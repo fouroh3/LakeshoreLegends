@@ -1,183 +1,239 @@
+// src/data.ts
 import type { Student } from "./types";
 
-/** Published-to-web CSV */
+// ✅ Your published-to-web CSV URL
 export const SHEET_CSV_URL =
   "https://docs.google.com/spreadsheets/d/e/2PACX-1vSsHQNK1vvVY-V6nI4kOEilMlAdcnPCdM50QC3-mO4OQsoBDN0l_ROeTUoob3OhJpKD7zIZPXP1VrJw/pub?gid=0&single=true&output=csv";
 
-/* ---------- CSV utils ---------- */
+/** Simple CSV parser (handles quotes) */
 function parseCSV(text: string): string[][] {
   const rows: string[][] = [];
-  let i = 0,
-    field = "",
-    row: string[] = [],
-    inQuotes = false;
-
-  while (i < text.length) {
-    const c = text[i];
+  let row: string[] = [];
+  let cur = "";
+  let inQuotes = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i],
+      n = text[i + 1];
     if (inQuotes) {
-      if (c === '"') {
-        if (text[i + 1] === '"') {
-          field += '"';
-          i += 2;
-          continue;
-        }
+      if (c === '"' && n === '"') {
+        cur += '"';
+        i++;
+      } else if (c === '"') {
         inQuotes = false;
-        i++;
-        continue;
+      } else {
+        cur += c;
       }
-      field += c;
-      i++;
-      continue;
     } else {
-      if (c === '"') {
-        inQuotes = true;
-        i++;
-        continue;
-      }
-      if (c === ",") {
-        row.push(field);
-        field = "";
-        i++;
-        continue;
-      }
-      if (c === "\r") {
-        i++;
-        continue;
-      }
-      if (c === "\n") {
-        row.push(field);
+      if (c === '"') inQuotes = true;
+      else if (c === ",") {
+        row.push(cur);
+        cur = "";
+      } else if (c === "\r" && n === "\n") {
+        row.push(cur);
         rows.push(row);
         row = [];
-        field = "";
+        cur = "";
         i++;
-        continue;
+      } else if (c === "\n" || c === "\r") {
+        row.push(cur);
+        rows.push(row);
+        row = [];
+        cur = "";
+      } else {
+        cur += c;
       }
-      field += c;
-      i++;
     }
   }
-  row.push(field);
-  rows.push(row);
+  if (cur.length || row.length) {
+    row.push(cur);
+    rows.push(row);
+  }
   return rows;
 }
 
-const toNumber = (n: any) => (Number.isFinite(Number(n)) ? Number(n) : 0);
-const norm = (h: string) => h.toLowerCase().trim().replace(/\s+/g, "_");
+const nk = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, ""); // normalize key
 
-function splitName(full: string): { last: string; first: string } {
-  const raw = (full || "").trim();
-  if (!raw) return { last: "", first: "" };
-  // Expect "Last, First" but handle "First Last" fallback
-  if (raw.includes(",")) {
-    const [last, first] = raw.split(",").map((s) => s.trim());
-    return { last: last || "", first: first || "" };
-  }
-  const parts = raw.split(" ").filter(Boolean);
-  if (parts.length === 1) return { last: parts[0], first: "" };
-  return { last: parts[0], first: parts.slice(1).join(" ") };
+function toNumber(v?: string): number | undefined {
+  if (!v) return undefined;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : undefined;
 }
 
-function rowsToStudents(rows: string[][]): Student[] {
-  if (!rows.length) return [];
-  const headers = rows[0].map(norm);
-  const H = (k: string[]) =>
-    k.map((x) => headers.indexOf(x)).find((i) => i >= 0) ?? -1;
-
-  // Your sheet headers (per screenshot):
-  // Name | Homeroom | Strength | Dexterity | Constitution | Intelligence | Wisdom | Charisma | PortraitURL | Skills
-  const cName = H(["name"]);
-  const cFirst = H(["first", "first_name", "given", "given_name"]);
-  const cLast = H(["last", "last_name", "family", "family_name", "surname"]);
-  const cRoom = H(["homeroom", "hr", "class", "classroom"]);
-  const cSkills = H(["skills", "skill_list"]);
-  const cPort = H(["portraiturl", "portrait_url", "avatar", "image"]);
-
-  const cStr = H(["str", "strength"]);
-  const cDex = H(["dex", "dexterity"]);
-  const cCon = H(["con", "constitution"]);
-  const cInt = H(["int", "intelligence"]);
-  const cWis = H(["wis", "wisdom"]);
-  const cCha = H(["cha", "charisma"]);
-
-  const out: Student[] = [];
-
-  for (let r = 1; r < rows.length; r++) {
-    const row = rows[r];
-    if (!row || row.every((x) => !String(x || "").trim())) continue;
-
-    // Prefer explicit First/Last; else split Name
-    let first = cFirst >= 0 ? row[cFirst] : "";
-    let last = cLast >= 0 ? row[cLast] : "";
-    if ((!first || !last) && cName >= 0) {
-      const { first: f, last: l } = splitName(row[cName] || "");
-      if (!first) first = f;
-      if (!last) last = l;
+/** Convert Google Drive links to direct image links */
+function normalizeDrive(url: string): string {
+  if (!url) return url;
+  try {
+    const u = new URL(url);
+    if (u.hostname.includes("drive.google.com")) {
+      let id = u.searchParams.get("id") || "";
+      if (!id) {
+        const parts = u.pathname.split("/").filter(Boolean);
+        const di = parts.indexOf("d");
+        if (di !== -1 && parts[di + 1]) id = parts[di + 1];
+      }
+      if (id) return `https://drive.google.com/uc?export=view&id=${id}`;
     }
-
-    const homeroom = cRoom >= 0 ? row[cRoom] : "";
-
-    // Need at least a name to include
-    if (!first && !last) continue;
-
-    out.push({
-      id: `r${r}`,
-      first: (first || "").trim(),
-      last: (last || "").trim(),
-      homeroom: (homeroom || "").trim(),
-      str: toNumber(cStr >= 0 ? row[cStr] : 0),
-      dex: toNumber(cDex >= 0 ? row[cDex] : 0),
-      con: toNumber(cCon >= 0 ? row[cCon] : 0),
-      int: toNumber(cInt >= 0 ? row[cInt] : 0),
-      wis: toNumber(cWis >= 0 ? row[cWis] : 0),
-      cha: toNumber(cCha >= 0 ? row[cCha] : 0),
-      skills: cSkills >= 0 ? row[cSkills] || "" : "",
-      // PortraitURL is optional; your UI can use it later if desired
-      // @ts-ignore - allowed extra prop ignored elsewhere
-      portraitUrl: cPort >= 0 ? row[cPort] || "" : "",
-    });
-  }
-  return out;
+  } catch {}
+  return url;
 }
 
-let cache: Student[] | null = null;
+function splitName(full: string): { first: string; last: string } {
+  const s = (full || "").trim();
+  if (!s) return { first: "", last: "" };
+  if (s.includes(",")) {
+    const [last, first] = s.split(",").map((x) => x.trim());
+    return { first: first || "", last: last || "" };
+  }
+  const parts = s.split(/\s+/);
+  if (parts.length === 1) return { first: parts[0], last: "" };
+  return {
+    first: parts.slice(0, -1).join(" "),
+    last: parts.slice(-1).join(" "),
+  };
+}
 
 export async function loadStudents(): Promise<Student[]> {
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const anyWindow = window as any;
-    if (anyWindow && Array.isArray(anyWindow.__SHEET_DATA__)) {
-      return anyWindow.__SHEET_DATA__ as Student[];
+  const res = await fetch(SHEET_CSV_URL, { cache: "no-store" });
+  if (!res.ok) throw new Error(`CSV fetch failed: ${res.status}`);
+  const text = await res.text();
+  const rows = parseCSV(text);
+  if (!rows.length) return [];
+
+  const headers = rows[0].map((h) => (h || "").trim());
+  const idx: Record<string, number> = {};
+  headers.forEach((h, i) => (idx[nk(h)] = i));
+
+  // 👀 Log what we see
+  console.log("Parsed headers:", headers);
+
+  // helpers
+  const get = (r: string[], aliases: string[]) => {
+    for (const a of aliases) {
+      const j = idx[nk(a)];
+      if (j != null && j < r.length) {
+        const v = r[j]?.trim();
+        if (v) return v;
+      }
+    }
+    return undefined;
+  };
+
+  const out: Student[] = [];
+  for (let i = 1; i < rows.length; i++) {
+    const r = rows[i];
+    if (!r || r.every((c) => !c || !c.trim())) continue;
+
+    // ---- Names ----
+    let first =
+      get(r, [
+        "First",
+        "First Name",
+        "Given",
+        "GivenName",
+        "FName",
+        "FirstName",
+      ]) || "";
+    let last =
+      get(r, [
+        "Last",
+        "Last Name",
+        "Surname",
+        "FamilyName",
+        "LName",
+        "LastName",
+      ]) || "";
+
+    if (!first && !last) {
+      const fullName =
+        get(r, [
+          "Name",
+          "Student Name",
+          "Full Name",
+          "Student",
+          "StudentName",
+        ]) || "";
+      if (fullName) {
+        const split = splitName(fullName);
+        first = split.first;
+        last = split.last;
+      }
     }
 
-    if (cache) return cache;
+    // ---- Homeroom ----
+    const homeroom =
+      get(r, [
+        "Homeroom",
+        "HR",
+        "Home Room",
+        "Class",
+        "Room",
+        "Homeroom #",
+        "Homeroom Number",
+        "HR#",
+        "HR Number",
+      ]) || "";
 
-    const res = await fetch(SHEET_CSV_URL);
-    if (!res.ok) {
-      console.error(
-        "Sheet fetch failed:",
-        res.status,
-        res.statusText,
-        SHEET_CSV_URL
-      );
-      return [];
-    }
-    const text = await res.text();
-    if (!text || text.trim().length === 0) {
-      console.warn(
-        "CSV response empty. Check publish settings:",
-        SHEET_CSV_URL
-      );
-      return [];
-    }
-    const rows = parseCSV(text);
-    const students = rowsToStudents(rows);
-    if (students.length === 0) {
-      console.warn("Parsed 0 students. Headers seen:", rows[0]);
-    }
-    cache = students;
-    return students;
-  } catch (e) {
-    console.error("loadStudents() error:", e);
-    return [];
+    // ---- Abilities ----
+    const str = toNumber(get(r, ["STR", "Strength"]));
+    const dex = toNumber(get(r, ["DEX", "Dexterity"]));
+    const con = toNumber(get(r, ["CON", "Constitution"]));
+    const int = toNumber(get(r, ["INT", "Intelligence"]));
+    const wis = toNumber(get(r, ["WIS", "Wisdom"]));
+    const cha = toNumber(get(r, ["CHA", "Charisma"]));
+
+    // ---- Skills ----
+    const skillsRaw =
+      get(r, ["Skills", "Skill", "Tags", "Skill(s)"]) ||
+      [get(r, ["Skill 1"]), get(r, ["Skill 2"]), get(r, ["Skill 3"])]
+        .filter(Boolean)
+        .join(", ");
+    const skills = skillsRaw
+      ? skillsRaw
+          .split(/[;,]/)
+          .map((s) => s.trim())
+          .filter(Boolean)
+      : [];
+
+    // ---- Portrait ----
+    const portraitRaw =
+      get(r, [
+        "PortraitURL",
+        "Portrait Url",
+        "Portrait",
+        "ImageURL",
+        "Image Url",
+        "Image",
+        "Photo",
+        "Picture",
+        "Avatar",
+        "Headshot",
+        "Portrait Link",
+        "Photo URL",
+        "Image Link",
+      ]) || "";
+    const portraitUrl = normalizeDrive(portraitRaw);
+
+    // ---- ID ----
+    const id =
+      get(r, ["ID", "StudentID", "Student Id", "Key"]) ||
+      `${first}_${last}_${homeroom}_${i}`;
+
+    out.push({
+      id,
+      first,
+      last,
+      homeroom,
+      str,
+      dex,
+      con,
+      int,
+      wis,
+      cha,
+      skills,
+      portraitUrl: portraitUrl || undefined,
+    });
   }
+
+  console.log(`✅ Loaded ${out.length} students`, out[0]);
+  return out;
 }

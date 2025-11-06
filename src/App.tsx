@@ -1,243 +1,342 @@
-import { useEffect, useMemo, useState } from "react";
-import AbilitiesDashboard from "./components/AbilitiesDashboard";
+// src/App.tsx
+import { useEffect, useMemo, useRef, useState } from "react";
+import { loadStudents } from "./data";
 import type { Student } from "./types";
-import { loadStudents, SHEET_CSV_URL } from "./data";
+import AbilitiesDashboard from "./components/AbilitiesDashboard";
+import logo from "./assets/Lakeshore Legends Logo.png";
 
-// NOTE: path includes spaces, which Vite supports
-import logoUrl from "./assets/Lakeshore Legends Logo.png";
+type Density = "compact" | "ultra";
+type SortKey =
+  | "homeroom"
+  | "name"
+  | "str"
+  | "dex"
+  | "con"
+  | "int"
+  | "wis"
+  | "cha";
 
-export default function App() {
-  // UI state
-  const [query, setQuery] = useState("");
-  const [homeroom, setHomeroom] = useState<string | "All">("All");
-  const [columns, setColumns] = useState(4);
-  const [density, setDensity] = useState<"Comfort" | "Compact" | "Ultra">(
-    "Comfort"
-  );
-  const [sortKey, setSortKey] = useState<"homeroom" | "name">("homeroom");
+/* ─────────────────────────────────────────────
+   Lightweight Multi-Select (no dependencies)
+   ───────────────────────────────────────────── */
+function MultiSelect({
+  label,
+  options,
+  selected,
+  onChange,
+  widthClass = "w-44",
+  placeholder = "All",
+}: {
+  label: string;
+  options: string[];
+  selected: string[];
+  onChange: (next: string[]) => void;
+  widthClass?: string;
+  placeholder?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement | null>(null);
 
-  // data state
-  const [raw, setRaw] = useState<Student[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  // load from data.ts (which fetches your published CSV)
   useEffect(() => {
-    let alive = true;
-    const fetchNow = async () => {
-      try {
-        const rows = await loadStudents();
-        if (!alive) return;
-        setRaw(rows || []);
-        setError(null);
-      } catch (e) {
-        console.error(e);
-        if (!alive) return;
-        setRaw([]);
-        setError("Could not load data.");
-      }
+    const onClick = (e: MouseEvent) => {
+      if (!ref.current?.contains(e.target as Node)) setOpen(false);
     };
-    fetchNow();
-    const id = setInterval(fetchNow, 60_000); // auto-refresh every 60s
-    return () => {
-      alive = false;
-      clearInterval(id);
-    };
+    document.addEventListener("mousedown", onClick);
+    return () => document.removeEventListener("mousedown", onClick);
   }, []);
 
-  // derive lists
-  const students = useMemo<Student[]>(() => {
-    const src = raw || [];
-    // 🔧 Normalize skills to array safely (handles string | string[])
-    const cleaned = src.map((s) => ({
-      ...s,
-      skills: (Array.isArray(s.skills)
-        ? s.skills.join(",")
-        : String(s.skills ?? "")
-      )
-        .split(",")
-        .map((x) => x.trim())
-        .filter(Boolean),
-    }));
+  const allSelected = selected.length === options.length && options.length > 0;
+  const summary =
+    selected.length === 0
+      ? placeholder
+      : selected.length === 1
+      ? selected[0]
+      : `${selected.length} classes`;
 
-    let out = cleaned;
+  const baseCtl =
+    "h-9 text-sm px-3 rounded-md bg-zinc-900 border border-zinc-700";
+  const item =
+    "px-3 py-2 hover:bg-zinc-800 cursor-pointer flex items-center gap-2";
 
-    if (homeroom !== "All") {
-      out = out.filter(
-        (s) => (s.homeroom || "").toLowerCase() === homeroom.toLowerCase()
-      );
+  const toggle = (opt: string) =>
+    selected.includes(opt)
+      ? onChange(selected.filter((x) => x !== opt))
+      : onChange([...selected, opt]);
+
+  return (
+    <div className={`relative ${widthClass}`} ref={ref}>
+      <label className="text-xs text-zinc-400 block mb-1">{label}</label>
+
+      <button
+        type="button"
+        className={`w-full ${baseCtl} text-left relative`}
+        onClick={() => setOpen((v) => !v)}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+      >
+        <span className="block truncate text-zinc-100">{summary}</span>
+        <span className="pointer-events-none absolute inset-y-0 right-2 flex items-center text-zinc-500">
+          ▾
+        </span>
+      </button>
+
+      {open && (
+        <div className="absolute z-50 mt-2 w-[18rem] rounded-md border border-zinc-700 bg-zinc-900 shadow-xl">
+          <div className="flex items-center justify-between px-3 py-2 border-b border-zinc-700">
+            <span className="text-xs text-zinc-400">
+              {selected.length === 0
+                ? "Showing all"
+                : `${selected.length} selected`}
+            </span>
+            <div className="space-x-3">
+              <button
+                className="text-xs underline text-zinc-300 hover:text-zinc-100"
+                onClick={() => onChange(options.slice())}
+              >
+                Select all
+              </button>
+              <button
+                className="text-xs underline text-zinc-300 hover:text-zinc-100"
+                onClick={() => onChange([])}
+              >
+                Clear
+              </button>
+            </div>
+          </div>
+
+          <ul role="listbox" className="max-h-64 overflow-auto py-1">
+            <li
+              className={item}
+              onClick={() =>
+                allSelected ? onChange([]) : onChange(options.slice())
+              }
+            >
+              <input
+                type="checkbox"
+                readOnly
+                checked={allSelected}
+                className="h-4 w-4 accent-cyan-500"
+              />
+              <span className="text-zinc-100">All</span>
+            </li>
+            {options.map((opt) => {
+              const checked = selected.includes(opt);
+              return (
+                <li key={opt} className={item} onClick={() => toggle(opt)}>
+                  <input
+                    type="checkbox"
+                    readOnly
+                    checked={checked}
+                    className="h-4 w-4 accent-cyan-500"
+                  />
+                  <span className="text-zinc-100">{opt}</span>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function App() {
+  const [students, setStudents] = useState<Student[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Controls
+  const [query, setQuery] = useState("");
+  const [sortBy, setSortBy] = useState<SortKey>("homeroom");
+  const [columns, setColumns] = useState<number>(4);
+  const [density, setDensity] = useState<Density>("compact");
+  const [selectedHomerooms, setSelectedHomerooms] = useState<string[]>([]);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        setLoading(true);
+        const data = await loadStudents();
+        setStudents(data);
+      } catch (e: any) {
+        setError(e?.message ?? "Failed to load students");
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [refreshKey]);
+
+  const homerooms = useMemo(
+    () => Array.from(new Set(students.map((s) => s.homeroom))).sort(),
+    [students]
+  );
+
+  const q = query.trim().toLowerCase();
+
+  const filtered = useMemo(() => {
+    let list = students;
+
+    if (selectedHomerooms.length > 0) {
+      list = list.filter((s) => selectedHomerooms.includes(s.homeroom));
     }
 
-    if (query.trim()) {
-      const q = query.toLowerCase();
-      out = out.filter((s) => {
-        const name = `${s.first} ${s.last}`.toLowerCase();
-        const skills = (s.skills as string[]).join(" ").toLowerCase();
-        const room = (s.homeroom || "").toLowerCase();
-        return name.includes(q) || skills.includes(q) || room.includes(q);
+    if (q) {
+      list = list.filter((s) => {
+        const full = `${s.first ?? ""} ${s.last ?? ""}`.toLowerCase();
+        const skills = Array.isArray(s.skills)
+          ? s.skills.join(" ").toLowerCase()
+          : String(s.skills ?? "").toLowerCase();
+        return (
+          full.includes(q) ||
+          skills.includes(q) ||
+          s.homeroom.toLowerCase().includes(q)
+        );
       });
     }
 
-    const collator = new Intl.Collator("en", {
-      numeric: true,
-      sensitivity: "base",
-    });
-    out.sort((a, b) => {
-      if (sortKey === "homeroom") {
-        const hr = collator.compare(a.homeroom || "", b.homeroom || "");
-        if (hr !== 0) return hr;
+    return [...list].sort((a, b) => {
+      if (sortBy === "homeroom") return a.homeroom.localeCompare(b.homeroom);
+      if (sortBy === "name") {
+        const an = `${a.last ?? ""}, ${a.first ?? ""}`.toLowerCase();
+        const bn = `${b.last ?? ""}, ${b.first ?? ""}`.toLowerCase();
+        return an.localeCompare(bn);
       }
-      // name sort fallback
-      return collator.compare(`${a.last}, ${a.first}`, `${b.last}, ${b.first}`);
+      return ((b as any)[sortBy] ?? 0) - ((a as any)[sortBy] ?? 0);
     });
+  }, [students, selectedHomerooms, q, sortBy]);
 
-    return out;
-  }, [raw, query, homeroom, sortKey]);
-
-  const homerooms = useMemo(() => {
-    const set = new Set<string>();
-    (raw || []).forEach((s) => s.homeroom && set.add(s.homeroom));
-    return Array.from(set).sort((a, b) =>
-      a.localeCompare(b, undefined, { numeric: true })
-    );
-  }, [raw]);
-
-  // loading / error guards (prevents blank page)
-  if (raw === null) {
+  if (loading) {
     return (
-      <div className="min-h-screen bg-zinc-950 text-white flex items-center justify-center">
-        <div className="text-zinc-300">Loading data…</div>
+      <div className="min-h-screen bg-zinc-950 text-zinc-100 grid place-items-center">
+        Loading…
+      </div>
+    );
+  }
+  if (error) {
+    return (
+      <div className="min-h-screen bg-zinc-950 text-red-400 grid place-items-center">
+        {error}
       </div>
     );
   }
 
+  const ctl =
+    "w-full h-9 text-sm px-3 rounded-md bg-zinc-900 border border-zinc-700";
+
   return (
-    <div className="min-h-screen bg-zinc-950 text-white">
-      {/* Header */}
-      <header className="sticky top-0 z-10 bg-zinc-950/80 backdrop-blur border-b border-white/5">
-        <div className="mx-auto max-w-7xl px-4 py-4">
-          <div className="flex items-center gap-4">
-            <img
-              src={logoUrl}
-              alt="Lakeshore Legends"
-              className="h-10 w-auto select-none"
-              onError={(e) => (e.currentTarget.style.display = "none")}
-            />
-            <div>
-              <h1 className="text-2xl font-extrabold">Abilities Dashboard</h1>
-              <p className="text-zinc-400 text-sm">
-                {students.length} students • auto-refreshing
-              </p>
+    <div className="min-h-screen bg-zinc-950 text-zinc-100">
+      {/* Sticky header */}
+      <div className="sticky top-0 z-40 bg-zinc-950/95 backdrop-blur supports-[backdrop-filter]:bg-zinc-950/80 border-b border-zinc-800">
+        <div className="mx-auto max-w-7xl px-4">
+          {/* Title row */}
+          <div className="flex items-center gap-4 py-2.5">
+            <img src={logo} alt="Lakeshore Legends" className="h-8 w-auto" />
+            <div className="leading-tight">
+              <h1 className="text-lg md:text-xl font-semibold tracking-tight">
+                Abilities Dashboard
+              </h1>
+              <div className="text-xs text-zinc-400">
+                {filtered.length} students • auto-refreshing
+              </div>
             </div>
           </div>
 
-          {/* Controls */}
-          <div className="mt-4 flex flex-wrap items-center gap-3">
-            {/* Homeroom */}
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-zinc-300">Homeroom</span>
-              <select
-                className="rounded-lg bg-zinc-900 border border-white/10 px-3 py-2 text-sm"
-                value={homeroom}
-                onChange={(e) => setHomeroom(e.target.value as any)}
-              >
-                <option>All</option>
-                {homerooms.map((hr) => (
-                  <option key={hr}>{hr}</option>
-                ))}
-              </select>
-            </div>
-
-            {/* Search */}
-            <input
-              className="min-w-[260px] flex-1 rounded-lg bg-zinc-900 border border-white/10 px-3 py-2 text-sm"
-              placeholder="Search name, skill, or homeroom"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-            />
-
-            {/* Sort */}
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-zinc-300">Sort</span>
-              <select
-                className="rounded-lg bg-zinc-900 border border-white/10 px-3 py-2 text-sm"
-                value={sortKey}
-                onChange={(e) => setSortKey(e.target.value as any)}
-              >
-                <option value="homeroom">Homeroom</option>
-                <option value="name">Name</option>
-              </select>
-            </div>
-
-            {/* Columns */}
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-zinc-300">Columns</span>
-              <input
-                type="number"
-                min={1}
-                max={12}
-                className="w-16 rounded-lg bg-zinc-900 border border-white/10 px-3 py-2 text-sm"
-                value={columns}
-                onChange={(e) =>
-                  setColumns(
-                    Math.max(1, Math.min(12, Number(e.target.value) || 1))
-                  )
-                }
+          {/* Controls row */}
+          <div className="pb-3">
+            {/* Responsive grid for controls.
+               The fixed tracks keep alignment even when one control hides. */}
+            <div className="grid gap-2.5 items-end grid-cols-1 md:grid-cols-[11rem_1fr_10rem_7rem_9rem_auto]">
+              {/* Homeroom multi-select */}
+              <MultiSelect
+                label="Homeroom"
+                options={homerooms}
+                selected={selectedHomerooms}
+                onChange={setSelectedHomerooms}
+                widthClass="w-44"
               />
-            </div>
 
-            {/* Density */}
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-zinc-300">Density</span>
-              <select
-                className="rounded-lg bg-zinc-900 border border-white/10 px-3 py-2 text-sm"
-                value={density}
-                onChange={(e) => setDensity(e.target.value as any)}
-              >
-                <option>Comfort</option>
-                <option>Compact</option>
-                <option>Ultra</option>
-              </select>
-            </div>
+              {/* Search */}
+              <div>
+                <label className="sr-only">Search</label>
+                <input
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Search name, skill, or homeroom"
+                  className={ctl}
+                />
+              </div>
 
-            <button
-              onClick={() => window.location.reload()}
-              className="ml-auto rounded bg-zinc-800 px-3 py-2 text-sm hover:bg-zinc-700 transition"
-              title={`Reload from ${SHEET_CSV_URL}`}
-            >
-              Refresh
-            </button>
+              {/* Sort (full labels — no abbreviations) */}
+              <div>
+                <label className="text-xs text-zinc-400 block mb-1">Sort</label>
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as SortKey)}
+                  className={ctl}
+                >
+                  <option value="homeroom">Homeroom</option>
+                  <option value="name">Name</option>
+                  <option value="str">Strength</option>
+                  <option value="dex">Dexterity</option>
+                  <option value="con">Constitution</option>
+                  <option value="int">Intelligence</option>
+                  <option value="wis">Wisdom</option>
+                  <option value="cha">Charisma</option>
+                </select>
+              </div>
+
+              {/* Columns */}
+              <div>
+                <label className="text-xs text-zinc-400 block mb-1">
+                  Columns
+                </label>
+                <input
+                  type="number"
+                  min={1}
+                  value={columns}
+                  onChange={(e) => setColumns(Number(e.target.value))}
+                  className={ctl}
+                />
+              </div>
+
+              {/* Density (Compact / Ultra) */}
+              <div>
+                <label className="text-xs text-zinc-400 block mb-1">
+                  Density
+                </label>
+                <select
+                  value={density}
+                  onChange={(e) => setDensity(e.target.value as Density)}
+                  className={ctl}
+                >
+                  <option value="compact">Compact</option>
+                  <option value="ultra">Ultra</option>
+                </select>
+              </div>
+
+              {/* Refresh */}
+              <div className="self-end">
+                <button
+                  onClick={() => setRefreshKey((k) => k + 1)}
+                  className={`${ctl} hover:bg-zinc-800`}
+                >
+                  Refresh
+                </button>
+              </div>
+            </div>
           </div>
-
-          {/* Helpful message if something failed */}
-          {error && (
-            <div className="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-amber-200 text-sm">
-              {error}
-              <div className="opacity-80 mt-1">Source: {SHEET_CSV_URL}</div>
-            </div>
-          )}
         </div>
-      </header>
+      </div>
 
       {/* Content */}
-      <main className="w-full py-6">
-        <div className="bg-zinc-950 w-full overflow-x-auto">
-          <div className="px-4">
-            {students.length === 0 ? (
-              <div className="text-zinc-400 text-sm py-20 text-center">
-                No students found. Check filters or sheet content.
-              </div>
-            ) : (
-              <AbilitiesDashboard
-                data={students}
-                columns={columns}
-                density={density}
-                // small counts fill the width; large counts scroll
-                mode={columns <= 6 ? "auto" : "fixed"}
-              />
-            )}
-          </div>
-        </div>
-      </main>
+      <div className="mx-auto max-w-7xl px-4 pb-8 pt-4">
+        <AbilitiesDashboard
+          data={filtered}
+          columns={columns}
+          density={density}
+        />
+      </div>
     </div>
   );
 }
