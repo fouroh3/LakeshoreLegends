@@ -1,0 +1,11 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Keep the page background solid black even when content scrolls horizontally */
+html,
+body,
+#root {
+  height: 100%;
+  background-color: #09090b; /* Tailwind zinc-950 */
+}
