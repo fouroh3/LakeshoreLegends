@@ -1,10 +1,10 @@
-import React from "react";
+import type { PropsWithChildren } from "react";
 
 export default function AbilitiesGrid({
   columns = 6,
   mode = "auto",
   children,
-}: React.PropsWithChildren<{ columns?: number; mode?: "auto" | "fixed" }>) {
+}: PropsWithChildren<{ columns?: number; mode?: "auto" | "fixed" }>) {
   // mode "auto" = fills available width (nice for 1–6 columns)
   // mode "fixed" = forces each column to 280px and allows horizontal scroll
   const isFixed = mode === "fixed";

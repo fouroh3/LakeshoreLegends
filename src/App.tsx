@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import AbilitiesDashboard from "./components/AbilitiesDashboard";
 import type { Student } from "./types";
 import { loadStudents, SHEET_CSV_URL } from "./data";
@@ -47,9 +47,13 @@ export default function App() {
   // derive lists
   const students = useMemo<Student[]>(() => {
     const src = raw || [];
+    // 🔧 Normalize skills to array safely (handles string | string[])
     const cleaned = src.map((s) => ({
       ...s,
-      skills: (Array.isArray(s.skills) ? s.skills : `${s.skills || ""}`)
+      skills: (Array.isArray(s.skills)
+        ? s.skills.join(",")
+        : String(s.skills ?? "")
+      )
         .split(",")
         .map((x) => x.trim())
         .filter(Boolean),

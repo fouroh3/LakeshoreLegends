@@ -1,4 +1,3 @@
-import React from "react";
 import AbilitiesGrid from "./AbilitiesGrid";
 import AbilityCard from "./AbilityCard";
 import { Student } from "../types";

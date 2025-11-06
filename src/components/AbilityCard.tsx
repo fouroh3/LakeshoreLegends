@@ -1,4 +1,3 @@
-import React from "react";
 import { Student } from "../types";
 
 function StatBar({
@@ -86,6 +85,14 @@ export default function AbilityCard({
   person: Student;
   density: "Comfort" | "Compact" | "Ultra";
 }) {
+  // 🔧 Normalize skills so TS is happy (string | string[] → string[])
+  const skillList = Array.isArray(person.skills)
+    ? person.skills
+    : String(person.skills ?? "")
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+
   const top = (
     <div className="flex items-start gap-3">
       {/* Avatar */}
@@ -135,7 +142,7 @@ export default function AbilityCard({
 
   const pills = (
     <div className="flex flex-wrap items-start content-start gap-2 max-h-20 overflow-auto pr-1">
-      {(person.skills || []).map((sk) => (
+      {skillList.map((sk) => (
         <span
           key={`${person.id}-${sk}`}
           className="rounded-full border border-white/10 bg-zinc-800 px-2 py-1 text-xs text-zinc-200"
