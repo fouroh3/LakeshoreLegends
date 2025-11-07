@@ -1,21 +1,12 @@
-import React from "react";
-
-export default function SkillPill({
-  text,
-  density = "comfortable",
-}: {
+type Props = {
   text: string;
-  density?: "comfortable" | "compact" | "ultra";
-}) {
-  const sizes = {
-    comfortable: "px-2.5 py-1 text-xs",
-    compact: "px-2 py-[4px] text-[11px]",
-    ultra: "px-1.5 py-[3px] text-[10px]",
-  } as const;
+};
 
+export default function SkillPill({ text }: Props) {
   return (
     <span
-      className={`inline-flex items-center rounded-full border border-zinc-800 bg-zinc-900/70 text-zinc-200 ${sizes[density]} leading-none`}
+      className="rounded-full bg-zinc-800/80 border border-zinc-700 px-3 py-1 text-sm text-zinc-300 hover:bg-zinc-700/80 transition"
+      title={text}
     >
       {text}
     </span>
