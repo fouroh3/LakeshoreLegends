@@ -1,24 +1,26 @@
 import React from "react";
-import type { Student } from "../types";
 import AbilitiesGrid from "./AbilitiesGrid";
 import AbilityCard from "./AbilityCard";
-
-type Density = "compact" | "ultra";
+import type { Student } from "../types";
 
 export default function AbilitiesDashboard({
   data,
   columns,
   density,
+  mode,
+  autoMinWidth = 280,
 }: {
   data: Student[];
   columns: number;
-  density: Density;
+  density: "comfortable" | "compact" | "ultra";
+  mode: "auto" | "fixed";
+  autoMinWidth?: number;
 }) {
   return (
-    <AbilitiesGrid columns={columns} density={density}>
-      {data.map((p, i) => (
+    <AbilitiesGrid columns={columns} mode={mode} autoMinWidth={autoMinWidth}>
+      {data.map((p) => (
         <AbilityCard
-          key={p.id ?? `${p.first}-${p.last}-${i}`}
+          key={p.id ?? `${p.first}-${p.last}`}
           person={p}
           density={density}
         />
