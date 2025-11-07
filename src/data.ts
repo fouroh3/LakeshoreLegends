@@ -194,12 +194,13 @@ function rowsToStudents(rows: string[][]): Student[] {
       last,
       homeroom,
 
-      str: idx.str >= 0 ? toNumber(row[idx.str]) : undefined,
-      dex: idx.dex >= 0 ? toNumber(row[idx.dex]) : undefined,
-      con: idx.con >= 0 ? toNumber(row[idx.con]) : undefined,
-      int: idx.int >= 0 ? toNumber(row[idx.int]) : undefined,
-      wis: idx.wis >= 0 ? toNumber(row[idx.wis]) : undefined,
-      cha: idx.cha >= 0 ? toNumber(row[idx.cha]) : undefined,
+      // ✅ Force numeric defaults (no undefined)
+      str: idx.str >= 0 ? toNumber(row[idx.str]) ?? 0 : 0,
+      dex: idx.dex >= 0 ? toNumber(row[idx.dex]) ?? 0 : 0,
+      con: idx.con >= 0 ? toNumber(row[idx.con]) ?? 0 : 0,
+      int: idx.int >= 0 ? toNumber(row[idx.int]) ?? 0 : 0,
+      wis: idx.wis >= 0 ? toNumber(row[idx.wis]) ?? 0 : 0,
+      cha: idx.cha >= 0 ? toNumber(row[idx.cha]) ?? 0 : 0,
 
       skills,
       portraitUrl:
