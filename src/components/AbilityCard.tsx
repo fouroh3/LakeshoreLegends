@@ -37,9 +37,12 @@ export default function AbilityCard({
       ["WIS", wis, "🦉"],
       ["CHA", cha, "💬"],
     ] as const;
-    let best = stats[0];
-    for (const s of stats) if ((s[1] ?? -1) > (best[1] ?? -1)) best = s;
+    let best: (typeof stats)[number] = stats[0];
+    for (const s of stats) {
+      if ((s[1] ?? -1) > (best[1] ?? -1)) best = s;
+    }
     return best[2];
+    
   }, [str, dex, con, int, wis, cha]);
 
   const nameSize =

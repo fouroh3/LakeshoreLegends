@@ -1,4 +1,3 @@
-// src/App.tsx
 import React, { useEffect, useMemo, useState } from "react";
 import AbilitiesDashboard from "./components/AbilitiesDashboard";
 import { loadStudents } from "./data";
@@ -165,7 +164,7 @@ export default function App() {
             draggable={false}
           />
           <div className="min-w-0">
-            <h1 className="text-xl md:text-2xl font-semibold tracking-wide text-zinc-100">
+            <h1 className="text-xl md:text-2xl font-bold tracking-wide text-zinc-100">
               Abilities Dashboard
             </h1>
             <div className="text-xs md:text-sm text-zinc-400">
