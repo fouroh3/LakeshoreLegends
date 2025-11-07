@@ -4,22 +4,25 @@ export type Density = "comfortable" | "compact" | "ultra";
 
 type Props = {
   label: string;
-  value?: number | null;
+  value?: number | string | null; // accept strings from CSV
   icon?: React.ReactNode;
-  maxValue?: number;     // defaults to 100
-  density?: Density;     // optional height control
-  className?: string;    // optional override for bar height/classes
+  maxValue?: number; // default to 10 for RPG stats
+  density?: Density;
+  className?: string;
 };
 
 export default function StatBar({
   label,
   value,
   icon,
-  maxValue = 100,
+  maxValue = 10, // <-- 0–10 scale by default
   density = "comfortable",
   className,
 }: Props) {
-  const raw = Number.isFinite(value as number) ? (value as number) : 0;
+  // robust numeric coercion for numbers OR numeric strings
+  const num = typeof value === "string" ? parseFloat(value) : (value as number);
+
+  const raw = Number.isFinite(num) ? num : 0;
   const clamped = Math.max(0, Math.min(maxValue, raw));
   const pct = (clamped / maxValue) * 100;
 
@@ -34,8 +37,11 @@ export default function StatBar({
           {icon}
           {label}
         </span>
-        <span className="text-[11px] text-zinc-300">{Math.round(clamped)}</span>
+        <span className="text-[11px] text-zinc-300">
+          {Number.isFinite(num) ? Math.round(clamped) : 0}
+        </span>
       </div>
+
       <div className={`w-full bg-zinc-800/80 rounded-full ${barH}`}>
         <div
           className={`bg-cyan-500 rounded-full ${barH}`}
