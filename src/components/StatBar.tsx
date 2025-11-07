@@ -1,63 +1,46 @@
-import React, { useMemo } from "react";
+import React from "react";
+
+export type Density = "comfortable" | "compact" | "ultra";
+
+type Props = {
+  label: string;
+  value?: number | null;
+  icon?: React.ReactNode;
+  maxValue?: number;     // defaults to 100
+  density?: Density;     // optional height control
+  className?: string;    // optional override for bar height/classes
+};
 
 export default function StatBar({
   label,
   value,
   icon,
-  maxValue = 10, // matches your sheet (x/10)
+  maxValue = 100,
   density = "comfortable",
-}: {
-  label: string;
-  value: number | undefined | null;
-  icon?: React.ReactNode;
-  maxValue?: number;
-  density?: "comfortable" | "compact" | "ultra";
-}) {
-  const clamped = Math.max(0, Math.min(maxValue, Number(value ?? 0)));
+  className,
+}: Props) {
+  const raw = Number.isFinite(value as number) ? (value as number) : 0;
+  const clamped = Math.max(0, Math.min(maxValue, raw));
   const pct = (clamped / maxValue) * 100;
 
-  const heights = {
-    comfortable: "h-2.5",
-    compact: "h-2",
-    ultra: "h-1.5",
-  } as const;
-  const labelSize = {
-    comfortable: "text-sm",
-    compact: "text-[11.5px]",
-    ultra: "text-[10.5px]",
-  } as const;
-  const numberSize = {
-    comfortable: "text-sm",
-    compact: "text-[11.5px]",
-    ultra: "text-[10.5px]",
-  } as const;
-
-  const bar = useMemo(
-    () => (
-      <div
-        className={`w-full rounded-full bg-zinc-800/90 ${heights[density]} overflow-hidden`}
-      >
-        <div className="h-full bg-cyan-500/80" style={{ width: `${pct}%` }} />
-      </div>
-    ),
-    [pct, density]
-  );
+  const defaultH =
+    density === "ultra" ? "h-2" : density === "compact" ? "h-2.5" : "h-3";
+  const barH = className ?? defaultH;
 
   return (
-    <div className="flex items-center gap-2">
-      {icon ? <div className="shrink-0 text-zinc-300">{icon}</div> : null}
-      <div className="w-full">
-        {/* label row with breathing room */}
+    <div className="w-full">
+      <div className="flex items-center justify-between mb-1">
+        <span className="text-[11px] text-zinc-400 flex items-center gap-1">
+          {icon}
+          {label}
+        </span>
+        <span className="text-[11px] text-zinc-300">{Math.round(clamped)}</span>
+      </div>
+      <div className={`w-full bg-zinc-800/80 rounded-full ${barH}`}>
         <div
-          className={`flex items-baseline justify-between ${labelSize[density]} text-zinc-300/95`}
-        >
-          <span className="pr-2">{label}</span>
-          <span className={`tabular-nums text-zinc-400 ${numberSize[density]}`}>
-            {clamped}/{maxValue}
-          </span>
-        </div>
-        {/* slight spacing before bar */}
-        <div className="mt-1">{bar}</div>
+          className={`bg-cyan-500 rounded-full ${barH}`}
+          style={{ width: `${pct}%` }}
+        />
       </div>
     </div>
   );
