@@ -42,7 +42,6 @@ export default function AbilityCard({
       if ((s[1] ?? -1) > (best[1] ?? -1)) best = s;
     }
     return best[2];
-    
   }, [str, dex, con, int, wis, cha]);
 
   const nameSize =
