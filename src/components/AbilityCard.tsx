@@ -53,11 +53,22 @@ export default function AbilityCard({
 
   return (
     <div
-      className="rounded-2xl bg-zinc-900/70 border border-zinc-800 p-4 flex flex-col shadow-lg hover:shadow-cyan-500/10 transition-shadow duration-300"
+      className="relative rounded-2xl bg-zinc-900/70 border border-zinc-800 p-4 flex flex-col shadow-lg hover:shadow-cyan-500/10 transition-shadow duration-300"
       style={{ minWidth: 200 }}
     >
-      {/* Header: avatar + stacked name block */}
-      <div className="flex items-start gap-3">
+      {/* Homeroom Tag (lighter, tucked, non-interactive) */}
+      <div
+        className="pointer-events-none absolute top-2.5 right-2.5 h-6 px-2.5
+                   rounded-full text-[11px] leading-6 font-medium
+                   bg-zinc-900/85 backdrop-blur-sm
+                   border border-zinc-700/60
+                   text-zinc-300 shadow-[0_1px_0_rgba(255,255,255,0.03)_inset,0_2px_8px_rgba(0,0,0,0.45)]"
+      >
+        {homeroom || "—"}
+      </div>
+
+      {/* Header: avatar + stacked name block (pad-right to avoid chip overlap) */}
+      <div className="flex items-start gap-3 pr-10">
         <Avatar name={fullName} src={portraitUrl} badge={badgeIcon} size={56} />
 
         <div className="min-w-0 flex-1">
@@ -73,15 +84,11 @@ export default function AbilityCard({
           >
             {last || ""}
           </h3>
-          <div className="text-xs text-zinc-400 mt-1">{homeroom || "—"}</div>
         </div>
       </div>
 
       {/* Stats */}
-      <div
-        className="mt-4 grid gap-2"
-        style={{ gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))" }}
-      >
+      <div className="mt-4 grid gap-2">
         <StatBar label="Strength" value={str} density={density} />
         <StatBar label="Dexterity" value={dex} density={density} />
         <StatBar label="Constitution" value={con} density={density} />
