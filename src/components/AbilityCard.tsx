@@ -1,16 +1,44 @@
-import { useMemo } from "react";
+// src/components/AbilityCard.tsx
+import React, { useMemo } from "react";
 import Avatar from "./Avatar";
 import StatBar from "./StatBar";
+import { GuildBadge } from "./GuildBadge";
 
 type Density = "comfortable" | "compact" | "ultra";
+
+interface AbilityCardProps {
+  person: any;
+  density?: Density;
+}
+
+const densityConfig: Record<
+  Density,
+  { padding: string; gap: string; statGap: string; textSize: string }
+> = {
+  comfortable: {
+    padding: "p-4",
+    gap: "gap-3",
+    statGap: "space-y-2",
+    textSize: "text-sm",
+  },
+  compact: {
+    padding: "p-3",
+    gap: "gap-2.5",
+    statGap: "space-y-1.5",
+    textSize: "text-xs",
+  },
+  ultra: {
+    padding: "p-2.5",
+    gap: "gap-2",
+    statGap: "space-y-1.5",
+    textSize: "text-[11px]",
+  },
+};
 
 export default function AbilityCard({
   person,
   density = "comfortable",
-}: {
-  person: any;
-  density?: Density;
-}) {
+}: AbilityCardProps) {
   const {
     first,
     last,
@@ -23,107 +51,109 @@ export default function AbilityCard({
     cha,
     skills,
     portraitUrl,
-  } = person ?? {};
+    guild,
+  } = person;
 
-  const fullName = `${first ?? ""} ${last ?? ""}`.trim();
+  const cfg = densityConfig[density];
 
-  // strongest stat → badge emoji
-  const badgeIcon = useMemo(() => {
+  // Full name – allow wrapping, but never truncate
+  const fullName = `${first ?? ""} ${last ?? ""}`.trim() || "Unnamed Legend";
+
+  // Strongest stat → badge emoji OVERLAY on avatar
+  const { badgeIcon } = useMemo(() => {
     const stats = [
-      ["STR", str, "💪"],
-      ["DEX", dex, "🏹"],
-      ["CON", con, "🛡️"],
-      ["INT", int, "🧠"],
-      ["WIS", wis, "🦉"],
-      ["CHA", cha, "💬"],
+      ["Strength", Number(str) || 0, "💪"],
+      ["Dexterity", Number(dex) || 0, "🏹"],
+      ["Constitution", Number(con) || 0, "🛡️"],
+      ["Intelligence", Number(int) || 0, "🧠"],
+      ["Wisdom", Number(wis) || 0, "🦉"],
+      ["Charisma", Number(cha) || 0, "💬"],
     ] as const;
-    let best: (typeof stats)[number] = stats[0];
-    for (const s of stats) if ((s[1] ?? -1) > (best[1] ?? -1)) best = s;
-    return best[2];
+
+    const top = stats.reduce(
+      (best, current) => (current[1] > best[1] ? current : best),
+      stats[0]
+    );
+
+    return {
+      badgeIcon: top[2],
+    };
   }, [str, dex, con, int, wis, cha]);
 
-  const nameSize =
-    density === "ultra"
-      ? "text-[13px]"
-      : density === "compact"
-      ? "text-sm"
-      : "text-base";
-
-  const statBarClass =
-    density === "ultra" ? "h-2" : density === "compact" ? "h-2.5" : "h-3";
-
-  // normalize skills
-  const skillList: string[] = Array.isArray(skills)
-    ? skills.filter(Boolean).map((s: any) => String(s).trim())
-    : typeof skills === "string"
-    ? skills
-        .split(/[;,]/g)
+  // Normalise skills into an array of strings
+  const skillList: string[] = useMemo(() => {
+    if (Array.isArray(skills)) return skills.filter(Boolean);
+    if (typeof skills === "string") {
+      return skills
+        .split(",")
         .map((s) => s.trim())
-        .filter(Boolean)
-    : [];
+        .filter(Boolean);
+    }
+    return [];
+  }, [skills]);
 
   return (
     <div
-      className="relative rounded-2xl bg-zinc-900/70 border border-zinc-800 p-4 flex flex-col shadow-lg hover:shadow-cyan-500/10 transition-shadow duration-300"
-      style={{ minWidth: 200 }}
+      className={`flex flex-col ${cfg.gap} ${cfg.padding} rounded-2xl bg-zinc-900/70 border border-zinc-800/60 shadow-lg shadow-black/40`}
     >
-      {/* Homeroom tag */}
-      <div
-        className="pointer-events-none absolute top-2.5 right-2.5 h-6 px-2.5 rounded-full text-[11px] leading-6 font-medium bg-zinc-900/85 backdrop-blur-sm border border-zinc-700/60 text-zinc-300 shadow-[0_1px_0_rgba(255,255,255,0.03)_inset,0_2px_8px_rgba(0,0,0,0.45)]"
-      >
-        {homeroom || "—"}
-      </div>
-
-      {/* Header */}
-      <div className="flex items-start gap-3 pr-10">
-        <Avatar
-          name={fullName || "Unnamed Legend"}
-          src={portraitUrl || undefined}
-          badge={badgeIcon}
-          size={56}
-        />
-        <div className="min-w-0 flex-1">
-          <h2
-            className={`${nameSize} font-semibold text-zinc-100 leading-snug break-words`}
-            title={fullName}
-          >
-            {first || "—"}
-          </h2>
-          <h3
-            className="text-sm text-zinc-300 leading-tight break-words"
-            title={fullName}
-          >
-            {last || ""}
-          </h3>
-        </div>
-      </div>
-
-      {/* Stats */}
-      <div className="mt-4 grid gap-2">
-        <StatBar label="Strength" value={str} className={statBarClass} />
-        <StatBar label="Dexterity" value={dex} className={statBarClass} />
-        <StatBar label="Constitution" value={con} className={statBarClass} />
-        <StatBar label="Intelligence" value={int} className={statBarClass} />
-        <StatBar label="Wisdom" value={wis} className={statBarClass} />
-        <StatBar label="Charisma" value={cha} className={statBarClass} />
-      </div>
-
-      {/* Skills */}
-      {skillList.length > 0 ? (
-        <div className="mt-3 flex flex-wrap gap-2">
-          {skillList.slice(0, 12).map((s, i) => (
-            <span
-              key={`${s}-${i}`}
-              className="rounded-full bg-zinc-800/80 border border-zinc-700 px-3 py-1 text-sm text-zinc-300 hover:bg-zinc-700/80 transition"
-              title={s}
+      {/* HEADER */}
+      <div className="flex items-start justify-between gap-2">
+        {/* Avatar + Name (badge overlay on avatar) */}
+        <div className="flex items-center gap-2.5 min-w-0">
+          <Avatar name={fullName} src={portraitUrl} badge={badgeIcon} />
+          <div className="min-w-0">
+            <div
+              className={`font-semibold text-zinc-50 leading-tight ${cfg.textSize}`}
             >
-              {s}
-            </span>
-          ))}
+              <span className="break-words">{fullName}</span>
+            </div>
+          </div>
         </div>
-      ) : (
-        <div className="mt-3 text-[11px] text-zinc-400">No skills listed</div>
-      )}
+
+        {/* Homeroom pill + guild badge (stacked, centered) */}
+        <div className="flex flex-col items-center gap-1 flex-shrink-0">
+          {/* Class pill with outline, single line only */}
+          <div className="inline-flex items-center justify-center px-2 py-0.5 rounded-full bg-zinc-900/80 border border-zinc-700/80 text-[10px] font-semibold text-zinc-200 whitespace-nowrap flex-shrink-0">
+            {homeroom || "—"}
+          </div>
+
+          {/* Guild badge centered under class pill */}
+          <GuildBadge guild={guild} />
+        </div>
+      </div>
+
+      {/* STATS */}
+      <div className={`mt-1 ${cfg.statGap}`}>
+        <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">
+          <StatBar label="Strength" value={Number(str) || 0} />
+          <StatBar label="Dexterity" value={Number(dex) || 0} />
+          <StatBar label="Constitution" value={Number(con) || 0} />
+          <StatBar label="Intelligence" value={Number(int) || 0} />
+          <StatBar label="Wisdom" value={Number(wis) || 0} />
+          <StatBar label="Charisma" value={Number(cha) || 0} />
+        </div>
+      </div>
+
+      {/* SKILLS */}
+      <div className="mt-1">
+        <div className="text-[10px] uppercase tracking-[0.16em] text-zinc-500 mb-1">
+          Skills
+        </div>
+        {skillList.length === 0 ? (
+          <div className="text-xs text-zinc-500 italic">No skills yet</div>
+        ) : (
+          <div className="flex flex-wrap gap-1">
+            {skillList.map((skill) => (
+              <span
+                key={skill}
+                className="inline-flex items-center rounded-full bg-zinc-900/80 border border-zinc-700/80 px-2 py-0.5 text-[10px] text-zinc-200"
+              >
+                {skill}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
