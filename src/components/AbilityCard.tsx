@@ -1,5 +1,5 @@
 // src/components/AbilityCard.tsx
-import React, { useMemo } from "react";
+import { useMemo } from "react";
 import Avatar from "./Avatar";
 import StatBar from "./StatBar";
 import { GuildBadge } from "./GuildBadge";
@@ -56,10 +56,10 @@ export default function AbilityCard({
 
   const cfg = densityConfig[density];
 
-  // Full name – allow wrapping, but never truncate
+  // Full name without truncation
   const fullName = `${first ?? ""} ${last ?? ""}`.trim() || "Unnamed Legend";
 
-  // Strongest stat → badge emoji OVERLAY on avatar
+  // Stat badge over avatar
   const { badgeIcon } = useMemo(() => {
     const stats = [
       ["Strength", Number(str) || 0, "💪"],
@@ -75,12 +75,10 @@ export default function AbilityCard({
       stats[0]
     );
 
-    return {
-      badgeIcon: top[2],
-    };
+    return { badgeIcon: top[2] };
   }, [str, dex, con, int, wis, cha]);
 
-  // Normalise skills into an array of strings
+  // Normalize skills
   const skillList: string[] = useMemo(() => {
     if (Array.isArray(skills)) return skills.filter(Boolean);
     if (typeof skills === "string") {
@@ -98,9 +96,10 @@ export default function AbilityCard({
     >
       {/* HEADER */}
       <div className="flex items-start justify-between gap-2">
-        {/* Avatar + Name (badge overlay on avatar) */}
+        {/* Avatar + Name */}
         <div className="flex items-center gap-2.5 min-w-0">
           <Avatar name={fullName} src={portraitUrl} badge={badgeIcon} />
+
           <div className="min-w-0">
             <div
               className={`font-semibold text-zinc-50 leading-tight ${cfg.textSize}`}
@@ -110,14 +109,14 @@ export default function AbilityCard({
           </div>
         </div>
 
-        {/* Homeroom pill + guild badge (stacked, centered) */}
+        {/* Homeroom + Guild Badge */}
         <div className="flex flex-col items-center gap-1 flex-shrink-0">
-          {/* Class pill with outline, single line only */}
+          {/* Class pill outlined */}
           <div className="inline-flex items-center justify-center px-2 py-0.5 rounded-full bg-zinc-900/80 border border-zinc-700/80 text-[10px] font-semibold text-zinc-200 whitespace-nowrap flex-shrink-0">
             {homeroom || "—"}
           </div>
 
-          {/* Guild badge centered under class pill */}
+          {/* Guild badge */}
           <GuildBadge guild={guild} />
         </div>
       </div>
@@ -139,6 +138,7 @@ export default function AbilityCard({
         <div className="text-[10px] uppercase tracking-[0.16em] text-zinc-500 mb-1">
           Skills
         </div>
+
         {skillList.length === 0 ? (
           <div className="text-xs text-zinc-500 italic">No skills yet</div>
         ) : (
