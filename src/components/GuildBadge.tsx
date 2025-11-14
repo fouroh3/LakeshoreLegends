@@ -1,6 +1,5 @@
 // src/components/GuildBadge.tsx
 
-import React from "react";
 import type { Guild } from "../types";
 
 import scoutsPng from "../assets/guilds/scouts.png";
