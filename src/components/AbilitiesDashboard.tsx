@@ -1,10 +1,17 @@
 import AbilitiesGrid from "./AbilitiesGrid";
 import AbilityCard from "./AbilityCard";
 import type { Student } from "../types";
-import { Fragment } from "react";
+import { Fragment, useMemo, useState } from "react";
 
 type Density = "comfortable" | "compact" | "ultra";
 type GridMode = "auto" | "fixed";
+
+type SuggestionType = "name" | "homeroom" | "guild" | "skill";
+
+type SuggestionItem = {
+  text: string;
+  type: SuggestionType;
+};
 
 type Props = {
   data: Student[];
@@ -19,6 +26,9 @@ type Props = {
   homerooms: string[];
   selectedHRs: string[];
   setSelectedHRs: (hrs: string[]) => void;
+  guilds: string[];
+  selectedGuilds: string[];
+  setSelectedGuilds: (g: string[]) => void;
   setDensity: (d: Density) => void;
   setMode: (m: GridMode) => void;
   setColumns: (n: number) => void;
@@ -38,11 +48,17 @@ export default function AbilitiesDashboard({
   homerooms,
   selectedHRs,
   setSelectedHRs,
+  guilds,
+  selectedGuilds,
+  setSelectedGuilds,
   setDensity,
   setMode,
   setColumns,
   setAutoMinWidth,
 }: Props) {
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [activeIndex, setActiveIndex] = useState<number>(-1);
+
   const toggleHR = (hr: string) => {
     setSelectedHRs(
       selectedHRs.includes(hr)
@@ -50,6 +66,107 @@ export default function AbilitiesDashboard({
         : [...selectedHRs, hr]
     );
   };
+
+  // Build a flat list of suggestions with type metadata
+  const suggestions: SuggestionItem[] = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return [];
+
+    const items: SuggestionItem[] = [];
+    const seen = new Set<string>(); // avoid duplicates across types
+
+    const add = (text: string, type: SuggestionType) => {
+      const key = `${type}:${text.toLowerCase()}`;
+      if (seen.has(key)) return;
+      if (!text.toLowerCase().includes(q)) return;
+      seen.add(key);
+      items.push({ text, type });
+    };
+
+    // Names
+    for (const s of data) {
+      const full = `${s.first ?? ""} ${s.last ?? ""}`.trim();
+      if (full) add(full, "name");
+    }
+
+    // Homerooms
+    for (const hr of homerooms) {
+      if (hr) add(hr, "homeroom");
+    }
+
+    // Guilds
+    for (const g of guilds) {
+      if (g) add(g, "guild");
+    }
+
+    // Skills
+    for (const s of data) {
+      const rawSkills = Array.isArray(s.skills)
+        ? s.skills
+        : (s.skills ?? "")
+            .split(/[;,]/)
+            .map((t) => t.trim())
+            .filter(Boolean);
+
+      for (const sk of rawSkills) {
+        if (sk) add(sk, "skill");
+      }
+    }
+
+    // Soft cap for sanity
+    return items.slice(0, 20);
+  }, [query, data, homerooms, guilds]);
+
+  // Group suggestions by type for pretty dropdown
+  const grouped = useMemo(() => {
+    const byType: Record<SuggestionType, SuggestionItem[]> = {
+      name: [],
+      homeroom: [],
+      guild: [],
+      skill: [],
+    };
+    for (const item of suggestions) {
+      byType[item.type].push(item);
+    }
+    return byType;
+  }, [suggestions]);
+
+  const allSuggestions = suggestions; // for keyboard index
+
+  const handleSelectSuggestion = (text: string) => {
+    setQuery(text);
+    setShowSuggestions(false);
+    setActiveIndex(-1);
+  };
+
+  const renderHighlighted = (text: string) => {
+    const q = query.trim();
+    if (!q) return <span>{text}</span>;
+
+    const lower = text.toLowerCase();
+    const lowerQ = q.toLowerCase();
+    const idx = lower.indexOf(lowerQ);
+    if (idx === -1) return <span>{text}</span>;
+
+    const before = text.slice(0, idx);
+    const match = text.slice(idx, idx + q.length);
+    const after = text.slice(idx + q.length);
+
+    return (
+      <span>
+        {before}
+        <span className="text-cyan-300 font-medium">{match}</span>
+        {after}
+      </span>
+    );
+  };
+
+  const sectionMeta: { type: SuggestionType; label: string; icon: string }[] = [
+    { type: "name", label: "Names", icon: "🧑‍🎓" },
+    { type: "homeroom", label: "Homerooms", icon: "🏫" },
+    { type: "guild", label: "Guilds", icon: "🛡️" },
+    { type: "skill", label: "Skills", icon: "✨" },
+  ];
 
   return (
     <Fragment>
@@ -59,16 +176,117 @@ export default function AbilitiesDashboard({
           {/* ROW 1–2: Search + Sort / Clear */}
           <div className="w-full flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
             {/* Search */}
-            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:flex-1">
+            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:flex-1 relative">
               <label className="text-sm text-zinc-300 text-center sm:text-left sm:mr-3">
                 Search
               </label>
-              <input
-                value={query}
-                onChange={(e) => setQuery((e.target as HTMLInputElement).value)}
-                placeholder="Type a name, skill, or homeroom (e.g., 8-3)"
-                className="w-full sm:flex-1 rounded-xl bg-zinc-900/70 border border-zinc-800 px-3 py-2 outline-none focus:ring-2 focus:ring-cyan-500/40"
-              />
+              <div className="relative w-full sm:flex-1">
+                {/* Search icon */}
+                <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-zinc-500 text-sm">
+                  🔍
+                </span>
+
+                <input
+                  value={query}
+                  onChange={(e) => {
+                    const v = (e.target as HTMLInputElement).value;
+                    setQuery(v);
+                    setShowSuggestions(true);
+                    setActiveIndex(-1);
+                  }}
+                  onFocus={() => {
+                    if (allSuggestions.length > 0) setShowSuggestions(true);
+                  }}
+                  onBlur={() => {
+                    // Small delay so clicks on suggestions still register
+                    setTimeout(() => setShowSuggestions(false), 100);
+                  }}
+                  onKeyDown={(e) => {
+                    if (!allSuggestions.length) return;
+
+                    if (e.key === "ArrowDown") {
+                      e.preventDefault();
+                      setShowSuggestions(true);
+                      setActiveIndex((prev) =>
+                        prev < allSuggestions.length - 1 ? prev + 1 : 0
+                      );
+                    } else if (e.key === "ArrowUp") {
+                      e.preventDefault();
+                      setShowSuggestions(true);
+                      setActiveIndex((prev) =>
+                        prev > 0 ? prev - 1 : allSuggestions.length - 1
+                      );
+                    } else if (e.key === "Enter" && activeIndex >= 0) {
+                      e.preventDefault();
+                      handleSelectSuggestion(allSuggestions[activeIndex].text);
+                    } else if (e.key === "Escape") {
+                      setShowSuggestions(false);
+                      setActiveIndex(-1);
+                    }
+                  }}
+                  placeholder="Type a name, skill, guild, or homeroom (e.g., Stealth, Shadows, 8-3)"
+                  className="w-full rounded-xl bg-zinc-900/70 border border-zinc-800 pl-9 pr-3 py-2 text-sm outline-none focus:ring-2 focus:ring-cyan-500/60 focus:border-cyan-400/60"
+                />
+
+                {/* Autocomplete dropdown */}
+                {showSuggestions && allSuggestions.length > 0 && (
+                  <div className="absolute mt-1 w-full max-h-72 overflow-auto rounded-xl border border-zinc-800/80 bg-zinc-950/95 shadow-xl shadow-cyan-900/30 backdrop-blur-sm z-20">
+                    {sectionMeta.map(({ type, label, icon }) => {
+                      const items = grouped[type];
+                      if (!items.length) return null;
+
+                      // Compute the starting index of this section in the flat array
+                      const startIndex = allSuggestions.findIndex(
+                        (s) => s.type === type && s.text === items[0].text
+                      );
+
+                      return (
+                        <div key={type} className="pb-1 pt-1.5 first:pt-1">
+                          <div className="flex items-center gap-1.5 px-3 pb-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-zinc-500">
+                            <span>{icon}</span>
+                            <span>{label}</span>
+                          </div>
+                          {items.map((item, idx) => {
+                            const globalIndex =
+                              startIndex === -1 ? -1 : startIndex + idx;
+                            const isActive = globalIndex === activeIndex;
+
+                            return (
+                              <button
+                                key={`${type}-${item.text}-${idx}`}
+                                type="button"
+                                onMouseDown={(e) => {
+                                  e.preventDefault(); // prevent blur before click
+                                  handleSelectSuggestion(item.text);
+                                }}
+                                className={[
+                                  "w-full flex items-center justify-between px-3 py-1.5 text-sm transition-colors",
+                                  isActive
+                                    ? "bg-cyan-600/20 text-cyan-50 border-l-2 border-cyan-400/80"
+                                    : "bg-transparent text-zinc-100 hover:bg-zinc-800/60 hover:text-zinc-50",
+                                ].join(" ")}
+                              >
+                                <span className="truncate">
+                                  {renderHighlighted(item.text)}
+                                </span>
+                                <span className="ml-2 text-[0.6rem] uppercase tracking-wide text-zinc-500">
+                                  {type === "name"
+                                    ? "Name"
+                                    : type === "homeroom"
+                                    ? "Homeroom"
+                                    : type === "guild"
+                                    ? "Guild"
+                                    : "Skill"}
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Sort + Clear */}
@@ -79,7 +297,7 @@ export default function AbilitiesDashboard({
                 onChange={(e) =>
                   setSortKey((e.target as HTMLSelectElement).value)
                 }
-                className="rounded-xl bg-zinc-900/70 border border-zinc-800 px-3 py-2 text-sm"
+                className="rounded-xl bg-zinc-900/70 border border-zinc-800 px-3 py-2 text-sm focus:ring-2 focus:ring-cyan-500/40"
               >
                 <option value="homeroom">Homeroom</option>
                 <option value="name-az">Name (A–Z)</option>
@@ -93,7 +311,11 @@ export default function AbilitiesDashboard({
               </select>
 
               <button
-                onClick={() => setQuery("")}
+                onClick={() => {
+                  setQuery("");
+                  setShowSuggestions(false);
+                  setActiveIndex(-1);
+                }}
                 className="rounded-xl border border-zinc-800 bg-zinc-900/70 px-3 py-2 text-sm hover:bg-zinc-800/60"
               >
                 Clear
@@ -191,11 +413,14 @@ export default function AbilitiesDashboard({
               <button
                 onClick={() => {
                   setQuery("");
+                  setShowSuggestions(false);
+                  setActiveIndex(-1);
                   setDensity("comfortable");
                   setMode("auto");
                   setColumns(6);
                   setAutoMinWidth(260);
                   setSelectedHRs([]);
+                  setSelectedGuilds([]);
                   setSortKey("homeroom");
                 }}
                 className="rounded-xl border border-zinc-800 bg-zinc-900/70 px-3 py-2 text-sm hover:bg-zinc-800/60"
@@ -205,7 +430,7 @@ export default function AbilitiesDashboard({
             </div>
           </div>
 
-          {/* ROW 3: Homeroom chips */}
+          {/* Homeroom chips */}
           <div className="w-full">
             <div className="flex flex-wrap gap-1.5 justify-center">
               <button
@@ -217,8 +442,9 @@ export default function AbilitiesDashboard({
                     : "bg-zinc-900/60 border-zinc-800 text-zinc-300 hover:bg-zinc-800/60",
                 ].join(" ")}
               >
-                All
+                All Homerooms
               </button>
+
               {homerooms.map((hr) => {
                 const active = selectedHRs.includes(hr);
                 return (

@@ -20,6 +20,7 @@ export default function App() {
   const [columns, setColumns] = useState<number>(6);
   const [autoMinWidth, setAutoMinWidth] = useState<number>(260);
   const [selectedHRs, setSelectedHRs] = useState<string[]>([]);
+  const [selectedGuilds, setSelectedGuilds] = useState<string[]>([]);
   const [sortKey, setSortKey] = useState<string>("homeroom");
 
   useEffect(() => {
@@ -66,14 +67,25 @@ export default function App() {
     );
   }, [normalized]);
 
+  // Guild list (from data) – used only for UI wiring, search still handles guilds
+  const guilds = useMemo(() => {
+    const set = new Set<string>();
+    for (const s of normalized) {
+      if (s.guild) set.add(s.guild);
+    }
+    return Array.from(set).sort((a, b) => a.localeCompare(b, "en"));
+  }, [normalized]);
+
   // Filter + search + sort
   const filtered = useMemo(() => {
     let list = normalized;
 
+    // Homeroom filter
     if (selectedHRs.length > 0) {
       list = list.filter((s) => selectedHRs.includes(s.homeroom ?? ""));
     }
 
+    // Search (name, skills, guild, homeroom)
     const q = query.trim().toLowerCase();
     if (q) {
       const looksLikeHR = /^\d{1,2}\s*-\s*\d{1,2}$/.test(q);
@@ -91,12 +103,15 @@ export default function App() {
           const skills = (Array.isArray(p.skills) ? p.skills : [])
             .join(" ")
             .toLowerCase();
+          const guild = (p.guild || "").toLowerCase();
+
           return (
             first.includes(q) ||
             last.includes(q) ||
             fullA.includes(q) ||
             fullB.includes(q) ||
-            skills.includes(q)
+            skills.includes(q) ||
+            guild.includes(q)
           );
         });
       }
@@ -192,6 +207,9 @@ export default function App() {
             selectedHRs={selectedHRs}
             setSelectedHRs={setSelectedHRs}
             homerooms={homerooms}
+            guilds={guilds}
+            selectedGuilds={selectedGuilds}
+            setSelectedGuilds={setSelectedGuilds}
             setSortKey={setSortKey}
             sortKey={sortKey}
             setQuery={setQuery}
