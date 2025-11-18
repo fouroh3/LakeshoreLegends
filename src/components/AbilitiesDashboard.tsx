@@ -27,7 +27,7 @@ type Props = {
   selectedHRs: string[];
   setSelectedHRs: (hrs: string[]) => void;
   guilds: string[];
-  selectedGuilds: string[];
+  selectedGuilds: string[]; // ⬅️ keep this in Props
   setSelectedGuilds: (g: string[]) => void;
   setDensity: (d: Density) => void;
   setMode: (m: GridMode) => void;
@@ -49,7 +49,7 @@ export default function AbilitiesDashboard({
   selectedHRs,
   setSelectedHRs,
   guilds,
-  selectedGuilds,
+  // ❌ NOTE: we do NOT destructure selectedGuilds here anymore
   setSelectedGuilds,
   setDensity,
   setMode,
