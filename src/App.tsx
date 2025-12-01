@@ -23,6 +23,10 @@ export default function App() {
   const [selectedGuilds, setSelectedGuilds] = useState<string[]>([]);
   const [sortKey, setSortKey] = useState<string>("homeroom");
 
+  // 🔥 NEW: Battle filter state (attribute ≥ value)
+  const [attrFilterKey, setAttrFilterKey] = useState<string>(""); // "str" | "dex" | ...
+  const [attrFilterMin, setAttrFilterMin] = useState<number>(0);
+
   useEffect(() => {
     (async () => {
       try {
@@ -67,7 +71,7 @@ export default function App() {
     );
   }, [normalized]);
 
-  // Guild list (from data) – used only for UI wiring, search still handles guilds
+  // Guild list (from data)
   const guilds = useMemo(() => {
     const set = new Set<string>();
     for (const s of normalized) {
@@ -76,13 +80,29 @@ export default function App() {
     return Array.from(set).sort((a, b) => a.localeCompare(b, "en"));
   }, [normalized]);
 
-  // Filter + search + sort
+  // Filter + search + sort (+ NEW attribute filter)
   const filtered = useMemo(() => {
     let list = normalized;
 
     // Homeroom filter
     if (selectedHRs.length > 0) {
       list = list.filter((s) => selectedHRs.includes(s.homeroom ?? ""));
+    }
+
+    // 🔥 Battle attribute filter (e.g., STR ≥ 2)
+    if (attrFilterKey) {
+      const map: Record<string, keyof Student> = {
+        str: "str",
+        dex: "dex",
+        con: "con",
+        int: "int",
+        wis: "wis",
+        cha: "cha",
+      };
+      const key = map[attrFilterKey];
+      if (key) {
+        list = list.filter((s) => Number(s[key] ?? 0) >= (attrFilterMin ?? 0));
+      }
     }
 
     // Search (name, skills, guild, homeroom)
@@ -158,7 +178,7 @@ export default function App() {
           })
         );
     }
-  }, [normalized, query, selectedHRs, sortKey]);
+  }, [normalized, query, selectedHRs, sortKey, attrFilterKey, attrFilterMin]);
 
   return (
     <div className="min-h-screen w-full bg-zinc-950 text-zinc-100">
@@ -218,6 +238,11 @@ export default function App() {
             setMode={setMode}
             setColumns={setColumns}
             setAutoMinWidth={setAutoMinWidth}
+            // 🔥 NEW battle filter props
+            attrFilterKey={attrFilterKey}
+            setAttrFilterKey={setAttrFilterKey}
+            attrFilterMin={attrFilterMin}
+            setAttrFilterMin={setAttrFilterMin}
           />
         )}
       </main>
