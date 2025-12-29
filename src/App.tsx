@@ -1,5 +1,7 @@
+// src/App.tsx
 import { useEffect, useMemo, useState } from "react";
 import AbilitiesDashboard from "./components/AbilitiesDashboard";
+import BattlePage from "./pages/BattlePage";
 import { loadStudents } from "./data";
 import type { Student } from "./types";
 import logoUrl from "./assets/Lakeshore Legends Logo.png";
@@ -9,6 +11,24 @@ type Density = "comfortable" | "compact" | "ultra";
 type GridMode = "auto" | "fixed";
 
 export default function App() {
+  // ✅ Route switch (dashboard unchanged unless ?view=battle)
+  const view = useMemo(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get("view") || "";
+  }, []);
+
+  if (view === "battle") {
+    return (
+      <BattlePage
+        onBack={() => {
+          const url = new URL(window.location.href);
+          url.searchParams.delete("view");
+          window.location.href = url.toString();
+        }}
+      />
+    );
+  }
+
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
@@ -23,7 +43,7 @@ export default function App() {
   const [selectedGuilds, setSelectedGuilds] = useState<string[]>([]);
   const [sortKey, setSortKey] = useState<string>("homeroom");
 
-  // 🔥 NEW: Battle filter state (attribute ≥ value)
+  // 🔥 Battle filter state (attribute ≥ value)
   const [attrFilterKey, setAttrFilterKey] = useState<string>(""); // "str" | "dex" | ...
   const [attrFilterMin, setAttrFilterMin] = useState<number>(0);
 
@@ -80,13 +100,18 @@ export default function App() {
     return Array.from(set).sort((a, b) => a.localeCompare(b, "en"));
   }, [normalized]);
 
-  // Filter + search + sort (+ NEW attribute filter)
+  // Filter + search + sort (+ attribute filter)
   const filtered = useMemo(() => {
     let list = normalized;
 
     // Homeroom filter
     if (selectedHRs.length > 0) {
       list = list.filter((s) => selectedHRs.includes(s.homeroom ?? ""));
+    }
+
+    // Guild filter
+    if (selectedGuilds.length > 0) {
+      list = list.filter((s) => selectedGuilds.includes(String(s.guild ?? "")));
     }
 
     // 🔥 Battle attribute filter (e.g., STR ≥ 2)
@@ -137,7 +162,7 @@ export default function App() {
       }
     }
 
-    // Sort (force numeric where needed)
+    // Sort
     switch (sortKey) {
       case "name-az":
         return list
@@ -178,7 +203,15 @@ export default function App() {
           })
         );
     }
-  }, [normalized, query, selectedHRs, sortKey, attrFilterKey, attrFilterMin]);
+  }, [
+    normalized,
+    query,
+    selectedHRs,
+    selectedGuilds,
+    sortKey,
+    attrFilterKey,
+    attrFilterMin,
+  ]);
 
   return (
     <div className="min-h-screen w-full bg-zinc-950 text-zinc-100">
@@ -195,12 +228,27 @@ export default function App() {
             Abilities Dashboard
           </h1>
           <div className="flex-1" />
-          <div className="text-sm text-zinc-400">
-            {loading
-              ? "Loading…"
-              : err
-              ? "Error"
-              : `${filtered.length}/${students.length} shown`}
+
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                const url = new URL(window.location.href);
+                url.searchParams.set("view", "battle");
+                window.location.href = url.toString();
+              }}
+              className="rounded-xl border border-zinc-800 bg-zinc-950/60 px-4 py-2 text-sm text-zinc-200 hover:bg-zinc-900"
+            >
+              Battle Mode
+            </button>
+
+            <div className="text-sm text-zinc-400">
+              {loading
+                ? "Loading…"
+                : err
+                ? "Error"
+                : `${filtered.length}/${students.length} shown`}
+            </div>
           </div>
         </div>
       </header>
@@ -238,7 +286,7 @@ export default function App() {
             setMode={setMode}
             setColumns={setColumns}
             setAutoMinWidth={setAutoMinWidth}
-            // 🔥 NEW battle filter props
+            // 🔥 battle filter props
             attrFilterKey={attrFilterKey}
             setAttrFilterKey={setAttrFilterKey}
             attrFilterMin={attrFilterMin}
