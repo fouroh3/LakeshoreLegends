@@ -1,21 +1,18 @@
 // src/types.ts
-
 export type Guild =
   | "Scouts"
   | "Guardians"
   | "Blades"
   | "Shadows"
   | "Scholars"
-  | "Diplomats";
+  | "Diplomats"
+  | string;
 
-export interface Student {
+export type Student = {
   id: string;
   first: string;
   last: string;
   homeroom: string;
-
-  // NEW
-  guild?: Guild;
 
   str: number;
   dex: number;
@@ -26,4 +23,9 @@ export interface Student {
 
   skills: string[] | string;
   portraitUrl?: string;
-}
+  guild?: Guild;
+
+  // ✅ NEW: HP (from Apps Script)
+  baseHP?: number;
+  currentHP?: number;
+};

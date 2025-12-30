@@ -52,6 +52,8 @@ export default function AbilityCard({
     skills,
     portraitUrl,
     guild,
+    baseHP,
+    currentHP,
   } = person;
 
   const cfg = densityConfig[density];
@@ -90,6 +92,11 @@ export default function AbilityCard({
     return [];
   }, [skills]);
 
+  // ✅ HP
+  const hpBase = Math.max(1, Number(baseHP ?? 20));
+  const hpCur = Math.max(0, Math.min(hpBase, Number(currentHP ?? hpBase)));
+  const hpPct = Math.max(0, Math.min(1, hpCur / hpBase));
+
   return (
     <div
       className={`flex flex-col ${cfg.gap} ${cfg.padding} rounded-2xl bg-zinc-900/70 border border-zinc-800/60 shadow-lg shadow-black/40`}
@@ -118,6 +125,22 @@ export default function AbilityCard({
 
           {/* Guild badge */}
           <GuildBadge guild={guild} />
+        </div>
+      </div>
+
+      {/* ✅ HP (compact, matches style) */}
+      <div className="mt-1">
+        <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.16em] text-zinc-500 mb-1">
+          <span>Health</span>
+          <span className="font-semibold text-zinc-200 tracking-normal">
+            {hpCur}/{hpBase}
+          </span>
+        </div>
+        <div className="h-2 w-full rounded-full bg-zinc-950/60 border border-zinc-800/70 overflow-hidden">
+          <div
+            className="h-full bg-emerald-400/80"
+            style={{ width: `${Math.round(hpPct * 100)}%` }}
+          />
         </div>
       </div>
 
