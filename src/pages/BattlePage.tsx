@@ -18,14 +18,19 @@ type BattleControlRow = {
   sessionId: string;
 };
 
+// ✅ Still fine to keep Battle_Control as published CSV (changes rarely)
 const BATTLE_CONTROL_CSV =
   "https://docs.google.com/spreadsheets/d/e/2PACX-1vSsHQNK1vvVY-V6nI4kOEilMlAdcnPCdM50QC3-mO4OQsoBDN0l_ROeTUoob3OhJpKD7zIZPXP1VrJw/pub?gid=653070188&single=true&output=csv";
 
-const HP_STATE_CSV =
-  "https://docs.google.com/spreadsheets/d/e/2PACX-1vSsHQNK1vvVY-V6nI4kOEilMlAdcnPCdM50QC3-mO4OQsoBDN0l_ROeTUoob3OhJpKD7zIZPXP1VrJw/pub?gid=780327587&single=true&output=csv";
+// ✅ Apps Script Web App
+const HP_API_URL =
+  "https://script.google.com/macros/s/AKfycbw6gMIFYPvaljF3Ls-waojzprU6bygZZonOIJeKLopN2NSKgkDT-EsRKznxQiGpth_6/exec";
 
-const TOUCH_PROTECT_MS = 15000;
 const MAX_TILES = 8;
+
+// If API/Sheets takes a bit to “settle”, we keep a pending override.
+// If it somehow never matches, we’ll give up after this many ms.
+const PENDING_TTL_MS = 90_000;
 
 function stripQuotes(s: string | undefined | null): string {
   if (!s) return "";
@@ -33,7 +38,6 @@ function stripQuotes(s: string | undefined | null): string {
   return t.replace(/^["'‘’“”]+|["'‘’“”]+$/g, "");
 }
 
-// normalize IDs to stop HP snapping back due to hidden spaces/dashes/case
 function normId(id: string | undefined | null) {
   return stripQuotes(String(id ?? ""))
     .replace(/\u00A0/g, " ")
@@ -206,9 +210,8 @@ export default function BattlePage({ onBack }: Props) {
 
   const [guildFilter, setGuildFilter] = useState<Guild | "ALL">("ALL");
 
-  // multi-select
   const [multiSelect, setMultiSelect] = useState(true);
-  const [selectedIds, setSelectedIds] = useState<string[]>([]); // normalized ids
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   const [delta, setDelta] = useState<number>(-1);
   const [note, setNote] = useState<string>("");
@@ -219,19 +222,18 @@ export default function BattlePage({ onBack }: Props) {
     msg: string;
   } | null>(null);
 
-  // session info toggle (the “i” button)
   const [showSessionInfo, setShowSessionInfo] = useState(false);
 
-  // protect against HP snapping back after submit
-  const recentlyTouchedRef = useRef<Map<string, number>>(new Map());
-  const localHpOverrideRef = useRef<Map<string, HpStateRow>>(new Map());
+  // ✅ Key fix: pending overrides stop “snap back” flicker
+  const pendingRef = useRef<
+    Map<string, { expected: number; base: number; ts: number }>
+  >(new Map());
 
-  const hpCsvUrlBusted = () => `${HP_STATE_CSV}&_=${Date.now()}`;
   const bcCsvUrlBusted = () => `${BATTLE_CONTROL_CSV}&_=${Date.now()}`;
 
   const allowScroll = guildFilter === "ALL";
 
-  // Load students once
+  // Load students once (your existing CSV loader)
   useEffect(() => {
     (async () => {
       try {
@@ -306,86 +308,67 @@ export default function BattlePage({ onBack }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeHomeroom]);
 
-  // HP_State refresh
+  // ✅ HP refresh from API (stable override logic)
   useEffect(() => {
     let alive = true;
 
-    const loadHp = async () => {
+    const loadHpFromApi = async () => {
       try {
-        const text = await fetch(hpCsvUrlBusted()).then((r) => r.text());
-        const { headers, rows } = parseCSV(text);
-        const map = idxMap(headers);
-
-        const parsed: HpStateRow[] = rows
-          .map((r) => {
-            const studentId = normId(
-              getCell(
-                r,
-                map,
-                "StudentID",
-                "studentid",
-                "Student Id",
-                "Student ID",
-                "ID",
-                "id"
-              )
-            );
-            if (!studentId) return null;
-
-            const baseHP = toNumber(
-              getCell(r, map, "BaseHP", "basehp", "Base HP"),
-              20
-            );
-            const currentHP = toNumber(
-              getCell(r, map, "CurrentHP", "currenthp", "Current HP"),
-              baseHP
-            );
-
-            return {
-              studentId,
-              baseHP: Math.max(1, Math.round(baseHP)),
-              currentHP: Math.max(0, Math.round(currentHP)),
-            } as HpStateRow;
-          })
-          .filter(Boolean) as HpStateRow[];
+        const res = await fetch(`${HP_API_URL}?action=hp&_=${Date.now()}`, {
+          method: "GET",
+        });
+        const data = await res.json();
 
         if (!alive) return;
+        if (!data || !data.ok || !Array.isArray(data.hp)) return;
 
-        // merge fetched with protection
-        setHpRows((prev) => {
-          const now = Date.now();
-          const touched = recentlyTouchedRef.current;
+        const parsed: HpStateRow[] = data.hp
+          .map((r: any) => {
+            const id = normId(r?.studentId);
+            if (!id) return null;
+            const baseHP = Math.max(1, Math.round(toNumber(r?.baseHP, 20)));
+            const currentHP = Math.max(
+              0,
+              Math.min(baseHP, Math.round(toNumber(r?.currentHP, baseHP)))
+            );
+            return { studentId: id, baseHP, currentHP } as HpStateRow;
+          })
+          .filter(Boolean);
 
-          const fetchedById = new Map<string, HpStateRow>();
-          for (const r of parsed) fetchedById.set(normId(r.studentId), r);
+        const now = Date.now();
+        const pending = pendingRef.current;
 
-          const next: HpStateRow[] = prev.map((oldRow) => {
-            const id = normId(oldRow.studentId);
-            const fetched = fetchedById.get(id);
-            if (!fetched) return oldRow;
+        // Build final rows while honoring pending overrides
+        const finalRows: HpStateRow[] = parsed.map((row) => {
+          const id = normId(row.studentId);
+          const p = pending.get(id);
 
-            const lastTouch = touched.get(id);
-            const isProtected =
-              lastTouch != null && now - lastTouch < TOUCH_PROTECT_MS;
+          if (!p) return row;
 
-            return isProtected ? oldRow : fetched;
-          });
-
-          const existing = new Set(next.map((r) => normId(r.studentId)));
-          for (const r of parsed) {
-            const id = normId(r.studentId);
-            if (!existing.has(id)) next.push({ ...r, studentId: id });
+          // if pending is too old, drop it
+          if (now - p.ts > PENDING_TTL_MS) {
+            pending.delete(id);
+            return row;
           }
 
-          return next;
+          // if API now matches our expected, clear pending and trust API
+          if (row.currentHP === p.expected) {
+            pending.delete(id);
+            return row;
+          }
+
+          // otherwise, keep showing expected (prevents snap-back flicker)
+          return { studentId: id, baseHP: p.base, currentHP: p.expected };
         });
+
+        setHpRows(finalRows);
       } catch {
         // ignore
       }
     };
 
-    loadHp();
-    const t = setInterval(loadHp, 4000);
+    loadHpFromApi();
+    const t = setInterval(loadHpFromApi, 3000);
 
     return () => {
       alive = false;
@@ -413,17 +396,13 @@ export default function BattlePage({ onBack }: Props) {
 
   const getDisplayHp = (studentIdRaw: string) => {
     const id = normId(studentIdRaw);
-    const now = Date.now();
-    const lastTouch = recentlyTouchedRef.current.get(id);
-    const isProtected = lastTouch != null && now - lastTouch < TOUCH_PROTECT_MS;
 
-    if (isProtected) {
-      const o = localHpOverrideRef.current.get(id);
-      if (o) return o;
-    }
+    // If we have pending override, prefer it
+    const p = pendingRef.current.get(id);
+    if (p) return { studentId: id, baseHP: p.base, currentHP: p.expected };
 
-    const fromSheet = hpById.get(id);
-    if (fromSheet) return fromSheet;
+    const fromApi = hpById.get(id);
+    if (fromApi) return fromApi;
 
     return { studentId: id, baseHP: 20, currentHP: 20 };
   };
@@ -464,7 +443,6 @@ export default function BattlePage({ onBack }: Props) {
   }, [selectedStudents]);
 
   useEffect(() => {
-    // reset when homeroom changes
     setSelectedIds([]);
     setBanner(null);
     setNote("");
@@ -473,7 +451,6 @@ export default function BattlePage({ onBack }: Props) {
   }, [activeHomeroom]);
 
   useEffect(() => {
-    // prune selection when guild changes
     const setVisible = new Set(visibleTiles.map((s) => normId(s.id)));
     setSelectedIds((prev) => prev.filter((id) => setVisible.has(normId(id))));
   }, [visibleTiles]);
@@ -510,7 +487,6 @@ export default function BattlePage({ onBack }: Props) {
     }
 
     const ids = selectedIds.map(normId);
-
     setSubmitting(true);
 
     let ok = 0;
@@ -523,15 +499,10 @@ export default function BattlePage({ onBack }: Props) {
         const base = Math.max(1, hp.baseHP || 20);
         const after = Math.max(0, Math.min(base, before + delta));
 
-        // protect + local sticky override (stops snapping)
-        recentlyTouchedRef.current.set(id, Date.now());
-        localHpOverrideRef.current.set(id, {
-          studentId: id,
-          baseHP: base,
-          currentHP: after,
-        });
+        // ✅ Set pending override (prevents UI bounce)
+        pendingRef.current.set(id, { expected: after, base, ts: Date.now() });
 
-        // optimistic UI
+        // Optimistic UI in the grid immediately
         setHpRows((prev) => {
           const next = prev.slice();
           const idx = next.findIndex((r) => normId(r.studentId) === id);
@@ -556,14 +527,11 @@ export default function BattlePage({ onBack }: Props) {
             note: note.trim(),
             sessionId: cleanSessionId,
           });
+
           ok++;
         } catch {
-          // revert on failure
-          localHpOverrideRef.current.set(id, {
-            studentId: id,
-            baseHP: base,
-            currentHP: before,
-          });
+          // revert pending + UI on failure
+          pendingRef.current.delete(id);
           setHpRows((prev) => {
             const next = prev.slice();
             const idx = next.findIndex((r) => normId(r.studentId) === id);
@@ -580,11 +548,15 @@ export default function BattlePage({ onBack }: Props) {
           type: "ok",
           msg: `Submitted ✅ (${ok} target${ok === 1 ? "" : "s"})`,
         });
-        setNote("");
       } else {
         setBanner({ type: "err", msg: `Partial: ${ok} ok, ${fail} failed.` });
       }
+
+      // ✅ prevent accidental double-hits
+      setSelectedIds([]);
     } finally {
+      // ✅ always clear note after submit (you asked for this)
+      setNote("");
       setSubmitting(false);
     }
   }
@@ -616,7 +588,6 @@ export default function BattlePage({ onBack }: Props) {
     );
   };
 
-  // compact styles
   const bar = "rounded-2xl border border-zinc-800 bg-zinc-950/30 p-2";
   const label = "text-[10px] uppercase tracking-widest text-zinc-500";
   const selectClass =
@@ -626,7 +597,6 @@ export default function BattlePage({ onBack }: Props) {
 
   return (
     <div className="w-full h-[100dvh]">
-      {/* scroll ONLY when ALL guilds */}
       <div
         className={
           allowScroll
@@ -641,7 +611,6 @@ export default function BattlePage({ onBack }: Props) {
             </div>
           )}
 
-          {/* SUPER-COMPACT TOP BAR */}
           <div className={bar}>
             <div className="flex items-center gap-2">
               <div className="min-w-0">
@@ -655,7 +624,6 @@ export default function BattlePage({ onBack }: Props) {
 
               <div className="flex-1" />
 
-              {/* session info toggle (i) */}
               <button
                 type="button"
                 onClick={() => setShowSessionInfo((v) => !v)}
@@ -772,10 +740,8 @@ export default function BattlePage({ onBack }: Props) {
             </div>
           </div>
 
-          {/* MAIN */}
           <div className="mt-2 rounded-2xl border border-zinc-800 bg-zinc-950/35 p-2">
             <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-2">
-              {/* LEFT: tiles */}
               <div
                 className={
                   allowScroll
@@ -879,9 +845,7 @@ export default function BattlePage({ onBack }: Props) {
                 )}
               </div>
 
-              {/* RIGHT: actions */}
               <div className="min-h-0">
-                {/* spacer to align with left header row */}
                 <div className="h-[22px] mb-2" />
 
                 <div className="rounded-2xl border border-zinc-800 bg-zinc-950/30 p-2 flex flex-col">
@@ -931,7 +895,6 @@ export default function BattlePage({ onBack }: Props) {
                     />
                   </div>
 
-                  {/* Full skills only for single target */}
                   {selectedStudents.length === 1 && (
                     <div className="mt-2">
                       <div className="text-[10px] uppercase tracking-widest text-zinc-500 mb-1">
