@@ -1,10 +1,11 @@
+// src/components/AbilitiesDashboard.tsx
 import AbilitiesGrid from "./AbilitiesGrid";
 import AbilityCard from "./AbilityCard";
 import type { Student } from "../types";
-import { Fragment, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
+import { fetchHpMap } from "../hpApi";
 
 type Density = "comfortable" | "compact" | "ultra";
-type GridMode = "auto" | "fixed";
 
 type SuggestionType = "name" | "homeroom" | "guild" | "skill";
 
@@ -16,8 +17,12 @@ type SuggestionItem = {
 type Props = {
   data: Student[];
   density: Density;
-  mode: GridMode;
-  columns: number;
+
+  // NOTE: mode is no longer used (always responsive), but kept here to avoid
+  // breaking other files. You can remove it later if you want.
+  mode?: any;
+
+  columns: number; // no longer used in UI; safe to keep for compatibility
   autoMinWidth: number;
   query: string;
   setQuery: (q: string) => void;
@@ -30,8 +35,11 @@ type Props = {
   selectedGuilds: string[];
   setSelectedGuilds: (g: string[]) => void;
   setDensity: (d: Density) => void;
-  setMode: (m: GridMode) => void;
-  setColumns: (n: number) => void;
+
+  // NOTE: setMode is no longer used (always responsive), but kept here to avoid breaking.
+  setMode: (m: any) => void;
+
+  setColumns: (n: number) => void; // no longer used in UI
   setAutoMinWidth: (n: number) => void;
 
   // Battle filter props
@@ -41,10 +49,22 @@ type Props = {
   setAttrFilterMin: (n: number) => void;
 };
 
+// ✅ Poll HP every 30 seconds (smartboard-friendly, not spammy)
+const HP_POLL_MS = 30_000;
+
+// Keep consistent with hpApi normalization (so IDs match reliably)
+function normId(id: string | undefined | null) {
+  return String(id ?? "")
+    .replace(/\u00A0/g, " ")
+    .replace(/[–—]/g, "-")
+    .replace(/\s+/g, "")
+    .trim()
+    .toUpperCase();
+}
+
 export default function AbilitiesDashboard({
   data,
   density,
-  mode,
   columns,
   autoMinWidth,
   query,
@@ -67,6 +87,47 @@ export default function AbilitiesDashboard({
 }: Props) {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [activeIndex, setActiveIndex] = useState<number>(-1);
+
+  // ✅ HP map from Apps Script (keyed by normalized studentId)
+  const [hpMap, setHpMap] = useState<
+    Map<string, { baseHP: number; currentHP: number }>
+  >(() => new Map());
+
+  // ✅ Poll HP every 30s (and pause when tab hidden)
+  useEffect(() => {
+    let cancelled = false;
+    let timer: number | null = null;
+
+    const tick = async () => {
+      // If the tab is hidden, skip fetching to reduce noise/spam
+      if (typeof document !== "undefined" && document.hidden) return;
+
+      try {
+        const m = await fetchHpMap();
+        if (!cancelled) setHpMap(m);
+      } catch {
+        // fail silently (dashboard should never crash due to HP polling)
+      }
+    };
+
+    // fetch immediately
+    tick();
+
+    // poll
+    timer = window.setInterval(tick, HP_POLL_MS);
+
+    // also fetch when returning to the tab (instant catch-up)
+    const onVis = () => {
+      if (!document.hidden) tick();
+    };
+    document.addEventListener("visibilitychange", onVis);
+
+    return () => {
+      cancelled = true;
+      if (timer) window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVis);
+    };
+  }, []);
 
   const toggleHR = (hr: string) => {
     setSelectedHRs(
@@ -316,7 +377,7 @@ export default function AbilitiesDashboard({
             </div>
           </div>
 
-          {/* Density / Grid / Reset */}
+          {/* Density / Card width / Reset */}
           <div className="w-full flex flex-col gap-3 md:flex-row md:items-center md:justify-center">
             <div className="w-full md:w-auto flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:justify-center">
               {/* Density */}
@@ -341,58 +402,20 @@ export default function AbilitiesDashboard({
                 </div>
               </div>
 
-              {/* Grid mode */}
+              {/* Card width (always responsive) */}
               <div className="flex items-center gap-2">
-                <span className="text-sm text-zinc-300">Grid</span>
-                <div className="inline-flex rounded-xl border border-zinc-800 overflow-hidden">
-                  {(["auto", "fixed"] as GridMode[]).map((m) => (
-                    <button
-                      key={m}
-                      onClick={() => setMode(m)}
-                      className={`px-3 py-2 text-sm ${
-                        mode === m
-                          ? "bg-zinc-800 text-zinc-100"
-                          : "bg-zinc-900/70 text-zinc-300 hover:bg-zinc-800/60"
-                      }`}
-                    >
-                      {m === "auto" ? "Responsive" : "Fixed"}
-                    </button>
-                  ))}
-                </div>
+                <label className="text-sm text-zinc-300">Card width</label>
+                <input
+                  type="range"
+                  min={200}
+                  max={360}
+                  value={autoMinWidth}
+                  onChange={(e) => setAutoMinWidth(Number(e.target.value))}
+                />
+                <span className="text-xs text-zinc-400 w-10">
+                  {autoMinWidth}px
+                </span>
               </div>
-
-              {/* Card size */}
-              {mode === "fixed" ? (
-                <div className="flex items-center gap-2">
-                  <label className="text-sm text-zinc-300">Columns</label>
-                  <input
-                    type="number"
-                    min={2}
-                    max={16}
-                    value={columns}
-                    onChange={(e) =>
-                      setColumns(
-                        Math.min(16, Math.max(2, Number(e.target.value) || 2))
-                      )
-                    }
-                    className="w-20 rounded-xl bg-zinc-900/70 border border-zinc-800 px-2 py-2 text-sm"
-                  />
-                </div>
-              ) : (
-                <div className="flex items-center gap-2">
-                  <label className="text-sm text-zinc-300">Card width</label>
-                  <input
-                    type="range"
-                    min={200}
-                    max={360}
-                    value={autoMinWidth}
-                    onChange={(e) => setAutoMinWidth(Number(e.target.value))}
-                  />
-                  <span className="text-xs text-zinc-400 w-10">
-                    {autoMinWidth}px
-                  </span>
-                </div>
-              )}
             </div>
 
             {/* Reset */}
@@ -403,6 +426,7 @@ export default function AbilitiesDashboard({
                   setShowSuggestions(false);
                   setActiveIndex(-1);
                   setDensity("comfortable");
+                  // force responsive forever
                   setMode("auto");
                   setColumns(6);
                   setAutoMinWidth(260);
@@ -457,17 +481,25 @@ export default function AbilitiesDashboard({
       {/* Cards */}
       <div className="w-full max-w-none px-2 sm:px-4 lg:px-6 py-4">
         <AbilitiesGrid
-          mode={mode}
+          mode="auto"
           columns={columns}
           autoMinWidth={autoMinWidth}
         >
-          {data.map((p, i) => (
-            <AbilityCard
-              key={p.id ?? `${p.first}-${p.last}-${p.homeroom}-${i}`}
-              person={p}
-              density={density}
-            />
-          ))}
+          {data.map((p, i) => {
+            // ✅ overlay HP from hpMap onto student record
+            const hpRow = hpMap.get(normId(p.id));
+            const personWithHp = hpRow
+              ? { ...p, hp: hpRow.currentHP, hpMax: hpRow.baseHP }
+              : p;
+
+            return (
+              <AbilityCard
+                key={p.id ?? `${p.first}-${p.last}-${p.homeroom}-${i}`}
+                person={personWithHp}
+                density={density}
+              />
+            );
+          })}
         </AbilitiesGrid>
       </div>
     </Fragment>
