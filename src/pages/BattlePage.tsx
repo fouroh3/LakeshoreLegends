@@ -46,6 +46,15 @@ function normId(id: string | undefined | null) {
     .toUpperCase();
 }
 
+function normHr(hr: string | undefined | null) {
+  // Normalizes “8–8” to “8-8”, trims NBSP, collapses whitespace.
+  return stripQuotes(String(hr ?? ""))
+    .replace(/\u00A0/g, " ")
+    .replace(/[–—]/g, "-")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function toNumber(n: string | undefined | null, fallback = 0): number {
   if (n == null || n === "") return fallback;
   const cleaned = String(n).replace(/[^\d\-\.]/g, "");
@@ -183,13 +192,38 @@ function skillsToArray(skills: Student["skills"]): string[] {
     .filter(Boolean);
 }
 
-function StatPill({ label, value }: { label: string; value: number }) {
+function StatPill({
+  label,
+  value,
+  muted,
+}: {
+  label: string;
+  value: number;
+  muted?: boolean;
+}) {
   return (
-    <div className="flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-950/35 px-2 py-1">
-      <span className="text-[9px] leading-none tracking-wide text-zinc-500">
+    <div
+      className={[
+        "flex items-center justify-between rounded-lg border px-2 py-1",
+        muted
+          ? "border-zinc-900 bg-zinc-950/20"
+          : "border-zinc-800 bg-zinc-950/35",
+      ].join(" ")}
+    >
+      <span
+        className={[
+          "text-[9px] leading-none tracking-wide",
+          muted ? "text-zinc-700" : "text-zinc-500",
+        ].join(" ")}
+      >
         {label}
       </span>
-      <span className="text-[11px] leading-none font-semibold text-zinc-100 tabular-nums">
+      <span
+        className={[
+          "text-[11px] leading-none font-semibold tabular-nums",
+          muted ? "text-zinc-600" : "text-zinc-100",
+        ].join(" ")}
+      >
         {value}
       </span>
     </div>
@@ -258,9 +292,9 @@ export default function BattlePage({ onBack }: Props) {
 
         const parsed: BattleControlRow[] = rows
           .map((r) => {
-            const homeroom = stripQuotes(
+            const homeroom = normHr(
               getCell(r, map, "Homeroom", "HomeRoom", "HR", "Class", "Section")
-            ).trim();
+            );
             const status = stripQuotes(getCell(r, map, "Status")).trim();
             const sessionId = stripQuotes(
               getCell(
@@ -283,8 +317,11 @@ export default function BattlePage({ onBack }: Props) {
         const actives = parsed.filter(
           (r) => String(r.status).toUpperCase() === "ACTIVE"
         );
+
         if (actives.length > 0) {
-          const keep = actives.find((r) => r.homeroom === activeHomeroom);
+          const keep = actives.find(
+            (r) => normHr(r.homeroom) === normHr(activeHomeroom)
+          );
           const pick = keep ?? actives[0];
           setActiveHomeroom(pick.homeroom);
           setActiveSessionId(pick.sessionId);
@@ -378,7 +415,9 @@ export default function BattlePage({ onBack }: Props) {
       .filter((r) => String(r.status).toUpperCase() === "ACTIVE")
       .slice()
       .sort((a, b) =>
-        a.homeroom.localeCompare(b.homeroom, "en", { numeric: true })
+        normHr(a.homeroom).localeCompare(normHr(b.homeroom), "en", {
+          numeric: true,
+        })
       );
   }, [battleRows]);
 
@@ -406,7 +445,7 @@ export default function BattlePage({ onBack }: Props) {
   const studentsInActiveHomeroom = useMemo(() => {
     if (!activeHomeroom) return [];
     return students
-      .filter((s) => (s.homeroom ?? "").trim() === activeHomeroom)
+      .filter((s) => normHr(s.homeroom) === normHr(activeHomeroom))
       .slice()
       .sort((a, b) => fullName(a).localeCompare(fullName(b)));
   }, [students, activeHomeroom]);
@@ -554,7 +593,7 @@ export default function BattlePage({ onBack }: Props) {
     }
   }
 
-  const tileSkillChips = (s: Student) => {
+  const tileSkillChips = (s: Student, muted?: boolean) => {
     const skills = skillsToArray(s.skills);
     if (skills.length === 0) return null;
 
@@ -566,14 +605,26 @@ export default function BattlePage({ onBack }: Props) {
         {top.map((sk) => (
           <span
             key={sk}
-            className="rounded-full border border-zinc-800 bg-zinc-950/40 px-2 py-0.5 text-[10px] text-zinc-200"
+            className={[
+              "rounded-full border px-2 py-0.5 text-[10px]",
+              muted
+                ? "border-zinc-900 bg-zinc-950/15 text-zinc-600"
+                : "border-zinc-800 bg-zinc-950/40 text-zinc-200",
+            ].join(" ")}
             title={sk}
           >
             {sk}
           </span>
         ))}
         {extra > 0 && (
-          <span className="rounded-full border border-zinc-800 bg-zinc-950/40 px-2 py-0.5 text-[10px] text-zinc-400">
+          <span
+            className={[
+              "rounded-full border px-2 py-0.5 text-[10px]",
+              muted
+                ? "border-zinc-900 bg-zinc-950/15 text-zinc-700"
+                : "border-zinc-800 bg-zinc-950/40 text-zinc-400",
+            ].join(" ")}
+          >
             +{extra}
           </span>
         )}
@@ -589,14 +640,6 @@ export default function BattlePage({ onBack }: Props) {
   // ✅ 10 buttons total: damage row then heal row
   const damageOptions = [-1, -2, -3, -4, -5];
   const healOptions = [1, 2, 3, 4, 5];
-
-  // ✅ styles: keep red/green “active” outlines
-  const neutralBtn =
-    "border-zinc-800 bg-zinc-950/40 text-zinc-200 hover:bg-zinc-900/60";
-  const activeDamage =
-    "border-red-400/80 bg-red-500/10 text-red-100 ring-2 ring-red-400/25";
-  const activeHeal =
-    "border-emerald-400/80 bg-emerald-500/10 text-emerald-100 ring-2 ring-emerald-400/25";
 
   return (
     <div className="w-full h-[100dvh]">
@@ -669,7 +712,9 @@ export default function BattlePage({ onBack }: Props) {
                   value={activeHomeroom}
                   onChange={(e) => {
                     const hr = e.target.value;
-                    const row = activeOptions.find((r) => r.homeroom === hr);
+                    const row = activeOptions.find(
+                      (r) => normHr(r.homeroom) === normHr(hr)
+                    );
                     setActiveHomeroom(hr);
                     setActiveSessionId(row?.sessionId ?? "");
                   }}
@@ -784,6 +829,9 @@ export default function BattlePage({ onBack }: Props) {
 
                     const isDead = hp.currentHP <= 0;
 
+                    // Keep identity readable; grey out from guild down
+                    const muted = isDead;
+
                     return (
                       <button
                         key={id}
@@ -792,25 +840,24 @@ export default function BattlePage({ onBack }: Props) {
                         className={[
                           "relative text-left rounded-2xl border bg-zinc-950/30 transition p-2.5 h-full flex flex-col",
                           isSelected
-                            ? "border-cyan-200 ring-2 ring-cyan-300/55 bg-cyan-400/10"
+                            ? "border-cyan-300 ring-2 ring-cyan-300/35 bg-cyan-400/5"
                             : "border-zinc-800 hover:border-zinc-700",
                         ].join(" ")}
                       >
-                        {/* ✅ DEAD overlay (ON TOP of everything) */}
-                        {isDead && (
-                          <div className="pointer-events-none absolute inset-0 z-30 rounded-2xl bg-black/45 flex flex-col items-center justify-center">
-                            <div className="text-3xl leading-none">💀</div>
-                            <div className="mt-1 text-sm font-extrabold tracking-widest text-zinc-100">
-                              DEAD
-                            </div>
-                          </div>
-                        )}
-
-                        {/* NAME ROW (stays readable even when dead) */}
+                        {/* Header stays readable */}
                         <div className="relative z-10 flex items-start gap-2">
                           <div className="min-w-0 flex-1">
                             <div className="h-[16px] text-[12px] leading-[16px] font-semibold text-zinc-100 truncate">
                               {fullName(s)}
+                            </div>
+
+                            <div
+                              className={[
+                                "h-[12px] mt-0.5 text-[10px] leading-[12px] truncate",
+                                muted ? "text-zinc-700" : "text-zinc-400",
+                              ].join(" ")}
+                            >
+                              {(s as any).guild ?? "—"}
                             </div>
                           </div>
 
@@ -821,19 +868,13 @@ export default function BattlePage({ onBack }: Props) {
                           </span>
                         </div>
 
-                        {/* ✅ Everything from GUILD down gets greyed out when dead */}
+                        {/* Everything below header can be dimmed */}
                         <div
                           className={[
                             "relative z-10",
-                            isDead ? "opacity-30 grayscale" : "",
+                            muted ? "opacity-35 grayscale" : "",
                           ].join(" ")}
                         >
-                          {/* Guild */}
-                          <div className="h-[12px] mt-0.5 text-[10px] leading-[12px] text-zinc-400 truncate">
-                            {(s as any).guild ?? "—"}
-                          </div>
-
-                          {/* HP */}
                           <div className="mt-1.5">
                             <div className="flex items-center justify-between text-[10px] text-zinc-500 mb-1">
                               <span>HP</span>
@@ -849,28 +890,51 @@ export default function BattlePage({ onBack }: Props) {
                             </div>
                           </div>
 
-                          {/* Stats */}
                           <div className="mt-2 grid grid-cols-2 gap-1">
-                            <StatPill label="Strength" value={(s as any).str} />
+                            <StatPill
+                              label="Strength"
+                              value={(s as any).str}
+                              muted={muted}
+                            />
                             <StatPill
                               label="Dexterity"
                               value={(s as any).dex}
+                              muted={muted}
                             />
                             <StatPill
                               label="Constitution"
                               value={(s as any).con}
+                              muted={muted}
                             />
                             <StatPill
                               label="Intelligence"
                               value={(s as any).int}
+                              muted={muted}
                             />
-                            <StatPill label="Wisdom" value={(s as any).wis} />
-                            <StatPill label="Charisma" value={(s as any).cha} />
+                            <StatPill
+                              label="Wisdom"
+                              value={(s as any).wis}
+                              muted={muted}
+                            />
+                            <StatPill
+                              label="Charisma"
+                              value={(s as any).cha}
+                              muted={muted}
+                            />
                           </div>
 
-                          {/* Skills */}
-                          {tileSkillChips(s)}
+                          {tileSkillChips(s, muted)}
                         </div>
+
+                        {/* DEAD overlay must be on top of everything */}
+                        {isDead && (
+                          <div className="pointer-events-none absolute inset-0 z-20 rounded-2xl bg-zinc-950/55 flex flex-col items-center justify-center">
+                            <div className="text-3xl leading-none">💀</div>
+                            <div className="mt-1 text-sm font-extrabold tracking-widest text-zinc-100">
+                              DEAD
+                            </div>
+                          </div>
+                        )}
                       </button>
                     );
                   })}
@@ -916,7 +980,9 @@ export default function BattlePage({ onBack }: Props) {
                             onClick={() => setDelta(d)}
                             className={[
                               "rounded-xl py-2 text-sm font-semibold border transition",
-                              active ? activeDamage : neutralBtn,
+                              active
+                                ? "border-red-400 bg-red-500/10 text-red-100 ring-2 ring-red-400/25"
+                                : "border-zinc-800 bg-zinc-950/40 text-zinc-200 hover:bg-zinc-900/60",
                             ].join(" ")}
                           >
                             {d}
@@ -938,7 +1004,9 @@ export default function BattlePage({ onBack }: Props) {
                             onClick={() => setDelta(d)}
                             className={[
                               "rounded-xl py-2 text-sm font-semibold border transition",
-                              active ? activeHeal : neutralBtn,
+                              active
+                                ? "border-emerald-400 bg-emerald-500/10 text-emerald-100 ring-2 ring-emerald-400/25"
+                                : "border-zinc-800 bg-zinc-950/40 text-zinc-200 hover:bg-zinc-900/60",
                             ].join(" ")}
                           >
                             +{d}
@@ -1000,7 +1068,7 @@ export default function BattlePage({ onBack }: Props) {
                       "mt-2 rounded-2xl px-6 py-3 text-sm font-semibold transition border w-full",
                       submitting
                         ? "border-zinc-800 bg-zinc-900/60 text-zinc-400 cursor-not-allowed"
-                        : "border-cyan-200/70 bg-cyan-400/12 text-cyan-100 hover:bg-cyan-400/18 ring-1 ring-cyan-300/25",
+                        : "border-cyan-300/60 bg-cyan-400/10 text-cyan-100 hover:bg-cyan-400/15 ring-1 ring-cyan-300/15",
                     ].join(" ")}
                   >
                     {submitting ? "Submitting…" : "Submit"}
