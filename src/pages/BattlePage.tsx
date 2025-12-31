@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { Student, Guild } from "../types";
 import { loadStudents } from "../data";
 import { submitHpDelta } from "../hpApi";
+import logoUrl from "../assets/Lakeshore Legends Logo.png";
 
 type Props = { onBack: () => void };
 
@@ -624,442 +625,455 @@ export default function BattlePage({ onBack }: Props) {
   const healOptions = [1, 2, 3, 4, 5];
 
   return (
-    // ✅ Fixed viewport, scroll only if necessary
+    // ✅ Fixed viewport; only the content area scrolls if needed
     <div className="w-full h-[100dvh] overflow-hidden">
-      <div className="w-full h-[100dvh] overflow-auto">
-        <div className="w-full max-w-none px-3 sm:px-4 lg:px-6 py-2">
-          {err && (
-            <div className="mb-2 rounded-xl border border-red-900/50 bg-red-950/40 px-3 py-2 text-red-200 text-sm">
-              {err}
+      <div className="h-[100dvh] flex flex-col overflow-hidden">
+        {/* ====== Battle Mode Header (logo + title) ====== */}
+        <div className="shrink-0 px-3 sm:px-4 lg:px-6 py-2 border-b border-zinc-800 bg-black/50">
+          <div className="flex items-center gap-3">
+            <img
+              src={logoUrl}
+              alt="Lakeshore Legends"
+              className="h-9 w-auto select-none"
+              draggable={false}
+            />
+
+            <div className="min-w-0">
+              <div className="text-[14px] sm:text-[15px] font-semibold text-zinc-100">
+                Battle Mode
+              </div>
+              <div className="text-[11px] text-zinc-400">
+                Select targets → pick damage/heal → submit.
+              </div>
+            </div>
+
+            <div className="flex-1" />
+
+            <button
+              type="button"
+              onClick={() => setShowSessionInfo((v) => !v)}
+              className={[
+                "rounded-xl border px-3 py-2 text-sm font-semibold transition",
+                showSessionInfo
+                  ? "border-cyan-400/60 bg-cyan-400/10 text-cyan-100"
+                  : "border-zinc-800 bg-zinc-950/40 text-zinc-200 hover:bg-zinc-900/60",
+              ].join(" ")}
+              aria-label="Toggle session info"
+              title="Toggle session info"
+            >
+              i
+            </button>
+
+            <button
+              type="button"
+              onClick={onBack}
+              className="rounded-xl border border-zinc-800 bg-zinc-950/60 px-4 py-2 text-sm text-zinc-200 hover:bg-zinc-900"
+            >
+              Back
+            </button>
+          </div>
+
+          {showSessionInfo && (
+            <div className="mt-2 text-[11px] text-zinc-500">
+              {activeSessionId ? (
+                <span className="truncate">Session: {activeSessionId}</span>
+              ) : (
+                "No active session."
+              )}
             </div>
           )}
+        </div>
 
-          <div className={bar}>
-            <div className="flex items-center gap-2">
-              <div className="min-w-0">
-                <div className="text-sm font-semibold text-zinc-100">
-                  Battle Console
-                </div>
-                <div className="text-[11px] text-zinc-400">
-                  Select targets → pick damage/heal → submit.
-                </div>
-              </div>
-
-              <div className="flex-1" />
-
-              <button
-                type="button"
-                onClick={() => setShowSessionInfo((v) => !v)}
-                className={[
-                  "rounded-xl border px-3 py-2 text-sm font-semibold transition",
-                  showSessionInfo
-                    ? "border-cyan-400/60 bg-cyan-400/10 text-cyan-100"
-                    : "border-zinc-800 bg-zinc-950/40 text-zinc-200 hover:bg-zinc-900/60",
-                ].join(" ")}
-                aria-label="Toggle session info"
-                title="Toggle session info"
-              >
-                i
-              </button>
-
-              <button
-                type="button"
-                onClick={onBack}
-                className="rounded-xl border border-zinc-800 bg-zinc-950/60 px-4 py-2 text-sm text-zinc-200 hover:bg-zinc-900"
-              >
-                Back
-              </button>
-            </div>
-
-            {showSessionInfo && (
-              <div className="mt-2 text-[11px] text-zinc-500">
-                {activeSessionId ? (
-                  <span className="truncate">Session: {activeSessionId}</span>
-                ) : (
-                  "No active session."
-                )}
+        {/* ====== Main content area (scroll only if needed) ====== */}
+        <div className="flex-1 min-h-0 overflow-auto">
+          <div className="w-full max-w-none px-3 sm:px-4 lg:px-6 py-2">
+            {err && (
+              <div className="mb-2 rounded-xl border border-red-900/50 bg-red-950/40 px-3 py-2 text-red-200 text-sm">
+                {err}
               </div>
             )}
 
-            <div className="mt-2 grid grid-cols-1 md:grid-cols-3 gap-2">
-              <div>
-                <div className={label}>Active Homeroom</div>
-                <select
-                  className={selectClass}
-                  value={activeHomeroom}
-                  onChange={(e) => {
-                    const hr = e.target.value;
-                    const row = activeOptions.find((r) => r.homeroom === hr);
-                    setActiveHomeroom(hr);
-                    setActiveSessionId(row?.sessionId ?? "");
-                  }}
-                >
-                  {activeOptions.length === 0 ? (
-                    <option value="">No ACTIVE homerooms</option>
-                  ) : (
-                    activeOptions.map((r) => (
-                      <option key={r.homeroom} value={r.homeroom}>
-                        {r.homeroom} · ACTIVE
+            <div className={bar}>
+              <div className="mt-2 grid grid-cols-1 md:grid-cols-3 gap-2">
+                <div>
+                  <div className={label}>Active Homeroom</div>
+                  <select
+                    className={selectClass}
+                    value={activeHomeroom}
+                    onChange={(e) => {
+                      const hr = e.target.value;
+                      const row = activeOptions.find((r) => r.homeroom === hr);
+                      setActiveHomeroom(hr);
+                      setActiveSessionId(row?.sessionId ?? "");
+                    }}
+                  >
+                    {activeOptions.length === 0 ? (
+                      <option value="">No ACTIVE homerooms</option>
+                    ) : (
+                      activeOptions.map((r) => (
+                        <option key={r.homeroom} value={r.homeroom}>
+                          {r.homeroom} · ACTIVE
+                        </option>
+                      ))
+                    )}
+                  </select>
+                </div>
+
+                <div>
+                  <div className={label}>Guild</div>
+                  <select
+                    className={selectClass}
+                    value={guildFilter}
+                    onChange={(e) => setGuildFilter(e.target.value as any)}
+                  >
+                    <option value="ALL">All guilds</option>
+                    {guildOptions.map((g) => (
+                      <option key={g} value={g}>
+                        {g}
                       </option>
-                    ))
-                  )}
-                </select>
-              </div>
-
-              <div>
-                <div className={label}>Guild</div>
-                <select
-                  className={selectClass}
-                  value={guildFilter}
-                  onChange={(e) => setGuildFilter(e.target.value as any)}
-                >
-                  <option value="ALL">All guilds</option>
-                  {guildOptions.map((g) => (
-                    <option key={g} value={g}>
-                      {g}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <div className={label}>Targets</div>
-                <div className="mt-1 flex items-center justify-between gap-2">
-                  <div className="text-sm font-semibold text-zinc-100">
-                    {selectedIds.length} selected
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setMultiSelect((v) => !v)}
-                      className={[
-                        "rounded-xl border px-3 py-2 text-sm font-semibold transition",
-                        multiSelect
-                          ? "border-cyan-400/60 bg-cyan-400/10 text-cyan-100"
-                          : "border-zinc-800 bg-zinc-950/40 text-zinc-200 hover:bg-zinc-900/60",
-                      ].join(" ")}
-                    >
-                      {multiSelect ? "Multi" : "Single"}
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setSelectedIds([])}
-                      className="rounded-xl border border-zinc-800 bg-zinc-950/40 px-3 py-2 text-sm text-zinc-200 hover:bg-zinc-900/60"
-                    >
-                      Clear
-                    </button>
-                  </div>
-                </div>
-                {selectedIds.length === 0 && (
-                  <div className="mt-1 text-[11px] text-zinc-500">
-                    Tap tiles to select.
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-2 rounded-2xl border border-zinc-800 bg-zinc-950/35 p-2">
-            <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-2">
-              {/* ✅ Students area: always scrolls if needed */}
-              <div className="min-h-0 overflow-auto pr-1">
-                <div className="flex items-center gap-2 mb-2 px-1 h-[22px]">
-                  <div className="text-[10px] uppercase tracking-widest text-zinc-500 truncate">
-                    Students ({activeHomeroom || "—"}) ·{" "}
-                    {guildFilter === "ALL"
-                      ? "All guilds"
-                      : `Guild: ${guildFilter}`}
-                  </div>
-                  <div className="flex-1" />
+                    ))}
+                  </select>
                 </div>
 
-                <div className="grid gap-2 grid-cols-2 md:grid-cols-4 auto-rows-fr">
-                  {visibleListForGrid.map((s) => {
-                    const id = normId(s.id);
-                    const hp = getDisplayHp(id);
-                    const status = hpStatus(hp.currentHP, hp.baseHP);
-                    const isSelected = selectedIds.some(
-                      (x) => normId(x) === id
-                    );
-
-                    const pct = Math.max(
-                      0,
-                      Math.min(1, hp.currentHP / Math.max(1, hp.baseHP))
-                    );
-
-                    const isDead = hp.currentHP <= 0;
-
-                    // ✅ per your spec: everything from guild down is greyed out when dead
-                    const muted = isDead;
-
-                    return (
+                <div>
+                  <div className={label}>Targets</div>
+                  <div className="mt-1 flex items-center justify-between gap-2">
+                    <div className="text-sm font-semibold text-zinc-100">
+                      {selectedIds.length} selected
+                    </div>
+                    <div className="flex items-center gap-2">
                       <button
-                        key={id}
                         type="button"
-                        onClick={() => toggleSelect(id)}
+                        onClick={() => setMultiSelect((v) => !v)}
                         className={[
-                          "relative text-left rounded-2xl border bg-zinc-950/30 transition p-2.5 h-full flex flex-col",
-                          isSelected
-                            ? "border-cyan-300 ring-2 ring-cyan-300/35 bg-cyan-400/5"
-                            : "border-zinc-800 hover:border-zinc-700",
+                          "rounded-xl border px-3 py-2 text-sm font-semibold transition",
+                          multiSelect
+                            ? "border-cyan-400/60 bg-cyan-400/10 text-cyan-100"
+                            : "border-zinc-800 bg-zinc-950/40 text-zinc-200 hover:bg-zinc-900/60",
                         ].join(" ")}
                       >
-                        {/* DEAD overlay: on top of everything else */}
-                        {isDead && (
-                          <div className="pointer-events-none absolute inset-0 z-50 rounded-2xl bg-zinc-950/60 flex flex-col items-center justify-center">
-                            <div className="text-4xl leading-none">💀</div>
-                            <div className="mt-1 text-base font-extrabold tracking-widest text-zinc-100">
-                              DEAD
-                            </div>
-                          </div>
-                        )}
-
-                        <div className="relative z-10 flex items-start gap-2">
-                          <div className="min-w-0 flex-1">
-                            <div className="h-[16px] text-[12px] leading-[16px] font-semibold text-zinc-100 truncate">
-                              {fullName(s)}
-                            </div>
-
-                            <div
-                              className={[
-                                "h-[12px] mt-0.5 text-[10px] leading-[12px] truncate",
-                                muted ? "text-zinc-700" : "text-zinc-400",
-                              ].join(" ")}
-                            >
-                              {(s as any).guild ?? "—"}
-                            </div>
-                          </div>
-
-                          <span
-                            className={`shrink-0 px-2 py-0.5 rounded-full text-[10px] leading-[12px] ${status.pillClass}`}
-                          >
-                            {status.label}
-                          </span>
-                        </div>
-
-                        <div className="relative z-10 mt-1.5">
-                          <div
-                            className={[
-                              "flex items-center justify-between text-[10px] mb-1",
-                              muted ? "text-zinc-700" : "text-zinc-500",
-                            ].join(" ")}
-                          >
-                            <span>HP</span>
-                            <span
-                              className={[
-                                "tabular-nums",
-                                muted ? "text-zinc-700" : "text-zinc-200",
-                              ].join(" ")}
-                            >
-                              {hp.currentHP}/{hp.baseHP}
-                            </span>
-                          </div>
-                          <div className="h-2 w-full rounded-full bg-zinc-900/70 border border-zinc-800 overflow-hidden">
-                            <div
-                              className={`h-full ${status.barClass}`}
-                              style={{ width: `${Math.round(pct * 100)}%` }}
-                            />
-                          </div>
-                        </div>
-
-                        <div className="relative z-10 mt-2 grid grid-cols-2 gap-1">
-                          <StatPill
-                            label="Strength"
-                            value={(s as any).str}
-                            muted={muted}
-                          />
-                          <StatPill
-                            label="Dexterity"
-                            value={(s as any).dex}
-                            muted={muted}
-                          />
-                          <StatPill
-                            label="Constitution"
-                            value={(s as any).con}
-                            muted={muted}
-                          />
-                          <StatPill
-                            label="Intelligence"
-                            value={(s as any).int}
-                            muted={muted}
-                          />
-                          <StatPill
-                            label="Wisdom"
-                            value={(s as any).wis}
-                            muted={muted}
-                          />
-                          <StatPill
-                            label="Charisma"
-                            value={(s as any).cha}
-                            muted={muted}
-                          />
-                        </div>
-
-                        <div className="relative z-10">
-                          {tileSkillChips(s, muted)}
-                        </div>
+                        {multiSelect ? "Multi" : "Single"}
                       </button>
-                    );
-                  })}
-                </div>
 
-                {!loading && activeOptions.length === 0 && (
-                  <div className="mt-2 text-[11px] text-zinc-500 px-1">
-                    Tip: set the homeroom(s) currently battling to <b>ACTIVE</b>{" "}
-                    in Battle_Control.
+                      <button
+                        type="button"
+                        onClick={() => setSelectedIds([])}
+                        className="rounded-xl border border-zinc-800 bg-zinc-950/40 px-3 py-2 text-sm text-zinc-200 hover:bg-zinc-900/60"
+                      >
+                        Clear
+                      </button>
+                    </div>
                   </div>
-                )}
+                  {selectedIds.length === 0 && (
+                    <div className="mt-1 text-[11px] text-zinc-500">
+                      Tap tiles to select.
+                    </div>
+                  )}
+                </div>
               </div>
+            </div>
 
-              <div className="min-h-0">
-                <div className="h-[22px] mb-2" />
-
-                <div className="rounded-2xl border border-zinc-800 bg-zinc-950/30 p-2 flex flex-col">
-                  <div className="flex items-center gap-2">
-                    <div className="text-[10px] uppercase tracking-widest text-zinc-500">
-                      Damage / Heal
+            <div className="mt-2 rounded-2xl border border-zinc-800 bg-zinc-950/35 p-2">
+              <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-2">
+                {/* ✅ Students area: scrolls if needed */}
+                <div className="min-h-0 overflow-auto pr-1">
+                  <div className="flex items-center gap-2 mb-2 px-1 h-[22px]">
+                    <div className="text-[10px] uppercase tracking-widest text-zinc-500 truncate">
+                      Students ({activeHomeroom || "—"}) ·{" "}
+                      {guildFilter === "ALL"
+                        ? "All guilds"
+                        : `Guild: ${guildFilter}`}
                     </div>
                     <div className="flex-1" />
-                    <div className="text-[11px] text-zinc-400">
-                      Targets:{" "}
-                      <span className="text-zinc-200">
-                        {selectedIds.length}
-                      </span>
-                    </div>
                   </div>
 
-                  {/* ✅ Two rows, 5 buttons each */}
-                  <div className="mt-2">
-                    <div className="text-[10px] uppercase tracking-widest text-zinc-500 mb-1">
-                      Damage
-                    </div>
-                    <div className="grid grid-cols-5 gap-2">
-                      {damageOptions.map((d) => {
-                        const active = delta === d;
-                        return (
-                          <button
-                            key={d}
-                            type="button"
-                            onClick={() => setDelta(d)}
-                            className={[
-                              "rounded-xl py-2 text-sm font-semibold border transition",
-                              active
-                                ? "border-red-400 bg-red-500/10 text-red-100 ring-2 ring-red-400/25"
-                                : "border-zinc-800 bg-zinc-950/40 text-zinc-200 hover:bg-zinc-900/60",
-                            ].join(" ")}
-                          >
-                            {d}
-                          </button>
-                        );
-                      })}
-                    </div>
+                  <div className="grid gap-2 grid-cols-2 md:grid-cols-4 auto-rows-fr">
+                    {visibleListForGrid.map((s) => {
+                      const id = normId(s.id);
+                      const hp = getDisplayHp(id);
+                      const status = hpStatus(hp.currentHP, hp.baseHP);
+                      const isSelected = selectedIds.some(
+                        (x) => normId(x) === id
+                      );
 
-                    <div className="mt-2 text-[10px] uppercase tracking-widest text-zinc-500 mb-1">
-                      Heal
-                    </div>
-                    <div className="grid grid-cols-5 gap-2">
-                      {healOptions.map((d) => {
-                        const active = delta === d;
-                        return (
-                          <button
-                            key={d}
-                            type="button"
-                            onClick={() => setDelta(d)}
-                            className={[
-                              "rounded-xl py-2 text-sm font-semibold border transition",
-                              active
-                                ? "border-emerald-400 bg-emerald-500/10 text-emerald-100 ring-2 ring-emerald-400/25"
-                                : "border-zinc-800 bg-zinc-950/40 text-zinc-200 hover:bg-zinc-900/60",
-                            ].join(" ")}
-                          >
-                            +{d}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
+                      const pct = Math.max(
+                        0,
+                        Math.min(1, hp.currentHP / Math.max(1, hp.baseHP))
+                      );
 
-                  <div className="mt-2">
-                    <div className="text-[10px] uppercase tracking-widest text-zinc-500 mb-1">
-                      Note
-                    </div>
-                    <input
-                      value={note}
-                      onChange={(e) => setNote(e.target.value)}
-                      placeholder="Optional (what happened)"
-                      className="w-full rounded-xl border border-zinc-800 bg-zinc-950/50 px-3 py-2 text-sm text-zinc-100 outline-none focus:ring-2 focus:ring-cyan-500/30"
-                    />
-                  </div>
+                      const isDead = hp.currentHP <= 0;
+                      const muted = isDead;
 
-                  {selectedStudents.length === 1 && (
-                    <div className="mt-2">
-                      <div className="text-[10px] uppercase tracking-widest text-zinc-500 mb-1">
-                        Full Skills
-                      </div>
-                      <div className="rounded-xl border border-zinc-800 bg-zinc-950/40 p-2">
-                        {selectedSkills.length === 0 ? (
-                          <div className="text-[11px] text-zinc-500">
-                            No skills listed.
-                          </div>
-                        ) : (
-                          <div className="flex flex-wrap gap-1">
-                            {selectedSkills.map((sk) => (
-                              <span
-                                key={sk}
-                                className="rounded-full border border-zinc-800 bg-zinc-950/40 px-2 py-0.5 text-[11px] text-zinc-200"
+                      return (
+                        <button
+                          key={id}
+                          type="button"
+                          onClick={() => toggleSelect(id)}
+                          className={[
+                            "relative text-left rounded-2xl border bg-zinc-950/30 transition p-2.5 h-full flex flex-col",
+                            isSelected
+                              ? "border-cyan-300 ring-2 ring-cyan-300/35 bg-cyan-400/5"
+                              : "border-zinc-800 hover:border-zinc-700",
+                          ].join(" ")}
+                        >
+                          {/* DEAD overlay: on top of everything else */}
+                          {isDead && (
+                            <div className="pointer-events-none absolute inset-0 z-50 rounded-2xl bg-zinc-950/60 flex flex-col items-center justify-center">
+                              <div className="text-4xl leading-none">💀</div>
+                              <div className="mt-1 text-base font-extrabold tracking-widest text-zinc-100">
+                                DEAD
+                              </div>
+                            </div>
+                          )}
+
+                          <div className="relative z-10 flex items-start gap-2">
+                            <div className="min-w-0 flex-1">
+                              <div className="h-[16px] text-[12px] leading-[16px] font-semibold text-zinc-100 truncate">
+                                {fullName(s)}
+                              </div>
+
+                              <div
+                                className={[
+                                  "h-[12px] mt-0.5 text-[10px] leading-[12px] truncate",
+                                  muted ? "text-zinc-700" : "text-zinc-400",
+                                ].join(" ")}
                               >
-                                {sk}
-                              </span>
-                            ))}
+                                {(s as any).guild ?? "—"}
+                              </div>
+                            </div>
+
+                            <span
+                              className={`shrink-0 px-2 py-0.5 rounded-full text-[10px] leading-[12px] ${status.pillClass}`}
+                            >
+                              {status.label}
+                            </span>
                           </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
 
-                  {selectedStudents.length > 1 && (
-                    <div className="mt-2 text-[11px] text-zinc-500">
-                      Full skills hidden in multi-target mode.
-                    </div>
-                  )}
+                          <div className="relative z-10 mt-1.5">
+                            <div
+                              className={[
+                                "flex items-center justify-between text-[10px] mb-1",
+                                muted ? "text-zinc-700" : "text-zinc-500",
+                              ].join(" ")}
+                            >
+                              <span>HP</span>
+                              <span
+                                className={[
+                                  "tabular-nums",
+                                  muted ? "text-zinc-700" : "text-zinc-200",
+                                ].join(" ")}
+                              >
+                                {hp.currentHP}/{hp.baseHP}
+                              </span>
+                            </div>
+                            <div className="h-2 w-full rounded-full bg-zinc-900/70 border border-zinc-800 overflow-hidden">
+                              <div
+                                className={`h-full ${status.barClass}`}
+                                style={{
+                                  width: `${Math.round(pct * 100)}%`,
+                                }}
+                              />
+                            </div>
+                          </div>
 
-                  <button
-                    type="button"
-                    onClick={onSubmit}
-                    disabled={submitting}
-                    className={[
-                      "mt-2 rounded-2xl px-6 py-3 text-sm font-semibold transition border w-full",
-                      submitting
-                        ? "border-zinc-800 bg-zinc-900/60 text-zinc-400 cursor-not-allowed"
-                        : "border-cyan-300/60 bg-cyan-400/10 text-cyan-100 hover:bg-cyan-400/15 ring-1 ring-cyan-300/15",
-                    ].join(" ")}
-                  >
-                    {submitting ? "Submitting…" : "Submit"}
-                  </button>
+                          <div className="relative z-10 mt-2 grid grid-cols-2 gap-1">
+                            <StatPill
+                              label="Strength"
+                              value={(s as any).str}
+                              muted={muted}
+                            />
+                            <StatPill
+                              label="Dexterity"
+                              value={(s as any).dex}
+                              muted={muted}
+                            />
+                            <StatPill
+                              label="Constitution"
+                              value={(s as any).con}
+                              muted={muted}
+                            />
+                            <StatPill
+                              label="Intelligence"
+                              value={(s as any).int}
+                              muted={muted}
+                            />
+                            <StatPill
+                              label="Wisdom"
+                              value={(s as any).wis}
+                              muted={muted}
+                            />
+                            <StatPill
+                              label="Charisma"
+                              value={(s as any).cha}
+                              muted={muted}
+                            />
+                          </div>
 
-                  {banner && (
-                    <div
-                      className={[
-                        "mt-2 rounded-xl px-3 py-2 text-sm border",
-                        banner.type === "ok"
-                          ? "border-emerald-900/50 bg-emerald-950/30 text-emerald-200"
-                          : "border-red-900/50 bg-red-950/30 text-red-200",
-                      ].join(" ")}
-                    >
-                      {banner.msg}
+                          <div className="relative z-10">
+                            {tileSkillChips(s, muted)}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {!loading && activeOptions.length === 0 && (
+                    <div className="mt-2 text-[11px] text-zinc-500 px-1">
+                      Tip: set the homeroom(s) currently battling to{" "}
+                      <b>ACTIVE</b> in Battle_Control.
                     </div>
                   )}
                 </div>
+
+                <div className="min-h-0">
+                  <div className="h-[22px] mb-2" />
+
+                  <div className="rounded-2xl border border-zinc-800 bg-zinc-950/30 p-2 flex flex-col">
+                    <div className="flex items-center gap-2">
+                      <div className="text-[10px] uppercase tracking-widest text-zinc-500">
+                        Damage / Heal
+                      </div>
+                      <div className="flex-1" />
+                      <div className="text-[11px] text-zinc-400">
+                        Targets:{" "}
+                        <span className="text-zinc-200">
+                          {selectedIds.length}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* ✅ Two rows, 5 buttons each */}
+                    <div className="mt-2">
+                      <div className="text-[10px] uppercase tracking-widest text-zinc-500 mb-1">
+                        Damage
+                      </div>
+                      <div className="grid grid-cols-5 gap-2">
+                        {damageOptions.map((d) => {
+                          const active = delta === d;
+                          return (
+                            <button
+                              key={d}
+                              type="button"
+                              onClick={() => setDelta(d)}
+                              className={[
+                                "rounded-xl py-2 text-sm font-semibold border transition",
+                                active
+                                  ? "border-red-400 bg-red-500/10 text-red-100 ring-2 ring-red-400/25"
+                                  : "border-zinc-800 bg-zinc-950/40 text-zinc-200 hover:bg-zinc-900/60",
+                              ].join(" ")}
+                            >
+                              {d}
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      <div className="mt-2 text-[10px] uppercase tracking-widest text-zinc-500 mb-1">
+                        Heal
+                      </div>
+                      <div className="grid grid-cols-5 gap-2">
+                        {healOptions.map((d) => {
+                          const active = delta === d;
+                          return (
+                            <button
+                              key={d}
+                              type="button"
+                              onClick={() => setDelta(d)}
+                              className={[
+                                "rounded-xl py-2 text-sm font-semibold border transition",
+                                active
+                                  ? "border-emerald-400 bg-emerald-500/10 text-emerald-100 ring-2 ring-emerald-400/25"
+                                  : "border-zinc-800 bg-zinc-950/40 text-zinc-200 hover:bg-zinc-900/60",
+                              ].join(" ")}
+                            >
+                              +{d}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    <div className="mt-2">
+                      <div className="text-[10px] uppercase tracking-widest text-zinc-500 mb-1">
+                        Note
+                      </div>
+                      <input
+                        value={note}
+                        onChange={(e) => setNote(e.target.value)}
+                        placeholder="Optional (what happened)"
+                        className="w-full rounded-xl border border-zinc-800 bg-zinc-950/50 px-3 py-2 text-sm text-zinc-100 outline-none focus:ring-2 focus:ring-cyan-500/30"
+                      />
+                    </div>
+
+                    {selectedStudents.length === 1 && (
+                      <div className="mt-2">
+                        <div className="text-[10px] uppercase tracking-widest text-zinc-500 mb-1">
+                          Full Skills
+                        </div>
+                        <div className="rounded-xl border border-zinc-800 bg-zinc-950/40 p-2">
+                          {selectedSkills.length === 0 ? (
+                            <div className="text-[11px] text-zinc-500">
+                              No skills listed.
+                            </div>
+                          ) : (
+                            <div className="flex flex-wrap gap-1">
+                              {selectedSkills.map((sk) => (
+                                <span
+                                  key={sk}
+                                  className="rounded-full border border-zinc-800 bg-zinc-950/40 px-2 py-0.5 text-[11px] text-zinc-200"
+                                >
+                                  {sk}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {selectedStudents.length > 1 && (
+                      <div className="mt-2 text-[11px] text-zinc-500">
+                        Full skills hidden in multi-target mode.
+                      </div>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={onSubmit}
+                      disabled={submitting}
+                      className={[
+                        "mt-2 rounded-2xl px-6 py-3 text-sm font-semibold transition border w-full",
+                        submitting
+                          ? "border-zinc-800 bg-zinc-900/60 text-zinc-400 cursor-not-allowed"
+                          : "border-cyan-300/60 bg-cyan-400/10 text-cyan-100 hover:bg-cyan-400/15 ring-1 ring-cyan-300/15",
+                      ].join(" ")}
+                    >
+                      {submitting ? "Submitting…" : "Submit"}
+                    </button>
+
+                    {banner && (
+                      <div
+                        className={[
+                          "mt-2 rounded-xl px-3 py-2 text-sm border",
+                          banner.type === "ok"
+                            ? "border-emerald-900/50 bg-emerald-950/30 text-emerald-200"
+                            : "border-red-900/50 bg-red-950/30 text-red-200",
+                        ].join(" ")}
+                      >
+                        {banner.msg}
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
 
-          {!loading && !err && students.length === 0 && (
-            <div className="mt-2 text-xs text-zinc-500">
-              No students loaded.
-            </div>
-          )}
+            {!loading && !err && students.length === 0 && (
+              <div className="mt-2 text-xs text-zinc-500">
+                No students loaded.
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
