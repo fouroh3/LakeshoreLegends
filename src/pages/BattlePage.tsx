@@ -18,22 +18,16 @@ type BattleControlRow = {
   sessionId: string;
 };
 
-// ✅ Still fine to keep Battle_Control as published CSV (changes rarely)
 const BATTLE_CONTROL_CSV =
   "https://docs.google.com/spreadsheets/d/e/2PACX-1vSsHQNK1vvVY-V6nI4kOEilMlAdcnPCdM50QC3-mO4OQsoBDN0l_ROeTUoob3OhJpKD7zIZPXP1VrJw/pub?gid=653070188&single=true&output=csv";
 
-// ✅ Apps Script Web App
 const HP_API_URL =
   "https://script.google.com/macros/s/AKfycbw6gMIFYPvaljF3Ls-waojzprU6bygZZonOIJeKLopN2NSKgkDT-EsRKznxQiGpth_6/exec";
 
 const MAX_TILES = 8;
-
-// If API/Sheets takes a bit to “settle”, we keep a pending override.
-// If it somehow never matches, we’ll give up after this many ms.
 const PENDING_TTL_MS = 90_000;
 
 // ✅ For MANY BattlePages open (one per table): do NOT poll every 3s.
-// Spread load with jitter so devices don't hit the script at the same moment.
 const HP_POLL_MS = 15_000;
 const HP_JITTER_MS = 4_000;
 
@@ -313,7 +307,7 @@ export default function BattlePage({ onBack }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeHomeroom]);
 
-  // ✅ HP refresh from API (use 15–19s with jitter, not 3s)
+  // ✅ HP refresh from API (use 15–19s with jitter)
   useEffect(() => {
     let alive = true;
 
@@ -419,14 +413,15 @@ export default function BattlePage({ onBack }: Props) {
 
   const guildOptions = useMemo(() => {
     const set = new Set<Guild>();
-    for (const s of studentsInActiveHomeroom) if (s.guild) set.add(s.guild);
+    for (const s of studentsInActiveHomeroom)
+      if ((s as any).guild) set.add((s as any).guild);
     return Array.from(set).sort((a, b) => a.localeCompare(b));
   }, [studentsInActiveHomeroom]);
 
   const visibleTiles = useMemo(() => {
     const list = studentsInActiveHomeroom;
     if (guildFilter === "ALL") return list;
-    return list.filter((s) => s.guild === guildFilter);
+    return list.filter((s: any) => s.guild === guildFilter);
   }, [studentsInActiveHomeroom, guildFilter]);
 
   const visibleListForGrid = useMemo(() => {
@@ -501,6 +496,7 @@ export default function BattlePage({ onBack }: Props) {
         const base = Math.max(1, hp.baseHP || 20);
         const after = Math.max(0, Math.min(base, before + delta));
 
+        // optimistic UI + anti-flicker pending
         pendingRef.current.set(id, { expected: after, base, ts: Date.now() });
 
         setHpRows((prev) => {
@@ -590,9 +586,17 @@ export default function BattlePage({ onBack }: Props) {
   const selectClass =
     "w-full rounded-xl border border-zinc-800 bg-zinc-950/50 px-3 py-2 text-sm text-zinc-100 outline-none focus:ring-2 focus:ring-cyan-500/30";
 
-  // ✅ 10 buttons total: -5..-1 and +1..+5 (includes ±4)
-  const damageOptions = [-5, -4, -3, -2, -1];
-  const healOptions = [+1, +2, +3, +4, +5];
+  // ✅ 10 buttons total: damage row then heal row
+  const damageOptions = [-1, -2, -3, -4, -5];
+  const healOptions = [1, 2, 3, 4, 5];
+
+  // ✅ styles: keep red/green “active” outlines
+  const neutralBtn =
+    "border-zinc-800 bg-zinc-950/40 text-zinc-200 hover:bg-zinc-900/60";
+  const activeDamage =
+    "border-red-400/80 bg-red-500/10 text-red-100 ring-2 ring-red-400/25";
+  const activeHeal =
+    "border-emerald-400/80 bg-emerald-500/10 text-emerald-100 ring-2 ring-emerald-400/25";
 
   return (
     <div className="w-full h-[100dvh]">
@@ -629,7 +633,7 @@ export default function BattlePage({ onBack }: Props) {
                 className={[
                   "rounded-xl border px-3 py-2 text-sm font-semibold transition",
                   showSessionInfo
-                    ? "border-cyan-500/40 bg-cyan-500/10 text-cyan-100"
+                    ? "border-cyan-400/60 bg-cyan-400/10 text-cyan-100"
                     : "border-zinc-800 bg-zinc-950/40 text-zinc-200 hover:bg-zinc-900/60",
                 ].join(" ")}
                 aria-label="Toggle session info"
@@ -714,7 +718,7 @@ export default function BattlePage({ onBack }: Props) {
                       className={[
                         "rounded-xl border px-3 py-2 text-sm font-semibold transition",
                         multiSelect
-                          ? "border-cyan-500/40 bg-cyan-500/10 text-cyan-100"
+                          ? "border-cyan-400/60 bg-cyan-400/10 text-cyan-100"
                           : "border-zinc-800 bg-zinc-950/40 text-zinc-200 hover:bg-zinc-900/60",
                       ].join(" ")}
                     >
@@ -772,10 +776,13 @@ export default function BattlePage({ onBack }: Props) {
                     const isSelected = selectedIds.some(
                       (x) => normId(x) === id
                     );
+
                     const pct = Math.max(
                       0,
                       Math.min(1, hp.currentHP / Math.max(1, hp.baseHP))
                     );
+
+                    const isDead = hp.currentHP <= 0;
 
                     return (
                       <button
@@ -783,19 +790,27 @@ export default function BattlePage({ onBack }: Props) {
                         type="button"
                         onClick={() => toggleSelect(id)}
                         className={[
-                          "text-left rounded-2xl border bg-zinc-950/30 transition p-2.5 h-full flex flex-col",
+                          "relative text-left rounded-2xl border bg-zinc-950/30 transition p-2.5 h-full flex flex-col",
                           isSelected
-                            ? "border-cyan-400 ring-2 ring-cyan-400/25"
+                            ? "border-cyan-200 ring-2 ring-cyan-300/55 bg-cyan-400/10"
                             : "border-zinc-800 hover:border-zinc-700",
                         ].join(" ")}
                       >
-                        <div className="flex items-start gap-2">
+                        {/* ✅ DEAD overlay (ON TOP of everything) */}
+                        {isDead && (
+                          <div className="pointer-events-none absolute inset-0 z-30 rounded-2xl bg-black/45 flex flex-col items-center justify-center">
+                            <div className="text-3xl leading-none">💀</div>
+                            <div className="mt-1 text-sm font-extrabold tracking-widest text-zinc-100">
+                              DEAD
+                            </div>
+                          </div>
+                        )}
+
+                        {/* NAME ROW (stays readable even when dead) */}
+                        <div className="relative z-10 flex items-start gap-2">
                           <div className="min-w-0 flex-1">
                             <div className="h-[16px] text-[12px] leading-[16px] font-semibold text-zinc-100 truncate">
                               {fullName(s)}
-                            </div>
-                            <div className="h-[12px] mt-0.5 text-[10px] leading-[12px] text-zinc-400 truncate">
-                              {s.guild ?? "—"}
                             </div>
                           </div>
 
@@ -806,31 +821,56 @@ export default function BattlePage({ onBack }: Props) {
                           </span>
                         </div>
 
-                        <div className="mt-1.5">
-                          <div className="flex items-center justify-between text-[10px] text-zinc-500 mb-1">
-                            <span>HP</span>
-                            <span className="text-zinc-200 tabular-nums">
-                              {hp.currentHP}/{hp.baseHP}
-                            </span>
+                        {/* ✅ Everything from GUILD down gets greyed out when dead */}
+                        <div
+                          className={[
+                            "relative z-10",
+                            isDead ? "opacity-30 grayscale" : "",
+                          ].join(" ")}
+                        >
+                          {/* Guild */}
+                          <div className="h-[12px] mt-0.5 text-[10px] leading-[12px] text-zinc-400 truncate">
+                            {(s as any).guild ?? "—"}
                           </div>
-                          <div className="h-2 w-full rounded-full bg-zinc-900/70 border border-zinc-800 overflow-hidden">
-                            <div
-                              className={`h-full ${status.barClass}`}
-                              style={{ width: `${Math.round(pct * 100)}%` }}
+
+                          {/* HP */}
+                          <div className="mt-1.5">
+                            <div className="flex items-center justify-between text-[10px] text-zinc-500 mb-1">
+                              <span>HP</span>
+                              <span className="text-zinc-200 tabular-nums">
+                                {hp.currentHP}/{hp.baseHP}
+                              </span>
+                            </div>
+                            <div className="h-2 w-full rounded-full bg-zinc-900/70 border border-zinc-800 overflow-hidden">
+                              <div
+                                className={`h-full ${status.barClass}`}
+                                style={{ width: `${Math.round(pct * 100)}%` }}
+                              />
+                            </div>
+                          </div>
+
+                          {/* Stats */}
+                          <div className="mt-2 grid grid-cols-2 gap-1">
+                            <StatPill label="Strength" value={(s as any).str} />
+                            <StatPill
+                              label="Dexterity"
+                              value={(s as any).dex}
                             />
+                            <StatPill
+                              label="Constitution"
+                              value={(s as any).con}
+                            />
+                            <StatPill
+                              label="Intelligence"
+                              value={(s as any).int}
+                            />
+                            <StatPill label="Wisdom" value={(s as any).wis} />
+                            <StatPill label="Charisma" value={(s as any).cha} />
                           </div>
-                        </div>
 
-                        <div className="mt-2 grid grid-cols-2 gap-1">
-                          <StatPill label="Strength" value={s.str} />
-                          <StatPill label="Dexterity" value={s.dex} />
-                          <StatPill label="Constitution" value={s.con} />
-                          <StatPill label="Intelligence" value={s.int} />
-                          <StatPill label="Wisdom" value={s.wis} />
-                          <StatPill label="Charisma" value={s.cha} />
+                          {/* Skills */}
+                          {tileSkillChips(s)}
                         </div>
-
-                        {tileSkillChips(s)}
                       </button>
                     );
                   })}
@@ -861,9 +901,11 @@ export default function BattlePage({ onBack }: Props) {
                     </div>
                   </div>
 
-                  {/* ✅ TWO ROWS: damage on top, heal on bottom (5 + 5) */}
-                  <div className="mt-2 space-y-2">
-                    {/* Damage */}
+                  {/* ✅ Two rows, 5 buttons each */}
+                  <div className="mt-2">
+                    <div className="text-[10px] uppercase tracking-widest text-zinc-500 mb-1">
+                      Damage
+                    </div>
                     <div className="grid grid-cols-5 gap-2">
                       {damageOptions.map((d) => {
                         const active = delta === d;
@@ -873,10 +915,8 @@ export default function BattlePage({ onBack }: Props) {
                             type="button"
                             onClick={() => setDelta(d)}
                             className={[
-                              "h-10 rounded-xl text-sm font-semibold border transition flex items-center justify-center",
-                              active
-                                ? "border-red-400 bg-red-500/15 text-red-100 ring-1 ring-red-400/40"
-                                : "border-red-800/70 bg-zinc-950/40 text-zinc-200 hover:bg-red-950/40",
+                              "rounded-xl py-2 text-sm font-semibold border transition",
+                              active ? activeDamage : neutralBtn,
                             ].join(" ")}
                           >
                             {d}
@@ -885,7 +925,9 @@ export default function BattlePage({ onBack }: Props) {
                       })}
                     </div>
 
-                    {/* Heal */}
+                    <div className="mt-2 text-[10px] uppercase tracking-widest text-zinc-500 mb-1">
+                      Heal
+                    </div>
                     <div className="grid grid-cols-5 gap-2">
                       {healOptions.map((d) => {
                         const active = delta === d;
@@ -895,10 +937,8 @@ export default function BattlePage({ onBack }: Props) {
                             type="button"
                             onClick={() => setDelta(d)}
                             className={[
-                              "h-10 rounded-xl text-sm font-semibold border transition flex items-center justify-center",
-                              active
-                                ? "border-emerald-300 bg-emerald-500/20 text-emerald-100 ring-1 ring-emerald-300/50"
-                                : "border-emerald-600/80 bg-zinc-950/40 text-zinc-200 hover:bg-emerald-950/35",
+                              "rounded-xl py-2 text-sm font-semibold border transition",
+                              active ? activeHeal : neutralBtn,
                             ].join(" ")}
                           >
                             +{d}
@@ -960,7 +1000,7 @@ export default function BattlePage({ onBack }: Props) {
                       "mt-2 rounded-2xl px-6 py-3 text-sm font-semibold transition border w-full",
                       submitting
                         ? "border-zinc-800 bg-zinc-900/60 text-zinc-400 cursor-not-allowed"
-                        : "border-cyan-500/30 bg-cyan-500/10 text-cyan-100 hover:bg-cyan-500/15",
+                        : "border-cyan-200/70 bg-cyan-400/12 text-cyan-100 hover:bg-cyan-400/18 ring-1 ring-cyan-300/25",
                     ].join(" ")}
                   >
                     {submitting ? "Submitting…" : "Submit"}
