@@ -1,90 +1,66 @@
 // src/hpApi.ts
+const HP_API_URL =
+  "https://script.google.com/macros/s/AKfycbw6gMIFYPvaljF3Ls-waojzprU6bygZZonOIJeKLopN2NSKgkDT-EsRKznxQiGpth_6/exec";
 
-type SubmitHpDeltaInput = {
+function normId(id: string | undefined | null) {
+  return String(id ?? "")
+    .replace(/\u00A0/g, " ")
+    .replace(/[–—]/g, "-")
+    .replace(/\s+/g, "")
+    .trim()
+    .toUpperCase();
+}
+
+export async function submitHpDelta(args: {
   studentId: string;
   delta: number;
   note?: string;
   sessionId: string;
-};
+}) {
+  const res = await fetch(HP_API_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      studentId: args.studentId,
+      delta: args.delta,
+      note: args.note ?? "",
+      sessionId: args.sessionId,
+    }),
+  });
 
-type HpApiOk = {
-  ok: true;
-  message?: string;
-  [k: string]: any;
-};
-
-function getHpWebAppUrl(): string {
-  const fromEnv = (import.meta as any)?.env?.VITE_HP_WEB_APP_URL;
-  const envUrl = typeof fromEnv === "string" ? fromEnv.trim() : "";
-
-  // Optional fallback so your GitHub repo works even if env isn't set yet.
-  const fallback =
-    "https://script.google.com/macros/s/AKfycbw6gMIFYPvaljF3Ls-waojzprU6bygZZonOIJeKLopN2NSKgkDT-EsRKznxQiGpth_6/exec";
-
-  const resolved = envUrl || fallback;
-  if (!resolved) {
-    throw new Error(
-      "HP_WEB_APP_URL is missing. Set VITE_HP_WEB_APP_URL in your environment."
-    );
+  const data = await res.json().catch(() => null);
+  if (!data || !data.ok) {
+    throw new Error(data?.error || "HP submit failed.");
   }
-  return resolved;
-}
-
-function cleanSessionId(sessionId: string): string {
-  return String(sessionId ?? "")
-    .replace(/^["'‘’“”]+|["'‘’“”]+$/g, "")
-    .replace(/\u00A0/g, " ")
-    .replace(/[–—]/g, "-")
-    .replace(/\s+/g, "")
-    .trim();
+  return data;
 }
 
 /**
- * Apps Script + browsers commonly fail CORS preflight when using
- * Content-Type: application/json.
- *
- * So we POST a "simple request" using text/plain to avoid preflight.
- * Your Apps Script doPost(e) can still JSON.parse(e.postData.contents).
+ * ✅ NEW: Fetch HP map from web app.
+ * Returns Map<StudentID, { baseHP, currentHP }>
  */
-export async function submitHpDelta(
-  input: SubmitHpDeltaInput
-): Promise<HpApiOk> {
-  const HP_WEB_APP_URL = getHpWebAppUrl();
-
-  const delta = Number(input.delta);
-  if (!Number.isFinite(delta) || delta === 0) {
-    throw new Error("Invalid HP delta.");
-  }
-
-  const payload = {
-    studentId: String(input.studentId ?? "").trim(),
-    delta,
-    note: String(input.note ?? "").trim(),
-    sessionId: cleanSessionId(input.sessionId),
-  };
-
-  const res = await fetch(HP_WEB_APP_URL, {
-    method: "POST",
-    // ✅ "simple" content-type => avoids OPTIONS preflight
-    headers: { "Content-Type": "text/plain;charset=utf-8" },
-    body: JSON.stringify(payload),
-    // credentials: "omit" is default; keep it that way
+export async function fetchHpMap(): Promise<
+  Map<string, { baseHP: number; currentHP: number }>
+> {
+  const res = await fetch(`${HP_API_URL}?action=hp&_=${Date.now()}`, {
+    method: "GET",
   });
 
-  // If Apps Script returns something readable, great. If not, still handle.
-  const text = await res.text().catch(() => "");
+  const data = await res.json().catch(() => null);
+  const out = new Map<string, { baseHP: number; currentHP: number }>();
 
-  if (!res.ok) {
-    throw new Error(text || `HTTP ${res.status} ${res.statusText}`);
+  if (!data || !data.ok || !Array.isArray(data.hp)) return out;
+
+  for (const r of data.hp) {
+    const id = normId(r?.studentId);
+    if (!id) continue;
+    const baseHP = Math.max(1, Math.round(Number(r?.baseHP ?? 20)));
+    const currentHP = Math.max(
+      0,
+      Math.min(baseHP, Math.round(Number(r?.currentHP ?? baseHP)))
+    );
+    out.set(id, { baseHP, currentHP });
   }
 
-  // Try JSON, but allow plain text
-  try {
-    const data = text ? JSON.parse(text) : null;
-    if (data && typeof data === "object") return data as HpApiOk;
-  } catch {
-    // ignore
-  }
-
-  return { ok: true, message: text || "Sent" };
+  return out;
 }

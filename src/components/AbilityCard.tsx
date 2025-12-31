@@ -35,6 +35,39 @@ const densityConfig: Record<
   },
 };
 
+function hpStatus(current: number, base: number) {
+  const b = Math.max(1, base || 1);
+  const pct = Math.max(0, Math.min(1, current / b));
+
+  if (current <= 0) {
+    return {
+      label: "Down",
+      pillClass: "bg-zinc-800 text-zinc-200 border border-zinc-700",
+      barClass: "bg-zinc-600",
+    };
+  }
+  if (pct < 0.4) {
+    return {
+      label: "Critical",
+      pillClass: "bg-red-950/50 text-red-200 border border-red-900/50",
+      barClass: "bg-red-500",
+    };
+  }
+  if (pct < 0.7) {
+    return {
+      label: "Wounded",
+      pillClass: "bg-amber-950/40 text-amber-200 border border-amber-900/50",
+      barClass: "bg-amber-400",
+    };
+  }
+  return {
+    label: "Healthy",
+    pillClass:
+      "bg-emerald-950/40 text-emerald-200 border border-emerald-900/50",
+    barClass: "bg-emerald-400",
+  };
+}
+
 export default function AbilityCard({
   person,
   density = "comfortable",
@@ -92,10 +125,11 @@ export default function AbilityCard({
     return [];
   }, [skills]);
 
-  // ✅ HP
+  // ✅ HP + status styling
   const hpBase = Math.max(1, Number(baseHP ?? 20));
   const hpCur = Math.max(0, Math.min(hpBase, Number(currentHP ?? hpBase)));
   const hpPct = Math.max(0, Math.min(1, hpCur / hpBase));
+  const status = hpStatus(hpCur, hpBase);
 
   return (
     <div
@@ -128,17 +162,29 @@ export default function AbilityCard({
         </div>
       </div>
 
-      {/* ✅ HP (compact, matches style) */}
+      {/* ✅ HP (status-based) */}
       <div className="mt-1">
-        <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.16em] text-zinc-500 mb-1">
-          <span>Health</span>
-          <span className="font-semibold text-zinc-200 tracking-normal">
-            {hpCur}/{hpBase}
-          </span>
+        <div className="flex items-center justify-between mb-1">
+          <div className="text-[10px] uppercase tracking-[0.16em] text-zinc-500">
+            Health
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span
+              className={`px-2 py-0.5 rounded-full text-[10px] leading-[12px] ${status.pillClass}`}
+              title={status.label}
+            >
+              {status.label}
+            </span>
+            <span className="text-[10px] font-semibold text-zinc-200 tabular-nums">
+              {hpCur}/{hpBase}
+            </span>
+          </div>
         </div>
+
         <div className="h-2 w-full rounded-full bg-zinc-950/60 border border-zinc-800/70 overflow-hidden">
           <div
-            className="h-full bg-emerald-400/80"
+            className={`h-full ${status.barClass}`}
             style={{ width: `${Math.round(hpPct * 100)}%` }}
           />
         </div>
