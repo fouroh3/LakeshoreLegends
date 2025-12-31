@@ -21,7 +21,8 @@ export async function submitHpDelta(args: {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      studentId: args.studentId,
+      // ✅ IMPORTANT: normalize so it matches the HP sheet ids consistently
+      studentId: normId(args.studentId),
       delta: args.delta,
       note: args.note ?? "",
       sessionId: args.sessionId,
@@ -36,7 +37,7 @@ export async function submitHpDelta(args: {
 }
 
 /**
- * ✅ NEW: Fetch HP map from web app.
+ * Fetch HP map from web app.
  * Returns Map<StudentID, { baseHP, currentHP }>
  */
 export async function fetchHpMap(): Promise<
@@ -54,11 +55,13 @@ export async function fetchHpMap(): Promise<
   for (const r of data.hp) {
     const id = normId(r?.studentId);
     if (!id) continue;
+
     const baseHP = Math.max(1, Math.round(Number(r?.baseHP ?? 20)));
     const currentHP = Math.max(
       0,
       Math.min(baseHP, Math.round(Number(r?.currentHP ?? baseHP)))
     );
+
     out.set(id, { baseHP, currentHP });
   }
 

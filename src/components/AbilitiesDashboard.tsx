@@ -49,10 +49,9 @@ type Props = {
   setAttrFilterMin: (n: number) => void;
 };
 
-// ✅ Poll HP every 30 seconds (smartboard-friendly, not spammy)
-const HP_POLL_MS = 30_000;
+// ✅ Smartboard-friendly refresh (not spammy)
+const HP_POLL_MS = 25_000;
 
-// Keep consistent with hpApi normalization (so IDs match reliably)
 function normId(id: string | undefined | null) {
   return String(id ?? "")
     .replace(/\u00A0/g, " ")
@@ -88,35 +87,28 @@ export default function AbilitiesDashboard({
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [activeIndex, setActiveIndex] = useState<number>(-1);
 
-  // ✅ HP map from Apps Script (keyed by normalized studentId)
   const [hpMap, setHpMap] = useState<
     Map<string, { baseHP: number; currentHP: number }>
   >(() => new Map());
 
-  // ✅ Poll HP every 30s (and pause when tab hidden)
+  // ✅ Poll HP every ~25s (pause if tab hidden, refresh on return)
   useEffect(() => {
     let cancelled = false;
-    let timer: number | null = null;
 
     const tick = async () => {
-      // If the tab is hidden, skip fetching to reduce noise/spam
       if (typeof document !== "undefined" && document.hidden) return;
-
       try {
         const m = await fetchHpMap();
         if (!cancelled) setHpMap(m);
       } catch {
-        // fail silently (dashboard should never crash due to HP polling)
+        // never crash the dashboard because of HP polling
       }
     };
 
-    // fetch immediately
     tick();
 
-    // poll
-    timer = window.setInterval(tick, HP_POLL_MS);
+    const id = window.setInterval(tick, HP_POLL_MS);
 
-    // also fetch when returning to the tab (instant catch-up)
     const onVis = () => {
       if (!document.hidden) tick();
     };
@@ -124,7 +116,7 @@ export default function AbilitiesDashboard({
 
     return () => {
       cancelled = true;
-      if (timer) window.clearInterval(timer);
+      window.clearInterval(id);
       document.removeEventListener("visibilitychange", onVis);
     };
   }, []);
@@ -402,7 +394,7 @@ export default function AbilitiesDashboard({
                 </div>
               </div>
 
-              {/* Card width (always responsive) */}
+              {/* Card width */}
               <div className="flex items-center gap-2">
                 <label className="text-sm text-zinc-300">Card width</label>
                 <input
@@ -426,7 +418,6 @@ export default function AbilitiesDashboard({
                   setShowSuggestions(false);
                   setActiveIndex(-1);
                   setDensity("comfortable");
-                  // force responsive forever
                   setMode("auto");
                   setColumns(6);
                   setAutoMinWidth(260);
@@ -486,7 +477,6 @@ export default function AbilitiesDashboard({
           autoMinWidth={autoMinWidth}
         >
           {data.map((p, i) => {
-            // ✅ overlay HP from hpMap onto student record
             const hpRow = hpMap.get(normId(p.id));
             const personWithHp = hpRow
               ? { ...p, hp: hpRow.currentHP, hpMax: hpRow.baseHP }

@@ -32,6 +32,11 @@ const MAX_TILES = 8;
 // If it somehow never matches, we’ll give up after this many ms.
 const PENDING_TTL_MS = 90_000;
 
+// ✅ For MANY BattlePages open (one per table): do NOT poll every 3s.
+// Spread load with jitter so devices don't hit the script at the same moment.
+const HP_POLL_MS = 15_000;
+const HP_JITTER_MS = 4_000;
+
 function stripQuotes(s: string | undefined | null): string {
   if (!s) return "";
   const t = String(s).trim();
@@ -141,7 +146,7 @@ function hpStatus(current: number, base: number): HpStatus {
 
   if (current <= 0) {
     return {
-      label: "Down",
+      label: "Dead",
       pillClass: "bg-zinc-800 text-zinc-200 border border-zinc-700",
       barClass: "bg-zinc-600",
     };
@@ -233,7 +238,7 @@ export default function BattlePage({ onBack }: Props) {
 
   const allowScroll = guildFilter === "ALL";
 
-  // Load students once (your existing CSV loader)
+  // Load students once
   useEffect(() => {
     (async () => {
       try {
@@ -308,7 +313,7 @@ export default function BattlePage({ onBack }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeHomeroom]);
 
-  // ✅ HP refresh from API (stable override logic)
+  // ✅ HP refresh from API (use 15–19s with jitter, not 3s)
   useEffect(() => {
     let alive = true;
 
@@ -338,26 +343,22 @@ export default function BattlePage({ onBack }: Props) {
         const now = Date.now();
         const pending = pendingRef.current;
 
-        // Build final rows while honoring pending overrides
         const finalRows: HpStateRow[] = parsed.map((row) => {
           const id = normId(row.studentId);
           const p = pending.get(id);
 
           if (!p) return row;
 
-          // if pending is too old, drop it
           if (now - p.ts > PENDING_TTL_MS) {
             pending.delete(id);
             return row;
           }
 
-          // if API now matches our expected, clear pending and trust API
           if (row.currentHP === p.expected) {
             pending.delete(id);
             return row;
           }
 
-          // otherwise, keep showing expected (prevents snap-back flicker)
           return { studentId: id, baseHP: p.base, currentHP: p.expected };
         });
 
@@ -368,7 +369,9 @@ export default function BattlePage({ onBack }: Props) {
     };
 
     loadHpFromApi();
-    const t = setInterval(loadHpFromApi, 3000);
+
+    const jitter = Math.floor(Math.random() * HP_JITTER_MS);
+    const t = setInterval(loadHpFromApi, HP_POLL_MS + jitter);
 
     return () => {
       alive = false;
@@ -397,7 +400,6 @@ export default function BattlePage({ onBack }: Props) {
   const getDisplayHp = (studentIdRaw: string) => {
     const id = normId(studentIdRaw);
 
-    // If we have pending override, prefer it
     const p = pendingRef.current.get(id);
     if (p) return { studentId: id, baseHP: p.base, currentHP: p.expected };
 
@@ -499,10 +501,8 @@ export default function BattlePage({ onBack }: Props) {
         const base = Math.max(1, hp.baseHP || 20);
         const after = Math.max(0, Math.min(base, before + delta));
 
-        // ✅ Set pending override (prevents UI bounce)
         pendingRef.current.set(id, { expected: after, base, ts: Date.now() });
 
-        // Optimistic UI in the grid immediately
         setHpRows((prev) => {
           const next = prev.slice();
           const idx = next.findIndex((r) => normId(r.studentId) === id);
@@ -530,7 +530,6 @@ export default function BattlePage({ onBack }: Props) {
 
           ok++;
         } catch {
-          // revert pending + UI on failure
           pendingRef.current.delete(id);
           setHpRows((prev) => {
             const next = prev.slice();
@@ -552,10 +551,8 @@ export default function BattlePage({ onBack }: Props) {
         setBanner({ type: "err", msg: `Partial: ${ok} ok, ${fail} failed.` });
       }
 
-      // ✅ prevent accidental double-hits
       setSelectedIds([]);
     } finally {
-      // ✅ always clear note after submit (you asked for this)
       setNote("");
       setSubmitting(false);
     }
@@ -593,7 +590,9 @@ export default function BattlePage({ onBack }: Props) {
   const selectClass =
     "w-full rounded-xl border border-zinc-800 bg-zinc-950/50 px-3 py-2 text-sm text-zinc-100 outline-none focus:ring-2 focus:ring-cyan-500/30";
 
-  const deltaOptions = [-5, -3, -2, -1, +1, +2, +3, +5];
+  // ✅ 10 buttons total: -5..-1 and +1..+5 (includes ±4)
+  const damageOptions = [-5, -4, -3, -2, -1];
+  const healOptions = [+1, +2, +3, +4, +5];
 
   return (
     <div className="w-full h-[100dvh]">
@@ -786,7 +785,7 @@ export default function BattlePage({ onBack }: Props) {
                         className={[
                           "text-left rounded-2xl border bg-zinc-950/30 transition p-2.5 h-full flex flex-col",
                           isSelected
-                            ? "border-cyan-500/70 ring-2 ring-cyan-500/15"
+                            ? "border-cyan-400 ring-2 ring-cyan-400/25"
                             : "border-zinc-800 hover:border-zinc-700",
                         ].join(" ")}
                       >
@@ -862,25 +861,51 @@ export default function BattlePage({ onBack }: Props) {
                     </div>
                   </div>
 
-                  <div className="mt-2 grid grid-cols-4 gap-2">
-                    {deltaOptions.map((d) => {
-                      const active = delta === d;
-                      return (
-                        <button
-                          key={d}
-                          type="button"
-                          onClick={() => setDelta(d)}
-                          className={[
-                            "rounded-xl py-2 text-sm font-semibold border transition",
-                            active
-                              ? "border-cyan-500/60 bg-cyan-500/10 text-cyan-100"
-                              : "border-zinc-800 bg-zinc-950/40 text-zinc-200 hover:bg-zinc-900/60",
-                          ].join(" ")}
-                        >
-                          {d > 0 ? `+${d}` : `${d}`}
-                        </button>
-                      );
-                    })}
+                  {/* ✅ TWO ROWS: damage on top, heal on bottom (5 + 5) */}
+                  <div className="mt-2 space-y-2">
+                    {/* Damage */}
+                    <div className="grid grid-cols-5 gap-2">
+                      {damageOptions.map((d) => {
+                        const active = delta === d;
+                        return (
+                          <button
+                            key={d}
+                            type="button"
+                            onClick={() => setDelta(d)}
+                            className={[
+                              "h-10 rounded-xl text-sm font-semibold border transition flex items-center justify-center",
+                              active
+                                ? "border-red-400 bg-red-500/15 text-red-100 ring-1 ring-red-400/40"
+                                : "border-red-800/70 bg-zinc-950/40 text-zinc-200 hover:bg-red-950/40",
+                            ].join(" ")}
+                          >
+                            {d}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Heal */}
+                    <div className="grid grid-cols-5 gap-2">
+                      {healOptions.map((d) => {
+                        const active = delta === d;
+                        return (
+                          <button
+                            key={d}
+                            type="button"
+                            onClick={() => setDelta(d)}
+                            className={[
+                              "h-10 rounded-xl text-sm font-semibold border transition flex items-center justify-center",
+                              active
+                                ? "border-emerald-300 bg-emerald-500/20 text-emerald-100 ring-1 ring-emerald-300/50"
+                                : "border-emerald-600/80 bg-zinc-950/40 text-zinc-200 hover:bg-emerald-950/35",
+                            ].join(" ")}
+                          >
+                            +{d}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
 
                   <div className="mt-2">
