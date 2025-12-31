@@ -24,7 +24,6 @@ const BATTLE_CONTROL_CSV =
 const HP_API_URL =
   "https://script.google.com/macros/s/AKfycbw6gMIFYPvaljF3Ls-waojzprU6bygZZonOIJeKLopN2NSKgkDT-EsRKznxQiGpth_6/exec";
 
-const MAX_TILES = 8;
 const PENDING_TTL_MS = 90_000;
 
 // ✅ For MANY BattlePages open (one per table): do NOT poll every 3s.
@@ -44,15 +43,6 @@ function normId(id: string | undefined | null) {
     .replace(/\s+/g, "")
     .trim()
     .toUpperCase();
-}
-
-function normHr(hr: string | undefined | null) {
-  // Normalizes “8–8” to “8-8”, trims NBSP, collapses whitespace.
-  return stripQuotes(String(hr ?? ""))
-    .replace(/\u00A0/g, " ")
-    .replace(/[–—]/g, "-")
-    .replace(/\s+/g, " ")
-    .trim();
 }
 
 function toNumber(n: string | undefined | null, fallback = 0): number {
@@ -213,7 +203,7 @@ function StatPill({
       <span
         className={[
           "text-[9px] leading-none tracking-wide",
-          muted ? "text-zinc-700" : "text-zinc-500",
+          muted ? "text-zinc-600" : "text-zinc-500",
         ].join(" ")}
       >
         {label}
@@ -264,8 +254,6 @@ export default function BattlePage({ onBack }: Props) {
 
   const bcCsvUrlBusted = () => `${BATTLE_CONTROL_CSV}&_=${Date.now()}`;
 
-  const allowScroll = guildFilter === "ALL";
-
   // Load students once
   useEffect(() => {
     (async () => {
@@ -292,9 +280,9 @@ export default function BattlePage({ onBack }: Props) {
 
         const parsed: BattleControlRow[] = rows
           .map((r) => {
-            const homeroom = normHr(
+            const homeroom = stripQuotes(
               getCell(r, map, "Homeroom", "HomeRoom", "HR", "Class", "Section")
-            );
+            ).trim();
             const status = stripQuotes(getCell(r, map, "Status")).trim();
             const sessionId = stripQuotes(
               getCell(
@@ -317,11 +305,8 @@ export default function BattlePage({ onBack }: Props) {
         const actives = parsed.filter(
           (r) => String(r.status).toUpperCase() === "ACTIVE"
         );
-
         if (actives.length > 0) {
-          const keep = actives.find(
-            (r) => normHr(r.homeroom) === normHr(activeHomeroom)
-          );
+          const keep = actives.find((r) => r.homeroom === activeHomeroom);
           const pick = keep ?? actives[0];
           setActiveHomeroom(pick.homeroom);
           setActiveSessionId(pick.sessionId);
@@ -415,9 +400,7 @@ export default function BattlePage({ onBack }: Props) {
       .filter((r) => String(r.status).toUpperCase() === "ACTIVE")
       .slice()
       .sort((a, b) =>
-        normHr(a.homeroom).localeCompare(normHr(b.homeroom), "en", {
-          numeric: true,
-        })
+        a.homeroom.localeCompare(b.homeroom, "en", { numeric: true })
       );
   }, [battleRows]);
 
@@ -445,7 +428,7 @@ export default function BattlePage({ onBack }: Props) {
   const studentsInActiveHomeroom = useMemo(() => {
     if (!activeHomeroom) return [];
     return students
-      .filter((s) => normHr(s.homeroom) === normHr(activeHomeroom))
+      .filter((s) => (s.homeroom ?? "").trim() === activeHomeroom)
       .slice()
       .sort((a, b) => fullName(a).localeCompare(fullName(b)));
   }, [students, activeHomeroom]);
@@ -463,9 +446,8 @@ export default function BattlePage({ onBack }: Props) {
     return list.filter((s: any) => s.guild === guildFilter);
   }, [studentsInActiveHomeroom, guildFilter]);
 
-  const visibleListForGrid = useMemo(() => {
-    return allowScroll ? visibleTiles : visibleTiles.slice(0, MAX_TILES);
-  }, [allowScroll, visibleTiles]);
+  // ✅ Always show all tiles; scroll will appear only if needed
+  const visibleListForGrid = useMemo(() => visibleTiles, [visibleTiles]);
 
   const selectedStudents = useMemo(() => {
     if (selectedIds.length === 0) return [];
@@ -642,14 +624,9 @@ export default function BattlePage({ onBack }: Props) {
   const healOptions = [1, 2, 3, 4, 5];
 
   return (
-    <div className="w-full h-[100dvh]">
-      <div
-        className={
-          allowScroll
-            ? "w-full h-[100dvh] overflow-auto"
-            : "w-full h-[100dvh] overflow-hidden"
-        }
-      >
+    // ✅ Fixed viewport, scroll only if necessary
+    <div className="w-full h-[100dvh] overflow-hidden">
+      <div className="w-full h-[100dvh] overflow-auto">
         <div className="w-full max-w-none px-3 sm:px-4 lg:px-6 py-2">
           {err && (
             <div className="mb-2 rounded-xl border border-red-900/50 bg-red-950/40 px-3 py-2 text-red-200 text-sm">
@@ -712,9 +689,7 @@ export default function BattlePage({ onBack }: Props) {
                   value={activeHomeroom}
                   onChange={(e) => {
                     const hr = e.target.value;
-                    const row = activeOptions.find(
-                      (r) => normHr(r.homeroom) === normHr(hr)
-                    );
+                    const row = activeOptions.find((r) => r.homeroom === hr);
                     setActiveHomeroom(hr);
                     setActiveSessionId(row?.sessionId ?? "");
                   }}
@@ -738,16 +713,13 @@ export default function BattlePage({ onBack }: Props) {
                   value={guildFilter}
                   onChange={(e) => setGuildFilter(e.target.value as any)}
                 >
-                  <option value="ALL">All guilds (scroll)</option>
+                  <option value="ALL">All guilds</option>
                   {guildOptions.map((g) => (
                     <option key={g} value={g}>
                       {g}
                     </option>
                   ))}
                 </select>
-                <div className="mt-1 text-[11px] text-zinc-500 truncate">
-                  {allowScroll ? "Scroll enabled" : `Max ${MAX_TILES} shown`}
-                </div>
               </div>
 
               <div>
@@ -790,13 +762,8 @@ export default function BattlePage({ onBack }: Props) {
 
           <div className="mt-2 rounded-2xl border border-zinc-800 bg-zinc-950/35 p-2">
             <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-2">
-              <div
-                className={
-                  allowScroll
-                    ? "min-h-0 overflow-auto pr-1"
-                    : "min-h-0 overflow-hidden"
-                }
-              >
+              {/* ✅ Students area: always scrolls if needed */}
+              <div className="min-h-0 overflow-auto pr-1">
                 <div className="flex items-center gap-2 mb-2 px-1 h-[22px]">
                   <div className="text-[10px] uppercase tracking-widest text-zinc-500 truncate">
                     Students ({activeHomeroom || "—"}) ·{" "}
@@ -805,12 +772,6 @@ export default function BattlePage({ onBack }: Props) {
                       : `Guild: ${guildFilter}`}
                   </div>
                   <div className="flex-1" />
-                  {!allowScroll && (
-                    <div className="text-[10px] text-zinc-500">
-                      Showing {Math.min(MAX_TILES, visibleTiles.length)} /{" "}
-                      {visibleTiles.length}
-                    </div>
-                  )}
                 </div>
 
                 <div className="grid gap-2 grid-cols-2 md:grid-cols-4 auto-rows-fr">
@@ -829,7 +790,7 @@ export default function BattlePage({ onBack }: Props) {
 
                     const isDead = hp.currentHP <= 0;
 
-                    // Keep identity readable; grey out from guild down
+                    // ✅ per your spec: everything from guild down is greyed out when dead
                     const muted = isDead;
 
                     return (
@@ -844,7 +805,16 @@ export default function BattlePage({ onBack }: Props) {
                             : "border-zinc-800 hover:border-zinc-700",
                         ].join(" ")}
                       >
-                        {/* Header stays readable */}
+                        {/* DEAD overlay: on top of everything else */}
+                        {isDead && (
+                          <div className="pointer-events-none absolute inset-0 z-50 rounded-2xl bg-zinc-950/60 flex flex-col items-center justify-center">
+                            <div className="text-4xl leading-none">💀</div>
+                            <div className="mt-1 text-base font-extrabold tracking-widest text-zinc-100">
+                              DEAD
+                            </div>
+                          </div>
+                        )}
+
                         <div className="relative z-10 flex items-start gap-2">
                           <div className="min-w-0 flex-1">
                             <div className="h-[16px] text-[12px] leading-[16px] font-semibold text-zinc-100 truncate">
@@ -868,73 +838,67 @@ export default function BattlePage({ onBack }: Props) {
                           </span>
                         </div>
 
-                        {/* Everything below header can be dimmed */}
-                        <div
-                          className={[
-                            "relative z-10",
-                            muted ? "opacity-35 grayscale" : "",
-                          ].join(" ")}
-                        >
-                          <div className="mt-1.5">
-                            <div className="flex items-center justify-between text-[10px] text-zinc-500 mb-1">
-                              <span>HP</span>
-                              <span className="text-zinc-200 tabular-nums">
-                                {hp.currentHP}/{hp.baseHP}
-                              </span>
-                            </div>
-                            <div className="h-2 w-full rounded-full bg-zinc-900/70 border border-zinc-800 overflow-hidden">
-                              <div
-                                className={`h-full ${status.barClass}`}
-                                style={{ width: `${Math.round(pct * 100)}%` }}
-                              />
-                            </div>
+                        <div className="relative z-10 mt-1.5">
+                          <div
+                            className={[
+                              "flex items-center justify-between text-[10px] mb-1",
+                              muted ? "text-zinc-700" : "text-zinc-500",
+                            ].join(" ")}
+                          >
+                            <span>HP</span>
+                            <span
+                              className={[
+                                "tabular-nums",
+                                muted ? "text-zinc-700" : "text-zinc-200",
+                              ].join(" ")}
+                            >
+                              {hp.currentHP}/{hp.baseHP}
+                            </span>
                           </div>
-
-                          <div className="mt-2 grid grid-cols-2 gap-1">
-                            <StatPill
-                              label="Strength"
-                              value={(s as any).str}
-                              muted={muted}
-                            />
-                            <StatPill
-                              label="Dexterity"
-                              value={(s as any).dex}
-                              muted={muted}
-                            />
-                            <StatPill
-                              label="Constitution"
-                              value={(s as any).con}
-                              muted={muted}
-                            />
-                            <StatPill
-                              label="Intelligence"
-                              value={(s as any).int}
-                              muted={muted}
-                            />
-                            <StatPill
-                              label="Wisdom"
-                              value={(s as any).wis}
-                              muted={muted}
-                            />
-                            <StatPill
-                              label="Charisma"
-                              value={(s as any).cha}
-                              muted={muted}
+                          <div className="h-2 w-full rounded-full bg-zinc-900/70 border border-zinc-800 overflow-hidden">
+                            <div
+                              className={`h-full ${status.barClass}`}
+                              style={{ width: `${Math.round(pct * 100)}%` }}
                             />
                           </div>
-
-                          {tileSkillChips(s, muted)}
                         </div>
 
-                        {/* DEAD overlay must be on top of everything */}
-                        {isDead && (
-                          <div className="pointer-events-none absolute inset-0 z-20 rounded-2xl bg-zinc-950/55 flex flex-col items-center justify-center">
-                            <div className="text-3xl leading-none">💀</div>
-                            <div className="mt-1 text-sm font-extrabold tracking-widest text-zinc-100">
-                              DEAD
-                            </div>
-                          </div>
-                        )}
+                        <div className="relative z-10 mt-2 grid grid-cols-2 gap-1">
+                          <StatPill
+                            label="Strength"
+                            value={(s as any).str}
+                            muted={muted}
+                          />
+                          <StatPill
+                            label="Dexterity"
+                            value={(s as any).dex}
+                            muted={muted}
+                          />
+                          <StatPill
+                            label="Constitution"
+                            value={(s as any).con}
+                            muted={muted}
+                          />
+                          <StatPill
+                            label="Intelligence"
+                            value={(s as any).int}
+                            muted={muted}
+                          />
+                          <StatPill
+                            label="Wisdom"
+                            value={(s as any).wis}
+                            muted={muted}
+                          />
+                          <StatPill
+                            label="Charisma"
+                            value={(s as any).cha}
+                            muted={muted}
+                          />
+                        </div>
+
+                        <div className="relative z-10">
+                          {tileSkillChips(s, muted)}
+                        </div>
                       </button>
                     );
                   })}
