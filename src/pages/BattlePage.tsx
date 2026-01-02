@@ -195,10 +195,10 @@ function StatPill({
   return (
     <div
       className={[
-        "flex items-center justify-between rounded-lg border px-2 py-1",
+        "flex items-center justify-between rounded-lg px-2 py-1 border",
         muted
-          ? "border-zinc-900 bg-zinc-950/20"
-          : "border-zinc-800 bg-zinc-950/35",
+          ? "border-zinc-900 bg-zinc-950/15"
+          : "border-zinc-800/70 bg-zinc-950/30",
       ].join(" ")}
     >
       <span
@@ -447,7 +447,6 @@ export default function BattlePage({ onBack }: Props) {
     return list.filter((s: any) => s.guild === guildFilter);
   }, [studentsInActiveHomeroom, guildFilter]);
 
-  // ✅ Always show all tiles; scroll will appear only if needed
   const visibleListForGrid = useMemo(() => visibleTiles, [visibleTiles]);
 
   const selectedStudents = useMemo(() => {
@@ -518,7 +517,6 @@ export default function BattlePage({ onBack }: Props) {
         const base = Math.max(1, hp.baseHP || 20);
         const after = Math.max(0, Math.min(base, before + delta));
 
-        // optimistic UI + anti-flicker pending
         pendingRef.current.set(id, { expected: after, base, ts: Date.now() });
 
         setHpRows((prev) => {
@@ -591,8 +589,8 @@ export default function BattlePage({ onBack }: Props) {
             className={[
               "rounded-full border px-2 py-0.5 text-[10px]",
               muted
-                ? "border-zinc-900 bg-zinc-950/15 text-zinc-600"
-                : "border-zinc-800 bg-zinc-950/40 text-zinc-200",
+                ? "border-zinc-900 bg-zinc-950/10 text-zinc-600"
+                : "border-zinc-800/70 bg-zinc-950/35 text-zinc-200",
             ].join(" ")}
             title={sk}
           >
@@ -604,8 +602,8 @@ export default function BattlePage({ onBack }: Props) {
             className={[
               "rounded-full border px-2 py-0.5 text-[10px]",
               muted
-                ? "border-zinc-900 bg-zinc-950/15 text-zinc-700"
-                : "border-zinc-800 bg-zinc-950/40 text-zinc-400",
+                ? "border-zinc-900 bg-zinc-950/10 text-zinc-700"
+                : "border-zinc-800/70 bg-zinc-950/35 text-zinc-400",
             ].join(" ")}
           >
             +{extra}
@@ -615,20 +613,36 @@ export default function BattlePage({ onBack }: Props) {
     );
   };
 
-  const bar = "rounded-2xl border border-zinc-800 bg-zinc-950/30 p-2";
+  // =======================
+  // ✅ STYLE: MATCH DASHBOARD
+  // - Panels: subtle borders
+  // - Student tiles: add dashboard-like gradient "sheen" so they pop
+  // =======================
+  const panel =
+    "rounded-2xl border border-zinc-800/60 bg-zinc-950/30 p-2 shadow-[0_8px_30px_rgb(0,0,0,0.35)]";
+  const innerPanel = "rounded-xl border border-zinc-800/55 bg-zinc-950/25 p-2";
   const label = "text-[10px] uppercase tracking-widest text-zinc-500";
   const selectClass =
-    "w-full rounded-xl border border-zinc-800 bg-zinc-950/50 px-3 py-2 text-sm text-zinc-100 outline-none focus:ring-2 focus:ring-cyan-500/30";
+    "w-full rounded-xl border border-zinc-800/70 bg-zinc-950/45 px-3 py-2 text-sm text-zinc-100 outline-none focus:ring-2 focus:ring-cyan-500/30";
 
-  // ✅ 10 buttons total: damage row then heal row
+  // tile structure:
+  // - borderless by default (transparent), subtle hover border
+  // - gradient layers behind content (like main dashboard cards)
+  const tileBase =
+    "relative text-left rounded-2xl transition p-2.5 h-full flex flex-col overflow-hidden bg-zinc-950/25 shadow-[0_10px_40px_rgb(0,0,0,0.45)]";
+  const tileHover =
+    "hover:border hover:border-zinc-800/70 hover:bg-zinc-950/30";
+  const tileSelected =
+    "ring-2 ring-cyan-300/35 bg-cyan-400/5 border border-cyan-300/70";
+  const tileUnselected = "border border-transparent";
+
   const damageOptions = [-1, -2, -3, -4, -5];
   const healOptions = [1, 2, 3, 4, 5];
 
   return (
-    // ✅ Fixed viewport; only the content area scrolls if needed
     <div className="w-full h-[100dvh] overflow-hidden">
       <div className="h-[100dvh] flex flex-col overflow-hidden">
-        {/* ====== Battle Mode Header (logo + title) ====== */}
+        {/* Header */}
         <div className="shrink-0 px-3 sm:px-4 lg:px-6 py-2 border-b border-zinc-800 bg-black/50">
           <div className="flex items-center gap-3">
             <img
@@ -656,7 +670,7 @@ export default function BattlePage({ onBack }: Props) {
                 "rounded-xl border px-3 py-2 text-sm font-semibold transition",
                 showSessionInfo
                   ? "border-cyan-400/60 bg-cyan-400/10 text-cyan-100"
-                  : "border-zinc-800 bg-zinc-950/40 text-zinc-200 hover:bg-zinc-900/60",
+                  : "border-zinc-800/70 bg-zinc-950/40 text-zinc-200 hover:bg-zinc-900/60",
               ].join(" ")}
               aria-label="Toggle session info"
               title="Toggle session info"
@@ -667,7 +681,7 @@ export default function BattlePage({ onBack }: Props) {
             <button
               type="button"
               onClick={onBack}
-              className="rounded-xl border border-zinc-800 bg-zinc-950/60 px-4 py-2 text-sm text-zinc-200 hover:bg-zinc-900"
+              className="rounded-xl border border-zinc-800/70 bg-zinc-950/50 px-4 py-2 text-sm text-zinc-200 hover:bg-zinc-900/60"
             >
               Back
             </button>
@@ -684,7 +698,7 @@ export default function BattlePage({ onBack }: Props) {
           )}
         </div>
 
-        {/* ====== Main content area (scroll only if needed) ====== */}
+        {/* Content */}
         <div className="flex-1 min-h-0 overflow-auto">
           <div className="w-full max-w-none px-3 sm:px-4 lg:px-6 py-2">
             {err && (
@@ -693,7 +707,8 @@ export default function BattlePage({ onBack }: Props) {
               </div>
             )}
 
-            <div className={bar}>
+            {/* Top controls */}
+            <div className={panel}>
               <div className="mt-2 grid grid-cols-1 md:grid-cols-3 gap-2">
                 <div>
                   <div className={label}>Active Homeroom</div>
@@ -749,7 +764,7 @@ export default function BattlePage({ onBack }: Props) {
                           "rounded-xl border px-3 py-2 text-sm font-semibold transition",
                           multiSelect
                             ? "border-cyan-400/60 bg-cyan-400/10 text-cyan-100"
-                            : "border-zinc-800 bg-zinc-950/40 text-zinc-200 hover:bg-zinc-900/60",
+                            : "border-zinc-800/70 bg-zinc-950/40 text-zinc-200 hover:bg-zinc-900/60",
                         ].join(" ")}
                       >
                         {multiSelect ? "Multi" : "Single"}
@@ -758,7 +773,7 @@ export default function BattlePage({ onBack }: Props) {
                       <button
                         type="button"
                         onClick={() => setSelectedIds([])}
-                        className="rounded-xl border border-zinc-800 bg-zinc-950/40 px-3 py-2 text-sm text-zinc-200 hover:bg-zinc-900/60"
+                        className="rounded-xl border border-zinc-800/70 bg-zinc-950/40 px-3 py-2 text-sm text-zinc-200 hover:bg-zinc-900/60"
                       >
                         Clear
                       </button>
@@ -773,9 +788,10 @@ export default function BattlePage({ onBack }: Props) {
               </div>
             </div>
 
-            <div className="mt-2 rounded-2xl border border-zinc-800 bg-zinc-950/35 p-2">
+            {/* Main area */}
+            <div className="mt-2 rounded-2xl border border-zinc-900/60 bg-zinc-950/15 p-2">
               <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-2">
-                {/* ✅ Students area: scrolls if needed */}
+                {/* Students */}
                 <div className="min-h-0 overflow-auto pr-1">
                   <div className="flex items-center gap-2 mb-2 px-1 h-[22px]">
                     <div className="text-[10px] uppercase tracking-widest text-zinc-500 truncate">
@@ -786,6 +802,8 @@ export default function BattlePage({ onBack }: Props) {
                     </div>
                     <div className="flex-1" />
                   </div>
+
+                  <div className="mb-2 border-t border-zinc-900/60" />
 
                   <div className="grid gap-2 grid-cols-2 md:grid-cols-4 auto-rows-fr">
                     {visibleListForGrid.map((s) => {
@@ -810,13 +828,21 @@ export default function BattlePage({ onBack }: Props) {
                           type="button"
                           onClick={() => toggleSelect(id)}
                           className={[
-                            "relative text-left rounded-2xl border bg-zinc-950/30 transition p-2.5 h-full flex flex-col",
-                            isSelected
-                              ? "border-cyan-300 ring-2 ring-cyan-300/35 bg-cyan-400/5"
-                              : "border-zinc-800 hover:border-zinc-700",
+                            tileBase,
+                            tileHover,
+                            isSelected ? tileSelected : tileUnselected,
                           ].join(" ")}
                         >
-                          {/* DEAD overlay: on top of everything else */}
+                          {/* ✅ dashboard-like gradient layers (behind content) */}
+                          <div className="pointer-events-none absolute inset-0 z-0">
+                            {/* top-left glow */}
+                            <div className="absolute -inset-10 opacity-70 bg-[radial-gradient(60%_60%_at_20%_10%,rgba(255,255,255,0.10),rgba(0,0,0,0)_60%)]" />
+                            {/* subtle diagonal sheen */}
+                            <div className="absolute inset-0 opacity-90 bg-gradient-to-br from-zinc-900/35 via-zinc-950/10 to-black/0" />
+                            {/* faint bottom vignette */}
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-transparent" />
+                          </div>
+
                           {isDead && (
                             <div className="pointer-events-none absolute inset-0 z-50 rounded-2xl bg-zinc-950/60 flex flex-col items-center justify-center">
                               <div className="text-4xl leading-none">💀</div>
@@ -866,7 +892,8 @@ export default function BattlePage({ onBack }: Props) {
                                 {hp.currentHP}/{hp.baseHP}
                               </span>
                             </div>
-                            <div className="h-2 w-full rounded-full bg-zinc-900/70 border border-zinc-800 overflow-hidden">
+
+                            <div className="h-2 w-full rounded-full bg-zinc-900/70 border border-zinc-800/65 overflow-hidden">
                               <div
                                 className={`h-full ${status.barClass}`}
                                 style={{
@@ -925,10 +952,11 @@ export default function BattlePage({ onBack }: Props) {
                   )}
                 </div>
 
+                {/* Console */}
                 <div className="min-h-0">
                   <div className="h-[22px] mb-2" />
 
-                  <div className="rounded-2xl border border-zinc-800 bg-zinc-950/30 p-2 flex flex-col">
+                  <div className={[panel, "flex flex-col"].join(" ")}>
                     <div className="flex items-center gap-2">
                       <div className="text-[10px] uppercase tracking-widest text-zinc-500">
                         Damage / Heal
@@ -942,7 +970,6 @@ export default function BattlePage({ onBack }: Props) {
                       </div>
                     </div>
 
-                    {/* ✅ Two rows, 5 buttons each */}
                     <div className="mt-2">
                       <div className="text-[10px] uppercase tracking-widest text-zinc-500 mb-1">
                         Damage
@@ -959,7 +986,7 @@ export default function BattlePage({ onBack }: Props) {
                                 "rounded-xl py-2 text-sm font-semibold border transition",
                                 active
                                   ? "border-red-400 bg-red-500/10 text-red-100 ring-2 ring-red-400/25"
-                                  : "border-zinc-800 bg-zinc-950/40 text-zinc-200 hover:bg-zinc-900/60",
+                                  : "border-zinc-800/70 bg-zinc-950/40 text-zinc-200 hover:bg-zinc-900/60",
                               ].join(" ")}
                             >
                               {d}
@@ -983,7 +1010,7 @@ export default function BattlePage({ onBack }: Props) {
                                 "rounded-xl py-2 text-sm font-semibold border transition",
                                 active
                                   ? "border-emerald-400 bg-emerald-500/10 text-emerald-100 ring-2 ring-emerald-400/25"
-                                  : "border-zinc-800 bg-zinc-950/40 text-zinc-200 hover:bg-zinc-900/60",
+                                  : "border-zinc-800/70 bg-zinc-950/40 text-zinc-200 hover:bg-zinc-900/60",
                               ].join(" ")}
                             >
                               +{d}
@@ -993,7 +1020,9 @@ export default function BattlePage({ onBack }: Props) {
                       </div>
                     </div>
 
-                    <div className="mt-2">
+                    <div className="mt-3 border-t border-zinc-900/60" />
+
+                    <div className="mt-3">
                       <div className="text-[10px] uppercase tracking-widest text-zinc-500 mb-1">
                         Note
                       </div>
@@ -1001,7 +1030,7 @@ export default function BattlePage({ onBack }: Props) {
                         value={note}
                         onChange={(e) => setNote(e.target.value)}
                         placeholder="Optional (what happened)"
-                        className="w-full rounded-xl border border-zinc-800 bg-zinc-950/50 px-3 py-2 text-sm text-zinc-100 outline-none focus:ring-2 focus:ring-cyan-500/30"
+                        className={selectClass}
                       />
                     </div>
 
@@ -1010,7 +1039,7 @@ export default function BattlePage({ onBack }: Props) {
                         <div className="text-[10px] uppercase tracking-widest text-zinc-500 mb-1">
                           Full Skills
                         </div>
-                        <div className="rounded-xl border border-zinc-800 bg-zinc-950/40 p-2">
+                        <div className={innerPanel}>
                           {selectedSkills.length === 0 ? (
                             <div className="text-[11px] text-zinc-500">
                               No skills listed.
@@ -1020,7 +1049,7 @@ export default function BattlePage({ onBack }: Props) {
                               {selectedSkills.map((sk) => (
                                 <span
                                   key={sk}
-                                  className="rounded-full border border-zinc-800 bg-zinc-950/40 px-2 py-0.5 text-[11px] text-zinc-200"
+                                  className="rounded-full border border-zinc-800/70 bg-zinc-950/35 px-2 py-0.5 text-[11px] text-zinc-200"
                                 >
                                   {sk}
                                 </span>
@@ -1044,7 +1073,7 @@ export default function BattlePage({ onBack }: Props) {
                       className={[
                         "mt-2 rounded-2xl px-6 py-3 text-sm font-semibold transition border w-full",
                         submitting
-                          ? "border-zinc-800 bg-zinc-900/60 text-zinc-400 cursor-not-allowed"
+                          ? "border-zinc-800/70 bg-zinc-900/60 text-zinc-400 cursor-not-allowed"
                           : "border-cyan-300/60 bg-cyan-400/10 text-cyan-100 hover:bg-cyan-400/15 ring-1 ring-cyan-300/15",
                       ].join(" ")}
                     >
