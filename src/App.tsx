@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import AbilitiesDashboard from "./components/AbilitiesDashboard";
 import BattlePage from "./pages/BattlePage";
+import StorePage from "./pages/StorePage"; // ✅ NEW
 import { loadStudents } from "./data";
 import type { Student } from "./types";
 import logoUrl from "./assets/Lakeshore Legends Logo.png";
@@ -12,22 +13,24 @@ type Density = "comfortable" | "compact" | "ultra";
 type GridMode = "auto" | "fixed";
 
 export default function App() {
-  // ✅ Route switch (dashboard unchanged unless ?view=battle)
+  // ✅ Route switch (dashboard unchanged unless ?view=battle or ?view=store)
   const view = useMemo(() => {
     const params = new URLSearchParams(window.location.search);
     return params.get("view") || "";
   }, []);
 
+  const goHome = () => {
+    const url = new URL(window.location.href);
+    url.searchParams.delete("view");
+    window.location.href = url.toString();
+  };
+
   if (view === "battle") {
-    return (
-      <BattlePage
-        onBack={() => {
-          const url = new URL(window.location.href);
-          url.searchParams.delete("view");
-          window.location.href = url.toString();
-        }}
-      />
-    );
+    return <BattlePage onBack={goHome} />;
+  }
+
+  if (view === "store") {
+    return <StorePage onBack={goHome} />; // ✅ NEW
   }
 
   const [students, setStudents] = useState<Student[]>([]);
@@ -289,6 +292,18 @@ export default function App() {
           <div className="flex-1" />
 
           <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                const url = new URL(window.location.href);
+                url.searchParams.set("view", "store");
+                window.location.href = url.toString();
+              }}
+              className="rounded-xl border border-zinc-800 bg-zinc-950/60 px-4 py-2 text-sm text-zinc-200 hover:bg-zinc-900"
+            >
+              Store
+            </button>
+
             <button
               type="button"
               onClick={() => {
