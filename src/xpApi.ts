@@ -84,22 +84,45 @@ export async function spendXp(args: {
   target: "STR" | "DEX" | "CON" | "INT" | "WIS" | "CHA";
   points: number;
 }): Promise<{ summary?: XpSummary }> {
-  const url = new URL(XP_API_URL);
-  url.searchParams.set("action", "spendXp");
+  // IMPORTANT:
+  // Use a "simple request" body to avoid browser CORS preflight (OPTIONS),
+  // which Apps Script web apps often don't handle reliably.
+  const body = new URLSearchParams({
+    action: "spendXp",
+    studentId: args.studentId,
+    pin: args.pin,
+    target: args.target,
+    points: String(args.points),
+  }).toString();
 
-  const raw = await fetchJson<any>(url.toString(), {
+  const raw = await fetchJson<any>(XP_API_URL, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(args),
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+      Accept: "application/json",
+    },
+    body,
   });
 
   if (raw?.ok !== true) throw new Error(raw?.error || "Spend failed");
 
-  let sum = raw.summary;
-  if (sum && sum.ok === true) {
-    const { ok, ...rest } = sum;
-    sum = rest;
-  }
+  // Normalize summary shape (your server returns summary as a plain object)
+  const sum = raw.summary
+    ? {
+        ...raw.summary,
+        recent: (raw.summary.recent ?? []).map((r: any) => ({
+          timestamp: String(r.timestamp ?? ""),
+          type: (String(r.type ?? "EARN").toUpperCase() === "SPEND"
+            ? "SPEND"
+            : "EARN") as "EARN" | "SPEND",
+          xp: Number(r.xp ?? 0),
+          target: (r.target
+            ? String(r.target).toUpperCase()
+            : undefined) as any,
+          note: r.note ? String(r.note) : undefined,
+        })),
+      }
+    : undefined;
 
   return { summary: sum };
 }

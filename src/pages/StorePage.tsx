@@ -26,13 +26,43 @@ const select =
 const btn =
   "rounded-xl border border-zinc-800/80 bg-zinc-950/60 px-3 py-2 text-sm text-white hover:bg-zinc-900 active:scale-[0.99] disabled:opacity-50 disabled:hover:bg-zinc-950/60";
 
-const buyCard =
-  "rounded-2xl border border-zinc-800/80 bg-zinc-950/60 hover:bg-zinc-900 active:scale-[0.99] disabled:opacity-50 disabled:hover:bg-zinc-950/60";
+const pill =
+  "inline-flex items-center gap-2 rounded-full border border-zinc-800/80 bg-black/20 px-3 py-1.5 text-xs text-white/80";
+
+const attrCardBase =
+  "rounded-2xl border border-zinc-800/80 bg-zinc-950/60 hover:bg-zinc-900 active:scale-[0.99] disabled:opacity-50 disabled:hover:bg-zinc-950/60 transition";
+
+const attrCardSelected =
+  "border-cyan-400/40 bg-cyan-400/10 hover:bg-cyan-400/10";
+
+function isSheetErrorLike(v: any) {
+  const s = String(v ?? "")
+    .trim()
+    .toUpperCase();
+  return (
+    s === "#REF!" ||
+    s === "#N/A" ||
+    s === "#VALUE!" ||
+    s === "#ERROR!" ||
+    s === "#DIV/0!"
+  );
+}
+
+function cleanText(v: any) {
+  if (v == null) return "";
+  const s = String(v)
+    .replace(/\u00A0/g, " ")
+    .trim();
+  if (!s) return "";
+  if (isSheetErrorLike(s)) return "";
+  return s;
+}
 
 function fullName(s: Student) {
-  const first = (s.first ?? "").trim();
-  const last = (s.last ?? "").trim();
-  return [last, first].filter(Boolean).join(", ");
+  const first = cleanText((s as any).first);
+  const last = cleanText((s as any).last);
+  const name = [last, first].filter(Boolean).join(", ");
+  return name || cleanText((s as any).name) || "Unknown";
 }
 
 function normIdForConfirm(v: string) {
@@ -68,33 +98,6 @@ function attrValFor(s: Student, t: AttrKey) {
   return Number(anyS?.[map[t]] ?? 0);
 }
 
-/** Dashboard-like emoji badge */
-function StatBadge({
-  icon,
-  title,
-  className = "",
-}: {
-  icon: string;
-  title?: string;
-  className?: string;
-}) {
-  return (
-    <span
-      title={title}
-      className={[
-        "inline-flex items-center justify-center",
-        "h-8 w-8 rounded-full",
-        "border border-zinc-700/70 bg-zinc-900/60",
-        "text-base leading-none",
-        "shadow-sm",
-        className,
-      ].join(" ")}
-    >
-      {icon}
-    </span>
-  );
-}
-
 export default function StorePage({ onBack }: Props) {
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
@@ -103,16 +106,19 @@ export default function StorePage({ onBack }: Props) {
   const [store, setStore] = useState<StoreState | null>(null);
   const [storeErr, setStoreErr] = useState<string | null>(null);
 
-  // Dropdown selector
+  // HR → Guild → Student
   const [hr, setHr] = useState<string>("");
   const [guild, setGuild] = useState<string>("");
   const [selectedId, setSelectedId] = useState<string>("");
 
   const [summary, setSummary] = useState<XpSummary | null>(null);
 
-  // prevent sticky PIN + wrong-student spend
+  // Safety inputs
   const [pin, setPin] = useState("");
   const [confirmId, setConfirmId] = useState("");
+
+  // Two-step purchase
+  const [pendingTarget, setPendingTarget] = useState<AttrKey | null>(null);
 
   const [spending, setSpending] = useState(false);
   const [spendErr, setSpendErr] = useState<string | null>(null);
@@ -127,10 +133,11 @@ export default function StorePage({ onBack }: Props) {
         setErr(null);
         const data = await loadStudents();
         if (!alive) return;
-        setStudents(data);
+        setStudents(Array.isArray(data) ? data : []);
       } catch (e: any) {
         if (!alive) return;
         setErr(e?.message ?? "Failed to load students");
+        setStudents([]);
       } finally {
         if (!alive) return;
         setLoading(false);
@@ -165,44 +172,50 @@ export default function StorePage({ onBack }: Props) {
   const storeLocked = store?.storeLocked ?? true;
   const maxPoints = store?.maxPointsPerOpen ?? 999;
 
-  // Homerooms list
+  // Homerooms list (robust)
   const homerooms = useMemo(() => {
     const set = new Set<string>();
-    for (const s of students) if (s.homeroom) set.add(String(s.homeroom));
+    for (const s of students) {
+      const h = cleanText((s as any).homeroom);
+      if (h) set.add(h);
+    }
     return Array.from(set).sort((a, b) =>
       a.localeCompare(b, "en", { numeric: true })
     );
   }, [students]);
 
-  // When HR changes, reset guild + student
+  // If HR changes: reset downstream steps
   useEffect(() => {
     setGuild("");
     setSelectedId("");
   }, [hr]);
 
-  // Guild list based on HR
+  // Guild list for selected HR
   const guildsForHr = useMemo(() => {
     const set = new Set<string>();
     for (const s of students) {
-      if (!hr || String(s.homeroom) !== hr) continue;
-      const g = String((s as any).guild ?? "");
+      const h = cleanText((s as any).homeroom);
+      if (!hr || h !== hr) continue;
+      const g = cleanText((s as any).guild);
       if (g) set.add(g);
     }
     return Array.from(set).sort((a, b) => a.localeCompare(b, "en"));
   }, [students, hr]);
 
-  // When guild changes, reset student
+  // If guild changes: reset student
   useEffect(() => {
     setSelectedId("");
   }, [guild]);
 
-  // Students for selected HR+Guild
+  // Students list for HR (+ optional guild)
   const studentsForPick = useMemo(() => {
     return students
       .filter((s) => {
-        if (!hr) return false;
-        if (String(s.homeroom) !== hr) return false;
-        if (guild && String((s as any).guild ?? "") !== guild) return false;
+        const h = cleanText((s as any).homeroom);
+        if (!hr) return false; // ✅ strict workflow: must pick HR first
+        if (h !== hr) return false;
+        const g = cleanText((s as any).guild);
+        if (guild && g !== guild) return false;
         return true;
       })
       .slice()
@@ -210,14 +223,15 @@ export default function StorePage({ onBack }: Props) {
   }, [students, hr, guild]);
 
   const selected = useMemo(
-    () => students.find((s) => s.id === selectedId) ?? null,
+    () => students.find((s) => (s as any).id === selectedId) ?? null,
     [students, selectedId]
   );
 
-  // clear sensitive inputs when switching students
+  // Clear sensitive inputs when switching students
   useEffect(() => {
     setPin("");
     setConfirmId("");
+    setPendingTarget(null);
     setSpendErr(null);
     setToast(null);
   }, [selectedId]);
@@ -248,34 +262,65 @@ export default function StorePage({ onBack }: Props) {
 
   const confirmOk =
     !!selected &&
-    normIdForConfirm(confirmId) === normIdForConfirm(String(selected.id ?? ""));
+    normIdForConfirm(confirmId) ===
+      normIdForConfirm(String((selected as any).id ?? ""));
 
-  async function doSpend(target: AttrKey) {
-    if (!selected) return;
+  const pointsAvailable = summary?.spendablePoints ?? 0;
+  const hasEnoughPoints = pointsAvailable >= 1;
+  const withinWindow = 1 <= maxPoints;
+
+  const canSelectAttribute =
+    !!selected &&
+    !storeLocked &&
+    !spending &&
+    !!pin.trim() &&
+    confirmOk &&
+    hasEnoughPoints &&
+    withinWindow;
+
+  const canConfirmPurchase = canSelectAttribute && !!pendingTarget;
+
+  const pendingMeta = useMemo(() => {
+    if (!selected || !pendingTarget) return null;
+    const current = attrValFor(selected, pendingTarget);
+    const next = current + 1;
+    const costXp = xpPerPoint;
+    const bal = summary?.balance ?? 0;
+    const afterBal = bal - costXp;
+    const afterPoints = Math.floor(Math.max(0, afterBal) / xpPerPoint);
+    const title =
+      ATTRS.find((a) => a.key === pendingTarget)?.title ?? pendingTarget;
+    const icon = ATTRS.find((a) => a.key === pendingTarget)?.icon ?? "⭐";
+    return { current, next, costXp, bal, afterBal, afterPoints, title, icon };
+  }, [selected, pendingTarget, xpPerPoint, summary?.balance]);
+
+  async function confirmSpend() {
+    if (!selected || !pendingTarget) return;
     if (storeLocked) return;
 
     setSpending(true);
     setSpendErr(null);
     try {
-      const pointsAvailable = summary?.spendablePoints ?? 0;
-      if (pointsAvailable < 1)
+      if (!hasEnoughPoints)
         throw new Error("Not enough XP to buy a point yet.");
-      if (1 > maxPoints) throw new Error("Spending is limited right now.");
+      if (!withinWindow) throw new Error("Spending is limited right now.");
       if (!pin.trim()) throw new Error("Enter the Store PIN.");
       if (!confirmOk) throw new Error("Confirm your StudentID to purchase.");
 
       const res = await spendXp({
-        studentId: selected.id,
+        studentId: (selected as any).id,
         pin: pin.trim(),
-        target,
+        target: pendingTarget,
         points: 1,
       });
 
-      const next = res.summary ?? (await getXpSummary(selected.id));
+      const next = res.summary ?? (await getXpSummary((selected as any).id));
       setSummary(next);
 
-      setToast(`✅ Purchased +1 ${target}`);
+      setToast(`✅ Purchased +1 ${pendingTarget}`);
       setTimeout(() => setToast(null), 1800);
+
+      setPendingTarget(null);
     } catch (e: any) {
       setSpendErr(e?.message ?? "Spend failed");
     } finally {
@@ -283,17 +328,10 @@ export default function StorePage({ onBack }: Props) {
     }
   }
 
-  // UI helpers for disabling
-  const canSpend =
-    !storeLocked &&
-    !spending &&
-    (summary?.spendablePoints ?? 0) >= 1 &&
-    !!pin.trim() &&
-    confirmOk;
+  const noHomerooms = !loading && homerooms.length === 0;
 
   return (
     <div className="min-h-screen w-full bg-zinc-950 text-zinc-100">
-      {/* Top bar */}
       <header className="sticky top-0 z-20 backdrop-blur bg-zinc-950/70 border-b border-zinc-800">
         <div className="w-full px-6 py-4 flex items-center gap-4">
           <button
@@ -339,44 +377,49 @@ export default function StorePage({ onBack }: Props) {
 
       <main className="w-full max-w-none px-4 sm:px-6 lg:px-8 py-4">
         <div className="mx-auto max-w-6xl space-y-4">
-          {/* ✅ FULL-WIDTH HOW IT WORKS (moved to top) */}
           <section className={`${card} ${cardPad}`}>
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
               <div>
                 <div className="text-base font-semibold">How it works</div>
                 <div className="text-sm text-white/70 mt-1">
-                  When the store is{" "}
-                  <span className="font-semibold text-white">open</span>, enter
-                  the PIN and confirm your StudentID to spend XP.
+                  Choose Homeroom → Guild → Student. Select an attribute to
+                  preview, then confirm the purchase.
                 </div>
               </div>
 
               <div className="flex flex-wrap gap-2">
-                <div className="rounded-xl border border-zinc-800/80 bg-black/20 px-3 py-2 text-sm">
-                  <div className={label}>Store</div>
-                  <div className="font-semibold">
+                <span className={pill}>
+                  <span className="text-white/50">Store</span>{" "}
+                  <span className="font-semibold">
                     {storeLocked ? "Closed" : "Open"}
-                  </div>
-                </div>
-                <div className="rounded-xl border border-zinc-800/80 bg-black/20 px-3 py-2 text-sm">
-                  <div className={label}>Cost</div>
-                  <div className="font-semibold">{xpPerPoint} XP / point</div>
-                </div>
-                <div className="rounded-xl border border-zinc-800/80 bg-black/20 px-3 py-2 text-sm">
-                  <div className={label}>Window limit</div>
-                  <div className="font-semibold">{maxPoints} max</div>
-                </div>
+                  </span>
+                </span>
+                <span className={pill}>
+                  <span className="text-white/50">Cost</span>{" "}
+                  <span className="font-semibold">{xpPerPoint} XP / point</span>
+                </span>
+                <span className={pill}>
+                  <span className="text-white/50">Window limit</span>{" "}
+                  <span className="font-semibold">{maxPoints} max</span>
+                </span>
               </div>
             </div>
 
             <div className="mt-3 text-xs text-white/60">
               Purchases are logged so teachers can verify later.
             </div>
+
+            {noHomerooms && (
+              <div className="mt-3 rounded-xl border border-red-500/20 bg-red-500/10 px-3 py-2 text-xs text-red-100">
+                No homerooms were found in the roster data. Check the published
+                sheet/CSV for a valid <b>Homeroom</b> column (and make sure it’s
+                not blank or showing errors like #REF!).
+              </div>
+            )}
           </section>
 
-          {/* ✅ MAIN 2-COLUMN LAYOUT */}
           <div className="grid grid-cols-1 lg:grid-cols-[360px_minmax(0,1fr)] gap-4">
-            {/* Left: dropdown picker */}
+            {/* LEFT: HR → Guild → Student */}
             <section className={`${card} ${cardPad}`}>
               <div className="flex items-end justify-between gap-3">
                 <div>
@@ -400,6 +443,7 @@ export default function StorePage({ onBack }: Props) {
                       className={select}
                       value={hr}
                       onChange={(e) => setHr(e.target.value)}
+                      disabled={homerooms.length === 0}
                     >
                       <option value="">Select…</option>
                       {homerooms.map((x) => (
@@ -408,7 +452,6 @@ export default function StorePage({ onBack }: Props) {
                         </option>
                       ))}
                     </select>
-                    {/* inset chevron */}
                     <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-white/50">
                       ▾
                     </div>
@@ -452,8 +495,8 @@ export default function StorePage({ onBack }: Props) {
                         {hr ? "Select…" : "Select homeroom first"}
                       </option>
                       {studentsForPick.map((s) => (
-                        <option key={s.id} value={s.id}>
-                          {fullName(s)} • {s.id}
+                        <option key={(s as any).id} value={(s as any).id}>
+                          {fullName(s)} • {(s as any).id}
                         </option>
                       ))}
                     </select>
@@ -470,9 +513,9 @@ export default function StorePage({ onBack }: Props) {
                   </div>
                   <div className="text-xs text-white/60 truncate">
                     {selected
-                      ? `${selected.homeroom} • ${selected.id} • ${String(
-                          (selected as any).guild ?? ""
-                        )}`
+                      ? `${cleanText((selected as any).homeroom)} • ${
+                          (selected as any).id
+                        } • ${cleanText((selected as any).guild)}`
                       : ""}
                   </div>
                 </div>
@@ -484,24 +527,23 @@ export default function StorePage({ onBack }: Props) {
               </div>
             </section>
 
-            {/* Right: XP + buy + recent */}
+            {/* RIGHT: XP + select + confirm */}
             <section className={`${card} ${cardPad}`}>
               <div>
                 <div className="text-base font-semibold">XP + Purchases</div>
                 <div className="text-xs text-white/60">
-                  Buy +1 attribute for {xpPerPoint} XP.
+                  Select an attribute, review, then confirm.
                 </div>
               </div>
 
               {!selected && (
                 <div className="mt-6 text-sm text-white/70">
-                  Select your character on the left.
+                  Select a student on the left.
                 </div>
               )}
 
               {selected && (
                 <>
-                  {/* XP boxes (centered) */}
                   <div className="mt-4 grid grid-cols-2 gap-3">
                     <div className="rounded-2xl border border-zinc-800/80 bg-black/20 px-3 py-2 text-center">
                       <div className={label}>XP Balance</div>
@@ -517,7 +559,6 @@ export default function StorePage({ onBack }: Props) {
                     </div>
                   </div>
 
-                  {/* Current attributes */}
                   <div className="mt-4">
                     <div className={label}>Current Attributes</div>
                     <div className="mt-2 grid grid-cols-3 gap-2">
@@ -527,11 +568,9 @@ export default function StorePage({ onBack }: Props) {
                           className="rounded-2xl border border-zinc-800/80 bg-black/20 px-3 py-2 text-center"
                         >
                           <div className="flex items-center justify-center gap-2 text-xs text-white/70">
-                            <StatBadge
-                              icon={icon}
-                              title={title}
-                              className="h-7 w-7 text-sm"
-                            />
+                            <span className="inline-flex items-center justify-center h-7 w-7 rounded-full border border-zinc-700/70 bg-zinc-900/60 text-sm">
+                              {icon}
+                            </span>
                             <span className="truncate">{title}</span>
                           </div>
                           <div className="text-lg font-bold mt-1 tabular-nums">
@@ -542,85 +581,110 @@ export default function StorePage({ onBack }: Props) {
                     </div>
                   </div>
 
-                  {/* PIN */}
-                  <div className="mt-4 rounded-2xl border border-zinc-800/80 bg-black/20 px-3 py-2">
-                    <div className={label}>Store PIN</div>
-                    <input
-                      className={input + " mt-1"}
-                      value={pin}
-                      onChange={(e) => setPin(e.target.value)}
-                      placeholder={
-                        storeLocked
-                          ? "Store is closed"
-                          : "Enter PIN shown by teacher"
-                      }
-                      disabled={storeLocked}
-                    />
-                    <div className="mt-2 text-[11px] text-white/60">
-                      {storeLocked
-                        ? "Store closed: you can view XP but cannot spend it."
-                        : "Store open: enter the PIN to unlock purchases."}
-                    </div>
-                  </div>
-
-                  {/* Confirm StudentID */}
-                  <div className="mt-3 rounded-2xl border border-zinc-800/80 bg-black/20 px-3 py-2">
-                    <div className="flex items-center justify-between gap-3">
-                      <div className={label}>Confirm StudentID</div>
-                      <button
-                        type="button"
-                        className="text-[11px] text-cyan-200 hover:text-cyan-100"
-                        onClick={() => setConfirmId(String(selected.id ?? ""))}
+                  <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="rounded-2xl border border-zinc-800/80 bg-black/20 px-3 py-2">
+                      <div className={label}>Store PIN</div>
+                      <input
+                        className={input + " mt-1"}
+                        value={pin}
+                        onChange={(e) => setPin(e.target.value)}
+                        placeholder={
+                          storeLocked
+                            ? "Store is closed"
+                            : "Enter PIN shown by teacher"
+                        }
                         disabled={storeLocked}
-                      >
-                        Tap to copy
-                      </button>
+                      />
+                      <div className="mt-2 text-[11px] text-white/60">
+                        {storeLocked
+                          ? "Store closed: you can view XP but cannot spend it."
+                          : "Store open: enter the PIN to unlock purchases."}
+                      </div>
                     </div>
 
-                    <input
-                      className={input + " mt-1"}
-                      value={confirmId}
-                      onChange={(e) => setConfirmId(e.target.value)}
-                      placeholder={`Type: ${selected.id}`}
-                      disabled={storeLocked}
-                    />
+                    <div className="rounded-2xl border border-zinc-800/80 bg-black/20 px-3 py-2">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className={label}>Confirm StudentID</div>
+                        <button
+                          type="button"
+                          className="text-[11px] text-cyan-200 hover:text-cyan-100"
+                          onClick={() =>
+                            setConfirmId(String((selected as any).id ?? ""))
+                          }
+                          disabled={storeLocked}
+                        >
+                          Tap to copy
+                        </button>
+                      </div>
 
-                    <div className="mt-2 text-[11px]">
-                      {confirmOk ? (
-                        <span className="text-cyan-200">
-                          ✓ StudentID confirmed
-                        </span>
-                      ) : (
-                        <span className="text-white/60">
-                          Must match exactly before purchase buttons unlock.
-                        </span>
-                      )}
+                      <input
+                        className={input + " mt-1"}
+                        value={confirmId}
+                        onChange={(e) => setConfirmId(e.target.value)}
+                        placeholder={`Type: ${(selected as any).id}`}
+                        disabled={storeLocked}
+                      />
+
+                      <div className="mt-2 text-[11px]">
+                        {confirmOk ? (
+                          <span className="text-cyan-200">
+                            ✓ StudentID confirmed
+                          </span>
+                        ) : (
+                          <span className="text-white/60">
+                            Must match exactly before purchasing.
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
 
-                  {/* Buy grid */}
+                  {/* Step 1: Select attribute */}
                   <div className="mt-5">
-                    <div className={label}>Buy +1 attribute</div>
+                    <div className="flex items-end justify-between gap-3">
+                      <div>
+                        <div className={label}>Step 1</div>
+                        <div className="text-sm font-semibold">
+                          Select an attribute (+1)
+                        </div>
+                      </div>
+                      <div className="text-xs text-white/60">
+                        Cost: {xpPerPoint} XP
+                      </div>
+                    </div>
+
                     <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                       {ATTRS.map(({ key, title, icon }) => {
                         const current = attrValFor(selected, key);
                         const next = current + 1;
+                        const isSelected = pendingTarget === key;
 
                         return (
                           <button
                             key={key}
-                            className={`${buyCard} p-4 text-center`}
-                            disabled={!canSpend}
-                            onClick={() => doSpend(key)}
+                            className={[
+                              attrCardBase,
+                              "p-4 text-center",
+                              isSelected ? attrCardSelected : "",
+                            ].join(" ")}
+                            disabled={!canSelectAttribute}
+                            onClick={() =>
+                              setPendingTarget((prev) =>
+                                prev === key ? null : key
+                              )
+                            }
                             title={
-                              canSpend
-                                ? `Buy +1 ${title}`
+                              canSelectAttribute
+                                ? isSelected
+                                  ? "Selected (tap again to unselect)"
+                                  : `Select ${title}`
                                 : "Need store open + PIN + confirm + enough XP"
                             }
                           >
-                            {/* Icon row (Placement A) */}
                             <div className="flex items-center justify-center">
-                              <StatBadge icon={icon} title={title} />
+                              <span className="inline-flex items-center justify-center h-8 w-8 rounded-full border border-zinc-700/70 bg-zinc-900/60 text-base">
+                                {icon}
+                              </span>
                             </div>
 
                             <div className="mt-3 text-[15px] font-semibold leading-tight text-white">
@@ -628,16 +692,122 @@ export default function StorePage({ onBack }: Props) {
                             </div>
 
                             <div className="mt-1 text-sm text-white/60">
-                              Cost: {xpPerPoint} XP
+                              {current} → {next}
                             </div>
 
-                            <div className="mt-1 text-sm text-white/70 tabular-nums">
-                              {current} → {next}
+                            <div className="mt-2 text-[11px] text-white/50">
+                              {isSelected ? "Selected" : "Tap to select"}
                             </div>
                           </button>
                         );
                       })}
                     </div>
+
+                    <div className="mt-3 text-xs text-white/60">
+                      {storeLocked
+                        ? "Store is closed."
+                        : !pin.trim()
+                        ? "Enter the Store PIN to unlock selection."
+                        : !confirmOk
+                        ? "Confirm your StudentID to unlock selection."
+                        : !hasEnoughPoints
+                        ? `Not enough XP. You need ${xpPerPoint} XP for 1 point.`
+                        : !withinWindow
+                        ? "Purchases are limited right now."
+                        : pendingTarget
+                        ? "Great — now review and confirm."
+                        : "Select an attribute to preview the purchase."}
+                    </div>
+                  </div>
+
+                  {/* Step 2: Review + confirm */}
+                  <div className="mt-5">
+                    <div className={label}>Step 2</div>
+                    <div className="text-sm font-semibold">Review purchase</div>
+
+                    {!pendingMeta && (
+                      <div className="mt-2 rounded-2xl border border-zinc-800/80 bg-black/20 px-3 py-3 text-sm text-white/70">
+                        Choose an attribute above to see what will change.
+                      </div>
+                    )}
+
+                    {pendingMeta && (
+                      <div className="mt-2 rounded-2xl border border-zinc-800/80 bg-black/20 px-4 py-3">
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <span className="inline-flex items-center justify-center h-8 w-8 rounded-full border border-zinc-700/70 bg-zinc-900/60 text-base">
+                              {pendingMeta.icon}
+                            </span>
+                            <div className="min-w-0">
+                              <div className="text-sm font-semibold truncate">
+                                +1 {pendingMeta.title}
+                              </div>
+                              <div className="text-xs text-white/60">
+                                {pendingMeta.current} → {pendingMeta.next}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="text-right">
+                            <div className={label}>Cost</div>
+                            <div className="text-sm font-semibold tabular-nums">
+                              {pendingMeta.costXp} XP
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-2">
+                          <div className="rounded-xl border border-zinc-800/80 bg-zinc-950/40 px-3 py-2 text-center">
+                            <div className={label}>XP now</div>
+                            <div className="text-sm font-semibold tabular-nums">
+                              {pendingMeta.bal}
+                            </div>
+                          </div>
+                          <div className="rounded-xl border border-zinc-800/80 bg-zinc-950/40 px-3 py-2 text-center">
+                            <div className={label}>XP after</div>
+                            <div className="text-sm font-semibold tabular-nums">
+                              {pendingMeta.afterBal}
+                            </div>
+                          </div>
+                          <div className="rounded-xl border border-zinc-800/80 bg-zinc-950/40 px-3 py-2 text-center">
+                            <div className={label}>Points now</div>
+                            <div className="text-sm font-semibold tabular-nums">
+                              {pointsAvailable}
+                            </div>
+                          </div>
+                          <div className="rounded-xl border border-zinc-800/80 bg-zinc-950/40 px-3 py-2 text-center">
+                            <div className={label}>Points after</div>
+                            <div className="text-sm font-semibold tabular-nums">
+                              {pendingMeta.afterPoints}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="mt-3 flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-end">
+                          <button
+                            className={btn}
+                            type="button"
+                            onClick={() => setPendingTarget(null)}
+                            disabled={spending}
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            className={[
+                              btn,
+                              canConfirmPurchase
+                                ? "border-cyan-400/30 bg-cyan-400/10 hover:bg-cyan-400/15 text-cyan-100"
+                                : "",
+                            ].join(" ")}
+                            type="button"
+                            onClick={confirmSpend}
+                            disabled={!canConfirmPurchase}
+                          >
+                            {spending ? "Purchasing…" : "Confirm Purchase"}
+                          </button>
+                        </div>
+                      </div>
+                    )}
 
                     {spendErr && (
                       <div className="mt-3 text-sm text-red-200">
