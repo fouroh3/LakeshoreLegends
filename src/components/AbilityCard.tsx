@@ -35,6 +35,39 @@ const densityConfig: Record<
   },
 };
 
+function hpStatus(current: number, base: number) {
+  const b = Math.max(1, base || 1);
+  const pct = Math.max(0, Math.min(1, current / b));
+
+  if (current <= 0) {
+    return {
+      label: "Dead",
+      pillClass: "bg-zinc-800 text-zinc-200 border border-zinc-700",
+      barClass: "bg-zinc-700",
+    };
+  }
+  if (pct < 0.4) {
+    return {
+      label: "Critical",
+      pillClass: "bg-red-950/50 text-red-200 border border-red-900/50",
+      barClass: "bg-red-500",
+    };
+  }
+  if (pct < 0.7) {
+    return {
+      label: "Wounded",
+      pillClass: "bg-amber-950/40 text-amber-200 border border-amber-900/50",
+      barClass: "bg-amber-400",
+    };
+  }
+  return {
+    label: "Healthy",
+    pillClass:
+      "bg-emerald-950/40 text-emerald-200 border border-emerald-900/50",
+    barClass: "bg-emerald-400",
+  };
+}
+
 export default function AbilityCard({
   person,
   density = "comfortable",
@@ -52,14 +85,14 @@ export default function AbilityCard({
     skills,
     portraitUrl,
     guild,
+    baseHP,
+    currentHP,
   } = person;
 
   const cfg = densityConfig[density];
 
-  // Full name without truncation
   const fullName = `${first ?? ""} ${last ?? ""}`.trim() || "Unnamed Legend";
 
-  // Stat badge over avatar
   const { badgeIcon } = useMemo(() => {
     const stats = [
       ["Strength", Number(str) || 0, "💪"],
@@ -78,7 +111,6 @@ export default function AbilityCard({
     return { badgeIcon: top[2] };
   }, [str, dex, con, int, wis, cha]);
 
-  // Normalize skills
   const skillList: string[] = useMemo(() => {
     if (Array.isArray(skills)) return skills.filter(Boolean);
     if (typeof skills === "string") {
@@ -90,16 +122,21 @@ export default function AbilityCard({
     return [];
   }, [skills]);
 
+  const hpBase = Math.max(1, Number(baseHP ?? 20));
+  const hpCur = Math.max(0, Math.min(hpBase, Number(currentHP ?? hpBase)));
+  const hpPct = Math.max(0, Math.min(1, hpCur / hpBase));
+  const status = hpStatus(hpCur, hpBase);
+
+  const isDead = hpCur <= 0;
+
   return (
     <div
       className={`flex flex-col ${cfg.gap} ${cfg.padding} rounded-2xl bg-zinc-900/70 border border-zinc-800/60 shadow-lg shadow-black/40`}
     >
-      {/* HEADER */}
+      {/* HEADER (never greyed out) */}
       <div className="flex items-start justify-between gap-2">
-        {/* Avatar + Name */}
         <div className="flex items-center gap-2.5 min-w-0">
           <Avatar name={fullName} src={portraitUrl} badge={badgeIcon} />
-
           <div className="min-w-0">
             <div
               className={`font-semibold text-zinc-50 leading-tight ${cfg.textSize}`}
@@ -109,48 +146,96 @@ export default function AbilityCard({
           </div>
         </div>
 
-        {/* Homeroom + Guild Badge */}
         <div className="flex flex-col items-center gap-1 flex-shrink-0">
-          {/* Class pill outlined */}
           <div className="inline-flex items-center justify-center px-2 py-0.5 rounded-full bg-zinc-900/80 border border-zinc-700/80 text-[10px] font-semibold text-zinc-200 whitespace-nowrap flex-shrink-0">
             {homeroom || "—"}
           </div>
-
-          {/* Guild badge */}
           <GuildBadge guild={guild} />
         </div>
       </div>
 
-      {/* STATS */}
-      <div className={`mt-1 ${cfg.statGap}`}>
-        <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">
-          <StatBar label="Strength" value={Number(str) || 0} />
-          <StatBar label="Dexterity" value={Number(dex) || 0} />
-          <StatBar label="Constitution" value={Number(con) || 0} />
-          <StatBar label="Intelligence" value={Number(int) || 0} />
-          <StatBar label="Wisdom" value={Number(wis) || 0} />
-          <StatBar label="Charisma" value={Number(cha) || 0} />
-        </div>
-      </div>
+      {/* EVERYTHING FROM HEALTH DOWN */}
+      <div className="relative">
+        {/* Grey-out layer (only affects the lower section) */}
+        <div
+          className={["relative", isDead ? "opacity-45 grayscale" : ""].join(
+            " "
+          )}
+        >
+          {/* HEALTH */}
+          <div className="mt-1">
+            <div className="flex items-center justify-between mb-1">
+              <div className="text-[10px] uppercase tracking-[0.16em] text-zinc-500">
+                Health
+              </div>
 
-      {/* SKILLS */}
-      <div className="mt-1">
-        <div className="text-[10px] uppercase tracking-[0.16em] text-zinc-500 mb-1">
-          Skills
+              <div className="flex items-center gap-2">
+                <span
+                  className={`px-2 py-0.5 rounded-full text-[10px] leading-[12px] ${status.pillClass}`}
+                  title={status.label}
+                >
+                  {status.label}
+                </span>
+                <span className="text-[10px] font-semibold text-zinc-200 tabular-nums">
+                  {hpCur}/{hpBase}
+                </span>
+              </div>
+            </div>
+
+            <div className="h-2 w-full rounded-full bg-zinc-950/60 border border-zinc-800/70 overflow-hidden">
+              <div
+                className={`h-full ${status.barClass}`}
+                style={{ width: `${Math.round(hpPct * 100)}%` }}
+              />
+            </div>
+          </div>
+
+          {/* STATS */}
+          <div className={`mt-3 ${cfg.statGap}`}>
+            <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">
+              <StatBar label="Strength" value={Number(str) || 0} />
+              <StatBar label="Dexterity" value={Number(dex) || 0} />
+              <StatBar label="Constitution" value={Number(con) || 0} />
+              <StatBar label="Intelligence" value={Number(int) || 0} />
+              <StatBar label="Wisdom" value={Number(wis) || 0} />
+              <StatBar label="Charisma" value={Number(cha) || 0} />
+            </div>
+          </div>
+
+          {/* SKILLS */}
+          <div className="mt-3">
+            <div className="text-[10px] uppercase tracking-[0.16em] text-zinc-500 mb-1">
+              Skills
+            </div>
+
+            {skillList.length === 0 ? (
+              <div className="text-xs text-zinc-500 italic">No skills yet</div>
+            ) : (
+              <div className="flex flex-wrap gap-1">
+                {skillList.map((skill) => (
+                  <span
+                    key={skill}
+                    className="inline-flex items-center rounded-full bg-zinc-900/80 border border-zinc-700/80 px-2 py-0.5 text-[10px] text-zinc-200"
+                  >
+                    {skill}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
-        {skillList.length === 0 ? (
-          <div className="text-xs text-zinc-500 italic">No skills yet</div>
-        ) : (
-          <div className="flex flex-wrap gap-1">
-            {skillList.map((skill) => (
-              <span
-                key={skill}
-                className="inline-flex items-center rounded-full bg-zinc-900/80 border border-zinc-700/80 px-2 py-0.5 text-[10px] text-zinc-200"
-              >
-                {skill}
-              </span>
-            ))}
+        {/* DEAD OVERLAY (on top of everything from health down) */}
+        {isDead && (
+          <div className="pointer-events-none absolute inset-0 z-20 flex flex-col items-center justify-center">
+            {/* subtle dark veil so overlay reads clearly */}
+            <div className="absolute inset-0 rounded-xl bg-zinc-950/35" />
+            <div className="relative flex flex-col items-center">
+              <div className="text-4xl leading-none drop-shadow">💀</div>
+              <div className="mt-1 text-xl font-extrabold tracking-widest text-zinc-100 drop-shadow">
+                DEAD
+              </div>
+            </div>
           </div>
         )}
       </div>

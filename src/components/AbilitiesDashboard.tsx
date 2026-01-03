@@ -1,10 +1,11 @@
+// src/components/AbilitiesDashboard.tsx
 import AbilitiesGrid from "./AbilitiesGrid";
 import AbilityCard from "./AbilityCard";
 import type { Student } from "../types";
-import { Fragment, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
+import { fetchHpMap } from "../hpApi";
 
 type Density = "comfortable" | "compact" | "ultra";
-type GridMode = "auto" | "fixed";
 
 type SuggestionType = "name" | "homeroom" | "guild" | "skill";
 
@@ -16,21 +17,27 @@ type SuggestionItem = {
 type Props = {
   data: Student[];
   density: Density;
-  mode: GridMode;
+
+  mode?: any;
   columns: number;
   autoMinWidth: number;
+
   query: string;
   setQuery: (q: string) => void;
+
   sortKey: string;
   setSortKey: (k: string) => void;
+
   homerooms: string[];
   selectedHRs: string[];
   setSelectedHRs: (hrs: string[]) => void;
+
   guilds: string[];
   selectedGuilds: string[];
   setSelectedGuilds: (g: string[]) => void;
+
   setDensity: (d: Density) => void;
-  setMode: (m: GridMode) => void;
+  setMode: (m: any) => void;
   setColumns: (n: number) => void;
   setAutoMinWidth: (n: number) => void;
 
@@ -41,10 +48,36 @@ type Props = {
   setAttrFilterMin: (n: number) => void;
 };
 
+const HP_POLL_MS = 25_000;
+
+function normId(id: string | undefined | null) {
+  return String(id ?? "")
+    .replace(/\u00A0/g, " ")
+    .replace(/[–—]/g, "-")
+    .replace(/\s+/g, "")
+    .trim()
+    .toUpperCase();
+}
+
+function skillsToArray(skills: Student["skills"]): string[] {
+  if (!skills) return [];
+  if (Array.isArray(skills))
+    return skills
+      .filter(Boolean)
+      .map((s) => String(s).trim())
+      .filter(Boolean);
+
+  const s = String(skills).trim();
+  if (!s) return [];
+  return s
+    .split(/[,;|]/g)
+    .map((x) => x.trim())
+    .filter(Boolean);
+}
+
 export default function AbilitiesDashboard({
   data,
   density,
-  mode,
   columns,
   autoMinWidth,
   query,
@@ -55,6 +88,7 @@ export default function AbilitiesDashboard({
   selectedHRs,
   setSelectedHRs,
   guilds,
+  selectedGuilds,
   setSelectedGuilds,
   setDensity,
   setMode,
@@ -68,11 +102,52 @@ export default function AbilitiesDashboard({
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [activeIndex, setActiveIndex] = useState<number>(-1);
 
+  const [hpMap, setHpMap] = useState<
+    Map<string, { baseHP: number; currentHP: number }>
+  >(() => new Map());
+
+  // ✅ Poll HP every ~25s (pause if tab hidden, refresh on return)
+  useEffect(() => {
+    let cancelled = false;
+
+    const tick = async () => {
+      if (typeof document !== "undefined" && document.hidden) return;
+      try {
+        const m = await fetchHpMap();
+        if (!cancelled) setHpMap(m);
+      } catch {
+        // never crash the dashboard because of HP polling
+      }
+    };
+
+    tick();
+    const id = window.setInterval(tick, HP_POLL_MS);
+
+    const onVis = () => {
+      if (!document.hidden) tick();
+    };
+    document.addEventListener("visibilitychange", onVis);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+      document.removeEventListener("visibilitychange", onVis);
+    };
+  }, []);
+
   const toggleHR = (hr: string) => {
     setSelectedHRs(
       selectedHRs.includes(hr)
         ? selectedHRs.filter((h) => h !== hr)
         : [...selectedHRs, hr]
+    );
+  };
+
+  const toggleGuild = (g: string) => {
+    setSelectedGuilds(
+      selectedGuilds.includes(g)
+        ? selectedGuilds.filter((x) => x !== g)
+        : [...selectedGuilds, g]
     );
   };
 
@@ -92,28 +167,16 @@ export default function AbilitiesDashboard({
       items.push({ text, type });
     };
 
-    // Names
     for (const s of data) {
       const full = `${s.first ?? ""} ${s.last ?? ""}`.trim();
       if (full) add(full, "name");
     }
 
-    // Homerooms
     for (const hr of homerooms) if (hr) add(hr, "homeroom");
-
-    // Guilds
     for (const g of guilds) if (g) add(g, "guild");
 
-    // Skills
     for (const s of data) {
-      const skills = Array.isArray(s.skills)
-        ? s.skills
-        : (s.skills ?? "")
-            .split(/[;,]/)
-            .map((t) => t.trim())
-            .filter(Boolean);
-
-      for (const sk of skills) if (sk) add(sk, "skill");
+      for (const sk of skillsToArray(s.skills)) add(sk, "skill");
     }
 
     return items.slice(0, 20);
@@ -161,6 +224,28 @@ export default function AbilitiesDashboard({
     { type: "guild", label: "Guilds", icon: "🛡️" },
     { type: "skill", label: "Skills", icon: "✨" },
   ] as const;
+
+  // ✅ actually use selectedGuilds (fixes TS warning + gives you guild filtering)
+  const filteredData = useMemo(() => {
+    let out = data;
+
+    if (selectedHRs.length) {
+      const set = new Set(selectedHRs);
+      out = out.filter((s) => set.has((s.homeroom ?? "").trim()));
+    }
+
+    if (selectedGuilds.length) {
+      const set = new Set(selectedGuilds);
+      out = out.filter((s: any) => set.has(String(s.guild ?? "").trim()));
+    }
+
+    if (attrFilterKey && attrFilterMin > 0) {
+      const key = attrFilterKey as keyof Student;
+      out = out.filter((s: any) => Number(s[key] ?? 0) >= attrFilterMin);
+    }
+
+    return out;
+  }, [data, selectedHRs, selectedGuilds, attrFilterKey, attrFilterMin]);
 
   return (
     <Fragment>
@@ -217,7 +302,7 @@ export default function AbilitiesDashboard({
                             const active = index === activeIndex;
                             return (
                               <button
-                                key={item.text}
+                                key={`${type}:${item.text}`}
                                 onMouseDown={(e) => {
                                   e.preventDefault();
                                   handleSelectSuggestion(item.text);
@@ -247,7 +332,6 @@ export default function AbilitiesDashboard({
 
             {/* Sort + Clear + Battle Filter */}
             <div className="flex flex-col items-center gap-2 sm:flex-row sm:items-center sm:justify-center sm:gap-3 lg:justify-end">
-              {/* Sort + Clear */}
               <div className="flex items-center gap-2">
                 <label className="text-sm text-zinc-300">Sort</label>
 
@@ -279,7 +363,6 @@ export default function AbilitiesDashboard({
                 </button>
               </div>
 
-              {/* Battle Filter */}
               <div className="flex items-center gap-2">
                 <label className="text-sm text-zinc-300 whitespace-nowrap">
                   Battle Filter
@@ -316,10 +399,9 @@ export default function AbilitiesDashboard({
             </div>
           </div>
 
-          {/* Density / Grid / Reset */}
+          {/* Density / Card width / Reset */}
           <div className="w-full flex flex-col gap-3 md:flex-row md:items-center md:justify-center">
             <div className="w-full md:w-auto flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:justify-center">
-              {/* Density */}
               <div className="flex items-center gap-2">
                 <span className="text-sm text-zinc-300">Density</span>
                 <div className="inline-flex rounded-xl border border-zinc-800 overflow-hidden">
@@ -341,61 +423,21 @@ export default function AbilitiesDashboard({
                 </div>
               </div>
 
-              {/* Grid mode */}
               <div className="flex items-center gap-2">
-                <span className="text-sm text-zinc-300">Grid</span>
-                <div className="inline-flex rounded-xl border border-zinc-800 overflow-hidden">
-                  {(["auto", "fixed"] as GridMode[]).map((m) => (
-                    <button
-                      key={m}
-                      onClick={() => setMode(m)}
-                      className={`px-3 py-2 text-sm ${
-                        mode === m
-                          ? "bg-zinc-800 text-zinc-100"
-                          : "bg-zinc-900/70 text-zinc-300 hover:bg-zinc-800/60"
-                      }`}
-                    >
-                      {m === "auto" ? "Responsive" : "Fixed"}
-                    </button>
-                  ))}
-                </div>
+                <label className="text-sm text-zinc-300">Card width</label>
+                <input
+                  type="range"
+                  min={200}
+                  max={360}
+                  value={autoMinWidth}
+                  onChange={(e) => setAutoMinWidth(Number(e.target.value))}
+                />
+                <span className="text-xs text-zinc-400 w-10">
+                  {autoMinWidth}px
+                </span>
               </div>
-
-              {/* Card size */}
-              {mode === "fixed" ? (
-                <div className="flex items-center gap-2">
-                  <label className="text-sm text-zinc-300">Columns</label>
-                  <input
-                    type="number"
-                    min={2}
-                    max={16}
-                    value={columns}
-                    onChange={(e) =>
-                      setColumns(
-                        Math.min(16, Math.max(2, Number(e.target.value) || 2))
-                      )
-                    }
-                    className="w-20 rounded-xl bg-zinc-900/70 border border-zinc-800 px-2 py-2 text-sm"
-                  />
-                </div>
-              ) : (
-                <div className="flex items-center gap-2">
-                  <label className="text-sm text-zinc-300">Card width</label>
-                  <input
-                    type="range"
-                    min={200}
-                    max={360}
-                    value={autoMinWidth}
-                    onChange={(e) => setAutoMinWidth(Number(e.target.value))}
-                  />
-                  <span className="text-xs text-zinc-400 w-10">
-                    {autoMinWidth}px
-                  </span>
-                </div>
-              )}
             </div>
 
-            {/* Reset */}
             <div className="w-full md:w-auto flex justify-center md:ml-4">
               <button
                 onClick={() => {
@@ -451,23 +493,65 @@ export default function AbilitiesDashboard({
               })}
             </div>
           </div>
+
+          {/* Guilds (optional but now actually wired) */}
+          {guilds.length > 0 && (
+            <div className="w-full">
+              <div className="flex flex-wrap gap-1.5 justify-center">
+                <button
+                  onClick={() => setSelectedGuilds([])}
+                  className={`rounded-full border px-3 py-1 text-sm ${
+                    selectedGuilds.length === 0
+                      ? "bg-cyan-600/15 border-cyan-600/40 text-cyan-200"
+                      : "bg-zinc-900/60 border-zinc-800 text-zinc-300 hover:bg-zinc-800/60"
+                  }`}
+                >
+                  All Guilds
+                </button>
+
+                {guilds.map((g) => {
+                  const active = selectedGuilds.includes(g);
+                  return (
+                    <button
+                      key={g}
+                      onClick={() => toggleGuild(g)}
+                      className={`rounded-full border px-3 py-1 text-sm ${
+                        active
+                          ? "bg-cyan-600/15 border-cyan-600/40 text-cyan-200"
+                          : "bg-zinc-900/60 border-zinc-800 text-zinc-300 hover:bg-zinc-800/60"
+                      }`}
+                    >
+                      {g}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
       </section>
 
       {/* Cards */}
       <div className="w-full max-w-none px-2 sm:px-4 lg:px-6 py-4">
         <AbilitiesGrid
-          mode={mode}
+          mode="auto"
           columns={columns}
           autoMinWidth={autoMinWidth}
         >
-          {data.map((p, i) => (
-            <AbilityCard
-              key={p.id ?? `${p.first}-${p.last}-${p.homeroom}-${i}`}
-              person={p}
-              density={density}
-            />
-          ))}
+          {filteredData.map((p, i) => {
+            const hpRow = hpMap.get(normId(p.id));
+            const personWithHp = hpRow
+              ? { ...p, baseHP: hpRow.baseHP, currentHP: hpRow.currentHP }
+              : p;
+
+            return (
+              <AbilityCard
+                key={p.id ?? `${p.first}-${p.last}-${p.homeroom}-${i}`}
+                person={personWithHp}
+                density={density}
+              />
+            );
+          })}
         </AbilitiesGrid>
       </div>
     </Fragment>
