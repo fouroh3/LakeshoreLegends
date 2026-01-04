@@ -1,20 +1,28 @@
 // src/xpApi.ts
-export const XP_API_URL =
-  "https://script.google.com/macros/s/AKfycbw6gMIFYPvaljF3Ls-waojzprU6bygZZonOIJeKLopN2NSKgkDT-EsRKznxQiGpth_6/exec";
+
+export type AttrKey = "STR" | "DEX" | "CON" | "INT" | "WIS" | "CHA";
+
+export type AttrsBundle = {
+  base: Record<AttrKey, number>;
+  bonus: Record<AttrKey, number>;
+  final: Record<AttrKey, number>;
+};
 
 export type StoreState = {
   storeLocked: boolean;
   windowLabel?: string;
   xpPerPoint: number;
-  maxPointsPerOpen?: number;
+  maxPointsPerOpen: number;
   openNonce?: string;
+  now?: string;
+  xpLastWriteIso?: string;
 };
 
 export type XpTxn = {
   timestamp: string;
   type: "EARN" | "SPEND";
   xp: number;
-  target?: "STR" | "DEX" | "CON" | "INT" | "WIS" | "CHA";
+  target?: string;
   note?: string;
 };
 
@@ -24,105 +32,136 @@ export type XpSummary = {
   spent: number;
   balance: number;
   spendablePoints: number;
-  recent?: XpTxn[];
+  recent: XpTxn[];
+  attrs?: AttrsBundle;
 };
 
-type ApiOk<T> = { ok: true } & T;
-type ApiErr = { ok: false; error: string };
+type SpendXpArgs = {
+  studentId: string;
+  pin: string;
+  target: AttrKey;
+  points: number;
+};
 
-async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(url, init);
-  const text = await res.text().catch(() => "");
-  if (!res.ok)
-    throw new Error(`XP API ${res.status}: ${text || res.statusText}`);
+type SpendXpResponse = {
+  ok: true;
+  studentId: string;
+  target: AttrKey;
+  points: number;
+  costXp: number;
+  balanceBefore: number;
+  balanceAfter: number;
+  bonusBefore?: number;
+  bonusAfter?: number;
+  attrs?: AttrsBundle;
+  summary?: XpSummary;
+  xpLastWriteIso?: string;
+};
+
+const XP_API_URL =
+  "https://script.google.com/macros/s/AKfycbw6gMIFYPvaljF3Ls-waojzprU6bygZZonOIJeKLopN2NSKgkDT-EsRKznxQiGpth_6/exec";
+
+/* ---------------- helpers ---------------- */
+
+function toBool(v: any): boolean {
+  if (typeof v === "boolean") return v;
+  const s = String(v ?? "")
+    .trim()
+    .toLowerCase();
+  if (["true", "1", "yes", "y"].includes(s)) return true;
+  if (["false", "0", "no", "n"].includes(s)) return false;
+  return false;
+}
+
+async function fetchJson(url: string, init?: RequestInit) {
+  // IMPORTANT:
+  // - Do NOT set custom headers for GET (avoids CORS preflight)
+  // - Only set headers when we truly need them (we won’t, since POST uses form encoding below)
+  const res = await fetch(url, {
+    ...init,
+    mode: "cors",
+    cache: "no-store",
+    redirect: "follow",
+  });
+
+  const text = await res.text();
+
+  let data: any;
   try {
-    return JSON.parse(text) as T;
+    data = text ? JSON.parse(text) : null;
   } catch {
-    throw new Error(`XP API invalid JSON: ${text.slice(0, 200)}`);
+    throw new Error("Invalid JSON from XP API");
   }
+
+  if (!res.ok || data?.ok === false) {
+    throw new Error(data?.error || `XP API error (${res.status})`);
+  }
+
+  return data;
 }
 
-function unwrap_<T>(x: ApiOk<T> | ApiErr): T {
-  if (!x || (x as any).ok !== true)
-    throw new Error((x as any)?.error || "XP API error");
-  const { ok, ...rest } = x as any;
-  return rest as T;
-}
+/* ---------------- API ---------------- */
 
 export async function getStoreState(): Promise<StoreState> {
-  const url = new URL(XP_API_URL);
-  url.searchParams.set("action", "xpState");
-  const raw = await fetchJson<ApiOk<StoreState> | ApiErr>(url.toString());
-  return unwrap_(raw);
-}
-
-export async function getXpSummary(studentId: string): Promise<XpSummary> {
-  const url = new URL(XP_API_URL);
-  url.searchParams.set("action", "xpSummary");
-  url.searchParams.set("studentId", studentId);
-
-  const raw = await fetchJson<ApiOk<XpSummary> | ApiErr>(url.toString());
-  const data = unwrap_(raw);
+  // cache bust without extra headers
+  const url = `${XP_API_URL}?action=xpState&t=${Date.now()}`;
+  const data = await fetchJson(url);
 
   return {
-    ...data,
-    recent: (data.recent ?? []).map((r: any) => ({
-      timestamp: String(r.timestamp ?? ""),
-      type: (String(r.type ?? "EARN").toUpperCase() === "SPEND"
-        ? "SPEND"
-        : "EARN") as "EARN" | "SPEND",
-      xp: Number(r.xp ?? 0),
-      target: (r.target ? String(r.target).toUpperCase() : undefined) as any,
-      note: r.note ? String(r.note) : undefined,
-    })),
+    storeLocked: toBool(data.storeLocked),
+    windowLabel: String(data.windowLabel ?? ""),
+    xpPerPoint: Number(data.xpPerPoint ?? 5),
+    maxPointsPerOpen: Number(data.maxPointsPerOpen ?? 999),
+    openNonce: String(data.openNonce ?? ""),
+    now: String(data.now ?? ""),
+    xpLastWriteIso: String(data.xpLastWriteIso ?? ""),
   };
 }
 
-export async function spendXp(args: {
-  studentId: string;
-  pin: string;
-  target: "STR" | "DEX" | "CON" | "INT" | "WIS" | "CHA";
-  points: number;
-}): Promise<{ summary?: XpSummary }> {
-  // IMPORTANT:
-  // Use a "simple request" body to avoid browser CORS preflight (OPTIONS),
-  // which Apps Script web apps often don't handle reliably.
-  const body = new URLSearchParams({
-    action: "spendXp",
-    studentId: args.studentId,
-    pin: args.pin,
-    target: args.target,
-    points: String(args.points),
-  }).toString();
+export async function getXpSummary(studentId: string): Promise<XpSummary> {
+  const url = `${XP_API_URL}?action=xpSummary&studentId=${encodeURIComponent(
+    studentId
+  )}&t=${Date.now()}`;
 
-  const raw = await fetchJson<any>(XP_API_URL, {
+  const data = await fetchJson(url);
+
+  return {
+    studentId: String(data.studentId || studentId),
+    earned: Number(data.earned ?? 0),
+    spent: Number(data.spent ?? 0),
+    balance: Number(data.balance ?? 0),
+    spendablePoints: Number(data.spendablePoints ?? 0),
+    recent: Array.isArray(data.recent)
+      ? data.recent.map((r: any) => ({
+          timestamp: String(r.timestamp ?? ""),
+          type:
+            String(r.type ?? "EARN").toUpperCase() === "SPEND"
+              ? "SPEND"
+              : "EARN",
+          xp: Number(r.xp ?? 0),
+          target: r.target ? String(r.target) : undefined,
+          note: r.note ? String(r.note) : undefined,
+        }))
+      : [],
+    attrs: data.attrs ?? undefined,
+  };
+}
+
+export async function spendXp(args: SpendXpArgs): Promise<SpendXpResponse> {
+  // ✅ Send as x-www-form-urlencoded to avoid preflight entirely
+  const body = new URLSearchParams();
+  body.set("action", "spendXp");
+  body.set("studentId", args.studentId);
+  body.set("pin", args.pin);
+  body.set("target", args.target);
+  body.set("points", String(args.points));
+  body.set("t", String(Date.now()));
+
+  const data = await fetchJson(XP_API_URL, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
-      Accept: "application/json",
-    },
     body,
+    // NO headers — browser sets correct form header automatically
   });
 
-  if (raw?.ok !== true) throw new Error(raw?.error || "Spend failed");
-
-  // Normalize summary shape (your server returns summary as a plain object)
-  const sum = raw.summary
-    ? {
-        ...raw.summary,
-        recent: (raw.summary.recent ?? []).map((r: any) => ({
-          timestamp: String(r.timestamp ?? ""),
-          type: (String(r.type ?? "EARN").toUpperCase() === "SPEND"
-            ? "SPEND"
-            : "EARN") as "EARN" | "SPEND",
-          xp: Number(r.xp ?? 0),
-          target: (r.target
-            ? String(r.target).toUpperCase()
-            : undefined) as any,
-          note: r.note ? String(r.note) : undefined,
-        })),
-      }
-    : undefined;
-
-  return { summary: sum };
+  return data as SpendXpResponse;
 }

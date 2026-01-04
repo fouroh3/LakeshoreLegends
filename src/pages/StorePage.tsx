@@ -8,6 +8,8 @@ import {
   spendXp,
   type StoreState,
   type XpSummary,
+  type AttrKey,
+  type AttrsBundle,
 } from "../xpApi";
 
 type Props = { onBack?: () => void };
@@ -74,8 +76,6 @@ function normIdForConfirm(v: string) {
     .toUpperCase();
 }
 
-type AttrKey = "STR" | "DEX" | "CON" | "INT" | "WIS" | "CHA";
-
 const ATTRS: { key: AttrKey; title: string; icon: string }[] = [
   { key: "STR", title: "Strength", icon: "💪" },
   { key: "DEX", title: "Dexterity", icon: "🏹" },
@@ -85,7 +85,8 @@ const ATTRS: { key: AttrKey; title: string; icon: string }[] = [
   { key: "CHA", title: "Charisma", icon: "💬" },
 ];
 
-function attrValFor(s: Student, t: AttrKey) {
+// Fallback base from roster (may be stale). Server attrs are preferred.
+function rosterBaseAttr(s: Student, t: AttrKey) {
   const anyS: any = s as any;
   const map: Record<AttrKey, string> = {
     STR: "str",
@@ -112,6 +113,7 @@ export default function StorePage({ onBack }: Props) {
   const [selectedId, setSelectedId] = useState<string>("");
 
   const [summary, setSummary] = useState<XpSummary | null>(null);
+  const [serverAttrs, setServerAttrs] = useState<AttrsBundle | null>(null);
 
   // Safety inputs
   const [pin, setPin] = useState("");
@@ -148,10 +150,11 @@ export default function StorePage({ onBack }: Props) {
     };
   }, []);
 
-  // Load store state
+  // Load store state (poll + cache-bust + keep last known)
   useEffect(() => {
     let alive = true;
-    (async () => {
+
+    const tick = async () => {
       try {
         setStoreErr(null);
         const st = await getStoreState();
@@ -160,19 +163,35 @@ export default function StorePage({ onBack }: Props) {
       } catch (e: any) {
         if (!alive) return;
         setStoreErr(e?.message ?? "Failed to load store state");
-        setStore((prev) => prev ?? { storeLocked: true, xpPerPoint: 5 });
+        // keep last known state; don't force "closed" on transient errors
+        setStore(
+          (prev) =>
+            prev ?? { storeLocked: true, xpPerPoint: 5, maxPointsPerOpen: 999 }
+        );
       }
-    })();
+    };
+
+    tick(); // initial load
+    const id = window.setInterval(tick, 5000);
+
+    const onVis = () => {
+      if (document.visibilityState === "visible") tick();
+    };
+    document.addEventListener("visibilitychange", onVis);
+
     return () => {
       alive = false;
+      window.clearInterval(id);
+      document.removeEventListener("visibilitychange", onVis);
     };
   }, []);
 
+  // ✅ these were missing (caused "Cannot find name storeLocked/xpPerPoint/maxPoints")
   const xpPerPoint = store?.xpPerPoint ?? 5;
   const storeLocked = store?.storeLocked ?? true;
   const maxPoints = store?.maxPointsPerOpen ?? 999;
 
-  // Homerooms list (robust)
+  // Homerooms list
   const homerooms = useMemo(() => {
     const set = new Set<string>();
     for (const s of students) {
@@ -212,7 +231,7 @@ export default function StorePage({ onBack }: Props) {
     return students
       .filter((s) => {
         const h = cleanText((s as any).homeroom);
-        if (!hr) return false; // ✅ strict workflow: must pick HR first
+        if (!hr) return false;
         if (h !== hr) return false;
         const g = cleanText((s as any).guild);
         if (guild && g !== guild) return false;
@@ -234,14 +253,16 @@ export default function StorePage({ onBack }: Props) {
     setPendingTarget(null);
     setSpendErr(null);
     setToast(null);
+    setServerAttrs(null);
   }, [selectedId]);
 
-  // Load XP summary
+  // Load XP summary (and attrs)
   useEffect(() => {
     let alive = true;
     (async () => {
       if (!selectedId) {
         setSummary(null);
+        setServerAttrs(null);
         return;
       }
       try {
@@ -249,10 +270,12 @@ export default function StorePage({ onBack }: Props) {
         const s = await getXpSummary(selectedId);
         if (!alive) return;
         setSummary(s);
+        setServerAttrs(s.attrs ?? null);
       } catch (e: any) {
         if (!alive) return;
         setSpendErr(e?.message ?? "Failed to load XP summary");
         setSummary(null);
+        setServerAttrs(null);
       }
     })();
     return () => {
@@ -280,19 +303,30 @@ export default function StorePage({ onBack }: Props) {
 
   const canConfirmPurchase = canSelectAttribute && !!pendingTarget;
 
+  function displayAttr(t: AttrKey) {
+    if (serverAttrs?.final?.[t] != null) return Number(serverAttrs.final[t]);
+    if (selected) return rosterBaseAttr(selected, t);
+    return 0;
+  }
+
   const pendingMeta = useMemo(() => {
     if (!selected || !pendingTarget) return null;
-    const current = attrValFor(selected, pendingTarget);
+
+    const current = displayAttr(pendingTarget);
     const next = current + 1;
+
     const costXp = xpPerPoint;
     const bal = summary?.balance ?? 0;
     const afterBal = bal - costXp;
     const afterPoints = Math.floor(Math.max(0, afterBal) / xpPerPoint);
+
     const title =
       ATTRS.find((a) => a.key === pendingTarget)?.title ?? pendingTarget;
     const icon = ATTRS.find((a) => a.key === pendingTarget)?.icon ?? "⭐";
+
     return { current, next, costXp, bal, afterBal, afterPoints, title, icon };
-  }, [selected, pendingTarget, xpPerPoint, summary?.balance]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selected, pendingTarget, xpPerPoint, summary?.balance, serverAttrs]);
 
   async function confirmSpend() {
     if (!selected || !pendingTarget) return;
@@ -314,8 +348,14 @@ export default function StorePage({ onBack }: Props) {
         points: 1,
       });
 
-      const next = res.summary ?? (await getXpSummary((selected as any).id));
-      setSummary(next);
+      // Apply server attrs immediately so UI updates instantly
+      if (res.attrs) setServerAttrs(res.attrs);
+
+      // Update summary (fallback to refresh if missing)
+      const nextSummary =
+        res.summary ?? (await getXpSummary((selected as any).id));
+      setSummary(nextSummary);
+      if (nextSummary.attrs) setServerAttrs(nextSummary.attrs);
 
       setToast(`✅ Purchased +1 ${pendingTarget}`);
       setTimeout(() => setToast(null), 1800);
@@ -412,8 +452,7 @@ export default function StorePage({ onBack }: Props) {
             {noHomerooms && (
               <div className="mt-3 rounded-xl border border-red-500/20 bg-red-500/10 px-3 py-2 text-xs text-red-100">
                 No homerooms were found in the roster data. Check the published
-                sheet/CSV for a valid <b>Homeroom</b> column (and make sure it’s
-                not blank or showing errors like #REF!).
+                sheet/CSV for a valid <b>Homeroom</b> column.
               </div>
             )}
           </section>
@@ -560,7 +599,7 @@ export default function StorePage({ onBack }: Props) {
                   </div>
 
                   <div className="mt-4">
-                    <div className={label}>Current Attributes</div>
+                    <div className={label}>Current Attributes (Final)</div>
                     <div className="mt-2 grid grid-cols-3 gap-2">
                       {ATTRS.map(({ key, title, icon }) => (
                         <div
@@ -574,7 +613,13 @@ export default function StorePage({ onBack }: Props) {
                             <span className="truncate">{title}</span>
                           </div>
                           <div className="text-lg font-bold mt-1 tabular-nums">
-                            {attrValFor(selected, key)}
+                            {displayAttr(key)}
+                          </div>
+                          <div className="text-[11px] text-white/50 mt-0.5">
+                            {serverAttrs?.base?.[key] != null &&
+                            serverAttrs?.bonus?.[key] != null
+                              ? `Base ${serverAttrs.base[key]} + Bonus ${serverAttrs.bonus[key]}`
+                              : "—"}
                           </div>
                         </div>
                       ))}
@@ -655,7 +700,7 @@ export default function StorePage({ onBack }: Props) {
 
                     <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                       {ATTRS.map(({ key, title, icon }) => {
-                        const current = attrValFor(selected, key);
+                        const current = displayAttr(key);
                         const next = current + 1;
                         const isSelected = pendingTarget === key;
 
