@@ -32,10 +32,10 @@ const pill =
   "inline-flex items-center gap-2 rounded-full border border-zinc-800/80 bg-black/20 px-3 py-1.5 text-xs text-white/80";
 
 const attrCardBase =
-  "relative rounded-2xl border border-zinc-800/80 bg-zinc-950/60 hover:bg-zinc-900 active:scale-[0.99] disabled:opacity-50 disabled:hover:bg-zinc-950/60 transition overflow-hidden";
+  "rounded-2xl border border-zinc-800/80 bg-zinc-950/60 hover:bg-zinc-900 active:scale-[0.99] disabled:opacity-50 disabled:hover:bg-zinc-950/60 transition";
 
 const attrCardSelected =
-  "border-cyan-400/45 bg-cyan-400/10 hover:bg-cyan-400/10 ring-1 ring-cyan-300/15";
+  "border-cyan-400/40 bg-cyan-400/10 hover:bg-cyan-400/10";
 
 function isSheetErrorLike(v: any) {
   const s = String(v ?? "")
@@ -99,6 +99,56 @@ function rosterBaseAttr(s: Student, t: AttrKey) {
   return Number(anyS?.[map[t]] ?? 0);
 }
 
+// ---------- Retry helper (spike-friendly) ----------
+function isTransientPurchaseError(err: any) {
+  const msg = String(err?.message ?? err ?? "").toLowerCase();
+  return (
+    msg.includes("failed to fetch") ||
+    msg.includes("network") ||
+    msg.includes("timeout") ||
+    msg.includes("timed out") ||
+    msg.includes("rate") ||
+    msg.includes("tempor") ||
+    msg.includes("try again") ||
+    msg.includes("service unavailable") ||
+    msg.includes("503") ||
+    msg.includes("502") ||
+    msg.includes("504")
+  );
+}
+
+function sleep(ms: number) {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+async function spendXpWithRetry(
+  args: Parameters<typeof spendXp>[0],
+  opts?: { retries?: number; baseDelayMs?: number }
+) {
+  const retries = opts?.retries ?? 3;
+  const baseDelayMs = opts?.baseDelayMs ?? 250;
+
+  let lastErr: any = null;
+
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      return await spendXp(args);
+    } catch (e: any) {
+      lastErr = e;
+
+      // Only retry if this looks transient, AND we have attempts left
+      if (!isTransientPurchaseError(e) || attempt === retries) throw e;
+
+      // Backoff + jitter so 60 iPads don't retry in sync
+      const jitter = Math.floor(Math.random() * baseDelayMs);
+      const delay = baseDelayMs * (attempt + 1) + jitter;
+      await sleep(delay);
+    }
+  }
+
+  throw lastErr ?? new Error("Purchase failed");
+}
+
 export default function StorePage({ onBack }: Props) {
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
@@ -150,7 +200,7 @@ export default function StorePage({ onBack }: Props) {
     };
   }, []);
 
-  // Load store state (poll + cache-bust + keep last known)
+  // Load store state (poll + keep last known)
   useEffect(() => {
     let alive = true;
 
@@ -163,7 +213,6 @@ export default function StorePage({ onBack }: Props) {
       } catch (e: any) {
         if (!alive) return;
         setStoreErr(e?.message ?? "Failed to load store state");
-        // keep last known state; don't force "closed" on transient errors
         setStore(
           (prev) =>
             prev ?? { storeLocked: true, xpPerPoint: 5, maxPointsPerOpen: 999 }
@@ -171,7 +220,7 @@ export default function StorePage({ onBack }: Props) {
       }
     };
 
-    tick(); // initial load
+    tick();
     const id = window.setInterval(tick, 5000);
 
     const onVis = () => {
@@ -333,6 +382,7 @@ export default function StorePage({ onBack }: Props) {
 
     setSpending(true);
     setSpendErr(null);
+
     try {
       if (!hasEnoughPoints)
         throw new Error("Not enough XP to buy a point yet.");
@@ -340,19 +390,30 @@ export default function StorePage({ onBack }: Props) {
       if (!pin.trim()) throw new Error("Enter the Store PIN.");
       if (!confirmOk) throw new Error("Confirm your StudentID to purchase.");
 
-      const res = await spendXp({
-        studentId: (selected as any).id,
-        pin: pin.trim(),
-        target: pendingTarget,
-        points: 1,
-      });
+      // ✅ Burst-friendly: retry transient failures
+      const res = await spendXpWithRetry(
+        {
+          studentId: (selected as any).id,
+          pin: pin.trim(),
+          target: pendingTarget,
+          points: 1,
+        },
+        { retries: 3, baseDelayMs: 250 }
+      );
 
-      if (res.attrs) setServerAttrs(res.attrs);
+      // ✅ Use server response directly (no extra round trip unless needed)
+      if (res?.attrs) setServerAttrs(res.attrs);
 
-      const nextSummary =
-        res.summary ?? (await getXpSummary((selected as any).id));
-      setSummary(nextSummary);
-      if (nextSummary.attrs) setServerAttrs(nextSummary.attrs);
+      if (res?.summary) {
+        setSummary(res.summary as XpSummary);
+        if ((res.summary as any)?.attrs)
+          setServerAttrs((res.summary as any).attrs);
+      } else {
+        // Backward compatibility if API doesn't return summary
+        const nextSummary = await getXpSummary((selected as any).id);
+        setSummary(nextSummary);
+        if (nextSummary.attrs) setServerAttrs(nextSummary.attrs);
+      }
 
       setToast(`✅ Purchased +1 ${pendingTarget}`);
       setTimeout(() => setToast(null), 1800);
@@ -366,35 +427,6 @@ export default function StorePage({ onBack }: Props) {
   }
 
   const noHomerooms = !loading && homerooms.length === 0;
-
-  const attrTileNumber = (key: AttrKey, isSelected: boolean) => {
-    const current = displayAttr(key);
-    const next = current + 1;
-
-    if (!isSelected) {
-      return (
-        <div className="mt-3 flex items-center justify-center">
-          <div className="text-4xl font-extrabold tabular-nums text-white leading-none">
-            {current}
-          </div>
-        </div>
-      );
-    }
-
-    return (
-      <div className="mt-3 flex items-center justify-center gap-3">
-        <div className="text-3xl font-extrabold tabular-nums text-white leading-none">
-          {current}
-        </div>
-        <div className="text-3xl font-extrabold text-cyan-200 leading-none">
-          →
-        </div>
-        <div className="text-4xl font-extrabold tabular-nums text-cyan-200 leading-none">
-          {next}
-        </div>
-      </div>
-    );
-  };
 
   return (
     <div className="min-h-screen w-full bg-zinc-950 text-zinc-100">
@@ -478,7 +510,7 @@ export default function StorePage({ onBack }: Props) {
           </section>
 
           <div className="grid grid-cols-1 lg:grid-cols-[360px_minmax(0,1fr)] gap-4">
-            {/* LEFT: HR → Guild → Student */}
+            {/* LEFT */}
             <section className={`${card} ${cardPad}`}>
               <div className="flex items-end justify-between gap-3">
                 <div>
@@ -586,7 +618,7 @@ export default function StorePage({ onBack }: Props) {
               </div>
             </section>
 
-            {/* RIGHT: XP + select + confirm */}
+            {/* RIGHT */}
             <section className={`${card} ${cardPad}`}>
               <div>
                 <div className="text-base font-semibold">XP + Purchases</div>
@@ -618,6 +650,7 @@ export default function StorePage({ onBack }: Props) {
                     </div>
                   </div>
 
+                  {/* ✅ PIN + CONFIRM ABOVE ATTRIBUTE SELECTION */}
                   <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div className="rounded-2xl border border-zinc-800/80 bg-black/20 px-3 py-2">
                       <div className={label}>Store PIN</div>
@@ -676,7 +709,7 @@ export default function StorePage({ onBack }: Props) {
                     </div>
                   </div>
 
-                  {/* Step 1: Select attribute */}
+                  {/* Step 1 */}
                   <div className="mt-5">
                     <div className="flex items-end justify-between gap-3">
                       <div>
@@ -692,6 +725,8 @@ export default function StorePage({ onBack }: Props) {
 
                     <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                       {ATTRS.map(({ key, title, icon }) => {
+                        const current = displayAttr(key);
+                        const next = current + 1;
                         const isSelected = pendingTarget === key;
 
                         return (
@@ -701,7 +736,6 @@ export default function StorePage({ onBack }: Props) {
                               attrCardBase,
                               "p-4 text-center",
                               isSelected ? attrCardSelected : "",
-                              isSelected ? "z-0" : "z-0", // keep tiles from stacking above Step 2
                             ].join(" ")}
                             disabled={!canSelectAttribute}
                             onClick={() =>
@@ -727,19 +761,31 @@ export default function StorePage({ onBack }: Props) {
                               {title}
                             </div>
 
-                            {attrTileNumber(key, isSelected)}
+                            <div className="mt-3 flex items-center justify-center">
+                              {!isSelected ? (
+                                <div className="text-4xl font-bold tabular-nums leading-none">
+                                  {current}
+                                </div>
+                              ) : (
+                                <div className="flex items-baseline justify-center gap-3 tabular-nums">
+                                  <span className="text-2xl font-semibold text-white/70">
+                                    {current}
+                                  </span>
+                                  <span className="text-2xl text-cyan-200">
+                                    →
+                                  </span>
+                                  <span className="text-4xl font-bold text-cyan-100 leading-none">
+                                    {next}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
 
-                            <div className="mt-2 text-[11px] text-white/50">
+                            <div className="mt-3 text-[11px] text-white/55">
                               {isSelected
                                 ? "Tap again to unselect"
                                 : "Tap to preview"}
                             </div>
-
-                            {isSelected && (
-                              <div className="mt-2 text-[11px] text-cyan-200/80">
-                                Selected
-                              </div>
-                            )}
                           </button>
                         );
                       })}
@@ -762,24 +808,19 @@ export default function StorePage({ onBack }: Props) {
                     </div>
                   </div>
 
-                  {/* Step 2: Review + confirm */}
-                  <div
-                    className={[
-                      "mt-6 pt-4 border-t border-zinc-800/60",
-                      "relative z-10", // <-- ensures this block stays above tile shadows
-                    ].join(" ")}
-                  >
+                  {/* Step 2 */}
+                  <div className="mt-5">
                     <div className={label}>Step 2</div>
                     <div className="text-sm font-semibold">Review purchase</div>
 
                     {!pendingMeta && (
-                      <div className="mt-2 rounded-2xl border border-zinc-800/80 bg-black/30 px-3 py-3 text-sm text-white/70">
+                      <div className="mt-2 rounded-2xl border border-zinc-800/80 bg-black/20 px-3 py-3 text-sm text-white/70">
                         Choose an attribute above to see what will change.
                       </div>
                     )}
 
                     {pendingMeta && (
-                      <div className="mt-2 rounded-2xl border border-zinc-800/80 bg-black/30 px-4 py-3">
+                      <div className="mt-2 rounded-2xl border border-zinc-800/80 bg-black/20 px-4 py-3">
                         <div className="flex items-center justify-between gap-3">
                           <div className="flex items-center gap-3 min-w-0">
                             <span className="inline-flex items-center justify-center h-8 w-8 rounded-full border border-zinc-700/70 bg-zinc-900/60 text-base">
@@ -867,41 +908,6 @@ export default function StorePage({ onBack }: Props) {
                         {toast}
                       </div>
                     )}
-                  </div>
-
-                  {/* Recent activity */}
-                  <div className="mt-6">
-                    <div className={label}>Recent activity</div>
-                    <div className="mt-2 space-y-2">
-                      {(summary?.recent ?? []).slice(0, 8).map((r, idx) => (
-                        <div
-                          key={idx}
-                          className="rounded-xl border border-zinc-800/80 bg-black/20 px-3 py-2 text-sm"
-                        >
-                          <div className="flex items-center justify-between gap-3">
-                            <div className="font-semibold min-w-0 truncate">
-                              {r.type === "SPEND"
-                                ? `Spent ${r.xp} XP`
-                                : `Earned ${r.xp} XP`}
-                              {r.target ? ` → ${r.target}` : ""}
-                            </div>
-                            <div className="text-[11px] text-white/60 whitespace-nowrap">
-                              {r.timestamp}
-                            </div>
-                          </div>
-                          {r.note && (
-                            <div className="text-xs text-white/60 mt-1">
-                              {r.note}
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                      {(summary?.recent?.length ?? 0) === 0 && (
-                        <div className="text-sm text-white/60">
-                          No transactions yet.
-                        </div>
-                      )}
-                    </div>
                   </div>
                 </>
               )}
