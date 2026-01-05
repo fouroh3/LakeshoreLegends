@@ -32,10 +32,10 @@ const pill =
   "inline-flex items-center gap-2 rounded-full border border-zinc-800/80 bg-black/20 px-3 py-1.5 text-xs text-white/80";
 
 const attrCardBase =
-  "rounded-2xl border border-zinc-800/80 bg-zinc-950/60 hover:bg-zinc-900 active:scale-[0.99] disabled:opacity-50 disabled:hover:bg-zinc-950/60 transition";
+  "relative rounded-2xl border border-zinc-800/80 bg-zinc-950/60 hover:bg-zinc-900 active:scale-[0.99] disabled:opacity-50 disabled:hover:bg-zinc-950/60 transition overflow-hidden";
 
 const attrCardSelected =
-  "border-cyan-400/40 bg-cyan-400/10 hover:bg-cyan-400/10";
+  "border-cyan-400/45 bg-cyan-400/10 hover:bg-cyan-400/10 ring-1 ring-cyan-300/15";
 
 function isSheetErrorLike(v: any) {
   const s = String(v ?? "")
@@ -186,7 +186,6 @@ export default function StorePage({ onBack }: Props) {
     };
   }, []);
 
-  // ✅ these were missing (caused "Cannot find name storeLocked/xpPerPoint/maxPoints")
   const xpPerPoint = store?.xpPerPoint ?? 5;
   const storeLocked = store?.storeLocked ?? true;
   const maxPoints = store?.maxPointsPerOpen ?? 999;
@@ -348,10 +347,8 @@ export default function StorePage({ onBack }: Props) {
         points: 1,
       });
 
-      // Apply server attrs immediately so UI updates instantly
       if (res.attrs) setServerAttrs(res.attrs);
 
-      // Update summary (fallback to refresh if missing)
       const nextSummary =
         res.summary ?? (await getXpSummary((selected as any).id));
       setSummary(nextSummary);
@@ -370,6 +367,35 @@ export default function StorePage({ onBack }: Props) {
 
   const noHomerooms = !loading && homerooms.length === 0;
 
+  const attrTileNumber = (key: AttrKey, isSelected: boolean) => {
+    const current = displayAttr(key);
+    const next = current + 1;
+
+    if (!isSelected) {
+      return (
+        <div className="mt-3 flex items-center justify-center">
+          <div className="text-4xl font-extrabold tabular-nums text-white leading-none">
+            {current}
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="mt-3 flex items-center justify-center gap-3">
+        <div className="text-3xl font-extrabold tabular-nums text-white leading-none">
+          {current}
+        </div>
+        <div className="text-3xl font-extrabold text-cyan-200 leading-none">
+          →
+        </div>
+        <div className="text-4xl font-extrabold tabular-nums text-cyan-200 leading-none">
+          {next}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen w-full bg-zinc-950 text-zinc-100">
       <header className="sticky top-0 z-20 backdrop-blur bg-zinc-950/70 border-b border-zinc-800">
@@ -383,14 +409,8 @@ export default function StorePage({ onBack }: Props) {
 
           <div className="flex-1">
             <h1 className="text-lg sm:text-xl font-bold tracking-wide">
-              XP Store
+              Attribute Store
             </h1>
-            <div className="text-xs text-white/60 mt-0.5">
-              {storeLocked ? "Store Closed" : "Store Open"}
-              {store?.windowLabel ? ` • ${store.windowLabel}` : ""}
-              {` • ${xpPerPoint} XP = 1 Attribute Point`}
-              {storeErr ? " • (status may be delayed)" : ""}
-            </div>
           </div>
 
           <div className="text-right">
@@ -598,34 +618,6 @@ export default function StorePage({ onBack }: Props) {
                     </div>
                   </div>
 
-                  <div className="mt-4">
-                    <div className={label}>Current Attributes (Final)</div>
-                    <div className="mt-2 grid grid-cols-3 gap-2">
-                      {ATTRS.map(({ key, title, icon }) => (
-                        <div
-                          key={key}
-                          className="rounded-2xl border border-zinc-800/80 bg-black/20 px-3 py-2 text-center"
-                        >
-                          <div className="flex items-center justify-center gap-2 text-xs text-white/70">
-                            <span className="inline-flex items-center justify-center h-7 w-7 rounded-full border border-zinc-700/70 bg-zinc-900/60 text-sm">
-                              {icon}
-                            </span>
-                            <span className="truncate">{title}</span>
-                          </div>
-                          <div className="text-lg font-bold mt-1 tabular-nums">
-                            {displayAttr(key)}
-                          </div>
-                          <div className="text-[11px] text-white/50 mt-0.5">
-                            {serverAttrs?.base?.[key] != null &&
-                            serverAttrs?.bonus?.[key] != null
-                              ? `Base ${serverAttrs.base[key]} + Bonus ${serverAttrs.bonus[key]}`
-                              : "—"}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
                   <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div className="rounded-2xl border border-zinc-800/80 bg-black/20 px-3 py-2">
                       <div className={label}>Store PIN</div>
@@ -700,8 +692,6 @@ export default function StorePage({ onBack }: Props) {
 
                     <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                       {ATTRS.map(({ key, title, icon }) => {
-                        const current = displayAttr(key);
-                        const next = current + 1;
                         const isSelected = pendingTarget === key;
 
                         return (
@@ -711,6 +701,7 @@ export default function StorePage({ onBack }: Props) {
                               attrCardBase,
                               "p-4 text-center",
                               isSelected ? attrCardSelected : "",
+                              isSelected ? "z-0" : "z-0", // keep tiles from stacking above Step 2
                             ].join(" ")}
                             disabled={!canSelectAttribute}
                             onClick={() =>
@@ -736,13 +727,19 @@ export default function StorePage({ onBack }: Props) {
                               {title}
                             </div>
 
-                            <div className="mt-1 text-sm text-white/60">
-                              {current} → {next}
-                            </div>
+                            {attrTileNumber(key, isSelected)}
 
                             <div className="mt-2 text-[11px] text-white/50">
-                              {isSelected ? "Selected" : "Tap to select"}
+                              {isSelected
+                                ? "Tap again to unselect"
+                                : "Tap to preview"}
                             </div>
+
+                            {isSelected && (
+                              <div className="mt-2 text-[11px] text-cyan-200/80">
+                                Selected
+                              </div>
+                            )}
                           </button>
                         );
                       })}
@@ -760,24 +757,29 @@ export default function StorePage({ onBack }: Props) {
                         : !withinWindow
                         ? "Purchases are limited right now."
                         : pendingTarget
-                        ? "Great — now review and confirm."
+                        ? "Great — now review and confirm below."
                         : "Select an attribute to preview the purchase."}
                     </div>
                   </div>
 
                   {/* Step 2: Review + confirm */}
-                  <div className="mt-5">
+                  <div
+                    className={[
+                      "mt-6 pt-4 border-t border-zinc-800/60",
+                      "relative z-10", // <-- ensures this block stays above tile shadows
+                    ].join(" ")}
+                  >
                     <div className={label}>Step 2</div>
                     <div className="text-sm font-semibold">Review purchase</div>
 
                     {!pendingMeta && (
-                      <div className="mt-2 rounded-2xl border border-zinc-800/80 bg-black/20 px-3 py-3 text-sm text-white/70">
+                      <div className="mt-2 rounded-2xl border border-zinc-800/80 bg-black/30 px-3 py-3 text-sm text-white/70">
                         Choose an attribute above to see what will change.
                       </div>
                     )}
 
                     {pendingMeta && (
-                      <div className="mt-2 rounded-2xl border border-zinc-800/80 bg-black/20 px-4 py-3">
+                      <div className="mt-2 rounded-2xl border border-zinc-800/80 bg-black/30 px-4 py-3">
                         <div className="flex items-center justify-between gap-3">
                           <div className="flex items-center gap-3 min-w-0">
                             <span className="inline-flex items-center justify-center h-8 w-8 rounded-full border border-zinc-700/70 bg-zinc-900/60 text-base">

@@ -2,22 +2,29 @@
 import { useEffect, useMemo, useState } from "react";
 import AbilitiesDashboard from "./components/AbilitiesDashboard";
 import BattlePage from "./pages/BattlePage";
-import StorePage from "./pages/StorePage"; // ✅ NEW
+import StorePage from "./pages/StorePage";
 import { loadStudents } from "./data";
 import type { Student } from "./types";
 import logoUrl from "./assets/Lakeshore Legends Logo.png";
 import "./index.css";
-import { fetchHpMap } from "./hpApi"; // ✅ NEW
+import { fetchHpMap } from "./hpApi";
 
 type Density = "comfortable" | "compact" | "ultra";
 type GridMode = "auto" | "fixed";
 
 export default function App() {
-  // ✅ Route switch (dashboard unchanged unless ?view=battle or ?view=store)
+  // ✅ Route switch (dashboard unless ?view=battle or ?view=store)
   const view = useMemo(() => {
     const params = new URLSearchParams(window.location.search);
     return params.get("view") || "";
   }, []);
+
+  // ✅ Set browser tab title ONLY on main dashboard
+  useEffect(() => {
+    if (!view) {
+      document.title = "Game Dashboard";
+    }
+  }, [view]);
 
   const goHome = () => {
     const url = new URL(window.location.href);
@@ -30,7 +37,7 @@ export default function App() {
   }
 
   if (view === "store") {
-    return <StorePage onBack={goHome} />; // ✅ NEW
+    return <StorePage onBack={goHome} />;
   }
 
   const [students, setStudents] = useState<Student[]>([]);
@@ -38,29 +45,30 @@ export default function App() {
   const [err, setErr] = useState<string | null>(null);
 
   // UI state
-  const [query, setQuery] = useState<string>("");
+  const [query, setQuery] = useState("");
   const [density, setDensity] = useState<Density>("comfortable");
   const [mode, setMode] = useState<GridMode>("auto");
-  const [columns, setColumns] = useState<number>(6);
-  const [autoMinWidth, setAutoMinWidth] = useState<number>(260);
+  const [columns, setColumns] = useState(6);
+  const [autoMinWidth, setAutoMinWidth] = useState(260);
   const [selectedHRs, setSelectedHRs] = useState<string[]>([]);
   const [selectedGuilds, setSelectedGuilds] = useState<string[]>([]);
-  const [sortKey, setSortKey] = useState<string>("homeroom");
+  const [sortKey, setSortKey] = useState("homeroom");
 
-  // 🔥 Battle filter state (attribute ≥ value)
-  const [attrFilterKey, setAttrFilterKey] = useState<string>(""); // "str" | "dex" | ...
-  const [attrFilterMin, setAttrFilterMin] = useState<number>(0);
+  // 🔥 Attribute filter
+  const [attrFilterKey, setAttrFilterKey] = useState("");
+  const [attrFilterMin, setAttrFilterMin] = useState(0);
 
-  // ✅ Load students + initial HP merge
+  // =====================
+  // Load students + initial HP
+  // =====================
   useEffect(() => {
     let alive = true;
 
     (async () => {
       try {
         const data = await loadStudents();
-
-        // merge HP into students
         const hpMap = await fetchHpMap();
+
         const merged = data.map((s) => {
           const hp = hpMap.get(String(s.id ?? "").toUpperCase());
           return hp
@@ -84,7 +92,9 @@ export default function App() {
     };
   }, []);
 
-  // ✅ Keep HP in sync (dashboard only; battle mode is separate)
+  // =====================
+  // Keep HP in sync (dashboard only)
+  // =====================
   useEffect(() => {
     if (loading) return;
 
@@ -99,19 +109,18 @@ export default function App() {
           prev.map((s) => {
             const hp = hpMap.get(String(s.id ?? "").toUpperCase());
             if (!hp) return s;
-            // only update if changed (prevents extra re-renders)
             if (s.baseHP === hp.baseHP && s.currentHP === hp.currentHP)
               return s;
             return { ...s, baseHP: hp.baseHP, currentHP: hp.currentHP };
           })
         );
       } catch {
-        // ignore; dashboard still usable even if HP API blips
+        // silent failure — dashboard still usable
       }
     };
 
     tick();
-    const t = window.setInterval(tick, 2500); // light polling
+    const t = window.setInterval(tick, 2500);
 
     return () => {
       alive = false;
@@ -119,11 +128,10 @@ export default function App() {
     };
   }, [loading]);
 
-  // Normalize skills to string[]
+  // Normalize student fields
   const normalized: Student[] = useMemo(() => {
     return students.map((s) => ({
       ...s,
-      // ensure numbers are numbers at runtime, even if CSV sent strings
       str: Number(s.str ?? 0),
       dex: Number(s.dex ?? 0),
       con: Number(s.con ?? 0),
@@ -136,13 +144,12 @@ export default function App() {
             .split(/[;,]/)
             .map((t) => t.trim())
             .filter(Boolean),
-      // ensure HP always has safe defaults for UI
       baseHP: Number(s.baseHP ?? 20),
       currentHP: Number(s.currentHP ?? 20),
     }));
   }, [students]);
 
-  // Grade 8 homerooms only
+  // Homerooms (Grade 8)
   const homerooms = useMemo(() => {
     const set = new Set<string>();
     for (const s of normalized) {
@@ -153,30 +160,27 @@ export default function App() {
     );
   }, [normalized]);
 
-  // Guild list (from data)
+  // Guilds
   const guilds = useMemo(() => {
     const set = new Set<string>();
-    for (const s of normalized) {
-      if (s.guild) set.add(s.guild);
-    }
+    for (const s of normalized) if (s.guild) set.add(s.guild);
     return Array.from(set).sort((a, b) => a.localeCompare(b, "en"));
   }, [normalized]);
 
-  // Filter + search + sort (+ attribute filter)
+  // =====================
+  // Filter + search + sort
+  // =====================
   const filtered = useMemo(() => {
     let list = normalized;
 
-    // Homeroom filter
     if (selectedHRs.length > 0) {
       list = list.filter((s) => selectedHRs.includes(s.homeroom ?? ""));
     }
 
-    // Guild filter
     if (selectedGuilds.length > 0) {
       list = list.filter((s) => selectedGuilds.includes(String(s.guild ?? "")));
     }
 
-    // 🔥 Battle attribute filter (e.g., STR ≥ 2)
     if (attrFilterKey) {
       const map: Record<string, keyof Student> = {
         str: "str",
@@ -188,43 +192,35 @@ export default function App() {
       };
       const key = map[attrFilterKey];
       if (key) {
-        list = list.filter((s) => Number(s[key] ?? 0) >= (attrFilterMin ?? 0));
+        list = list.filter((s) => Number(s[key] ?? 0) >= attrFilterMin);
       }
     }
 
-    // Search (name, skills, guild, homeroom)
     const q = query.trim().toLowerCase();
     if (q) {
-      const looksLikeHR = /^\d{1,2}\s*-\s*\d{1,2}$/.test(q);
-      if (looksLikeHR) {
-        const normHR = q.replace(/\s+/g, "");
-        list = list.filter(
-          (p) => (p.homeroom || "").toLowerCase().replace(/\s+/g, "") === normHR
+      list = list.filter((p) => {
+        const fullA = `${p.first} ${p.last}`.toLowerCase();
+        const fullB = `${p.last} ${p.first}`.toLowerCase();
+        const skills = (
+          Array.isArray(p.skills)
+            ? p.skills
+            : String(p.skills ?? "")
+                .split(/[;,|]/)
+                .map((t) => t.trim())
+                .filter(Boolean)
+        )
+          .join(" ")
+          .toLowerCase();
+        const guild = (p.guild || "").toLowerCase();
+        return (
+          fullA.includes(q) ||
+          fullB.includes(q) ||
+          skills.includes(q) ||
+          guild.includes(q)
         );
-      } else {
-        list = list.filter((p) => {
-          const first = (p.first || "").toLowerCase();
-          const last = (p.last || "").toLowerCase();
-          const fullA = `${first} ${last}`;
-          const fullB = `${last} ${first}`;
-          const skills = (Array.isArray(p.skills) ? p.skills : [])
-            .join(" ")
-            .toLowerCase();
-          const guild = (p.guild || "").toLowerCase();
-
-          return (
-            first.includes(q) ||
-            last.includes(q) ||
-            fullA.includes(q) ||
-            fullB.includes(q) ||
-            skills.includes(q) ||
-            guild.includes(q)
-          );
-        });
-      }
+      });
     }
 
-    // Sort
     switch (sortKey) {
       case "name-az":
         return list
@@ -252,11 +248,12 @@ export default function App() {
           wisdom: "wis",
           charisma: "cha",
         };
-        return list.slice().sort((a, b) => {
-          const av = Number(a[map[sortKey]] ?? 0);
-          const bv = Number(b[map[sortKey]] ?? 0);
-          return bv - av; // high → low
-        });
+        return list
+          .slice()
+          .sort(
+            (a, b) =>
+              Number(b[map[sortKey]] ?? 0) - Number(a[map[sortKey]] ?? 0)
+          );
       }
       default:
         return list.slice().sort((a, b) =>
@@ -286,14 +283,15 @@ export default function App() {
             className="h-10 w-auto select-none"
             draggable={false}
           />
-          <h1 className="text-lg sm:text-xl font-bold tracking-wide text-zinc-100">
-            Abilities Dashboard
+
+          <h1 className="text-xl sm:text-2xl font-bold text-zinc-100">
+            Game Dashboard
           </h1>
+
           <div className="flex-1" />
 
           <div className="flex items-center gap-3">
             <button
-              type="button"
               onClick={() => {
                 const url = new URL(window.location.href);
                 url.searchParams.set("view", "store");
@@ -305,7 +303,6 @@ export default function App() {
             </button>
 
             <button
-              type="button"
               onClick={() => {
                 const url = new URL(window.location.href);
                 url.searchParams.set("view", "battle");
@@ -360,7 +357,6 @@ export default function App() {
             setMode={setMode}
             setColumns={setColumns}
             setAutoMinWidth={setAutoMinWidth}
-            // 🔥 battle filter props
             attrFilterKey={attrFilterKey}
             setAttrFilterKey={setAttrFilterKey}
             attrFilterMin={attrFilterMin}
