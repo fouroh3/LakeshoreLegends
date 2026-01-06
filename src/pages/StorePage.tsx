@@ -402,7 +402,10 @@ export default function StorePage({ onBack }: Props) {
 
       if (res?.summary) {
         setSummary(res.summary as XpSummary);
-        if ((res.summary as any)?.attrs) setServerAttrs((res.summary as any).attrs);
+
+        // ✅ merge-conflict-safe: apply attrs if summary includes them
+        const attrsFromSummary = (res.summary as any)?.attrs;
+        if (attrsFromSummary) setServerAttrs(attrsFromSummary);
       } else {
         // Backward compatibility if API doesn't return summary
         const nextSummary = await getXpSummary((selected as any).id);
