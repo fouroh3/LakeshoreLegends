@@ -38,9 +38,7 @@ const attrCardSelected =
   "border-cyan-400/40 bg-cyan-400/10 hover:bg-cyan-400/10";
 
 function isSheetErrorLike(v: any) {
-  const s = String(v ?? "")
-    .trim()
-    .toUpperCase();
+  const s = String(v ?? "").trim().toUpperCase();
   return (
     s === "#REF!" ||
     s === "#N/A" ||
@@ -52,9 +50,7 @@ function isSheetErrorLike(v: any) {
 
 function cleanText(v: any) {
   if (v == null) return "";
-  const s = String(v)
-    .replace(/\u00A0/g, " ")
-    .trim();
+  const s = String(v).replace(/\u00A0/g, " ").trim();
   if (!s) return "";
   if (isSheetErrorLike(s)) return "";
   return s;
@@ -406,8 +402,10 @@ export default function StorePage({ onBack }: Props) {
 
       if (res?.summary) {
         setSummary(res.summary as XpSummary);
-        if ((res.summary as any)?.attrs)
-          setServerAttrs((res.summary as any).attrs);
+
+        // ✅ merge-conflict-safe: apply attrs if summary includes them
+        const attrsFromSummary = (res.summary as any)?.attrs;
+        if (attrsFromSummary) setServerAttrs(attrsFromSummary);
       } else {
         // Backward compatibility if API doesn't return summary
         const nextSummary = await getXpSummary((selected as any).id);

@@ -4,6 +4,7 @@ import type { Student, Guild } from "../types";
 import { loadStudents } from "../data";
 import { submitHpDelta } from "../hpApi";
 import logoUrl from "../assets/Lakeshore Legends Logo.png";
+import { hpBarColorFromPct } from "../utils/hpColor";
 
 type Props = { onBack: () => void };
 
@@ -131,7 +132,6 @@ function fullName(s: Student) {
 type HpStatus = {
   label: string;
   pillClass: string;
-  barClass: string;
 };
 
 function hpStatus(current: number, base: number): HpStatus {
@@ -142,28 +142,24 @@ function hpStatus(current: number, base: number): HpStatus {
     return {
       label: "Dead",
       pillClass: "bg-zinc-800 text-zinc-200 border border-zinc-700",
-      barClass: "bg-zinc-600",
     };
   }
   if (pct < 0.4) {
     return {
       label: "Critical",
       pillClass: "bg-red-950/50 text-red-200 border border-red-900/50",
-      barClass: "bg-red-500",
     };
   }
   if (pct < 0.7) {
     return {
       label: "Wounded",
       pillClass: "bg-amber-950/40 text-amber-200 border border-amber-900/50",
-      barClass: "bg-amber-400",
     };
   }
   return {
     label: "Healthy",
     pillClass:
       "bg-emerald-950/40 text-emerald-200 border border-emerald-900/50",
-    barClass: "bg-emerald-400",
   };
 }
 
@@ -615,8 +611,6 @@ export default function BattlePage({ onBack }: Props) {
 
   // =======================
   // ✅ STYLE: MATCH DASHBOARD
-  // - Panels: subtle borders
-  // - Student tiles: add dashboard-like gradient "sheen" so they pop
   // =======================
   const panel =
     "rounded-2xl border border-zinc-800/60 bg-zinc-950/30 p-2 shadow-[0_8px_30px_rgb(0,0,0,0.35)]";
@@ -625,9 +619,6 @@ export default function BattlePage({ onBack }: Props) {
   const selectClass =
     "w-full rounded-xl border border-zinc-800/70 bg-zinc-950/45 px-3 py-2 text-sm text-zinc-100 outline-none focus:ring-2 focus:ring-cyan-500/30";
 
-  // tile structure:
-  // - borderless by default (transparent), subtle hover border
-  // - gradient layers behind content (like main dashboard cards)
   const tileBase =
     "relative text-left rounded-2xl transition p-2.5 h-full flex flex-col overflow-hidden bg-zinc-950/25 shadow-[0_10px_40px_rgb(0,0,0,0.45)]";
   const tileHover =
@@ -822,6 +813,9 @@ export default function BattlePage({ onBack }: Props) {
                       const isDead = hp.currentHP <= 0;
                       const muted = isDead;
 
+                      const barColor = hpBarColorFromPct(pct);
+                      const lowHpPulse = !isDead && pct > 0 && pct <= 0.25;
+
                       return (
                         <button
                           key={id}
@@ -835,11 +829,8 @@ export default function BattlePage({ onBack }: Props) {
                         >
                           {/* ✅ dashboard-like gradient layers (behind content) */}
                           <div className="pointer-events-none absolute inset-0 z-0">
-                            {/* top-left glow */}
                             <div className="absolute -inset-10 opacity-70 bg-[radial-gradient(60%_60%_at_20%_10%,rgba(255,255,255,0.10),rgba(0,0,0,0)_60%)]" />
-                            {/* subtle diagonal sheen */}
                             <div className="absolute inset-0 opacity-90 bg-gradient-to-br from-zinc-900/35 via-zinc-950/10 to-black/0" />
-                            {/* faint bottom vignette */}
                             <div className="absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-transparent" />
                           </div>
 
@@ -895,9 +886,15 @@ export default function BattlePage({ onBack }: Props) {
 
                             <div className="h-2 w-full rounded-full bg-zinc-900/70 border border-zinc-800/65 overflow-hidden">
                               <div
-                                className={`h-full ${status.barClass}`}
+                                className={[
+                                  "h-full transition-[width] duration-300",
+                                  lowHpPulse ? "animate-pulse" : "",
+                                ].join(" ")}
                                 style={{
                                   width: `${Math.round(pct * 100)}%`,
+                                  backgroundColor: isDead
+                                    ? "rgba(113,113,122,1)"
+                                    : barColor,
                                 }}
                               />
                             </div>

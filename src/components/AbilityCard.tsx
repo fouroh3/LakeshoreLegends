@@ -3,6 +3,7 @@ import { useMemo } from "react";
 import Avatar from "./Avatar";
 import StatBar from "./StatBar";
 import { GuildBadge } from "./GuildBadge";
+import { hpBarColorFromPct } from "../utils/hpColor";
 
 type Density = "comfortable" | "compact" | "ultra";
 
@@ -43,28 +44,24 @@ function hpStatus(current: number, base: number) {
     return {
       label: "Dead",
       pillClass: "bg-zinc-800 text-zinc-200 border border-zinc-700",
-      barClass: "bg-zinc-700",
     };
   }
   if (pct < 0.4) {
     return {
       label: "Critical",
       pillClass: "bg-red-950/50 text-red-200 border border-red-900/50",
-      barClass: "bg-red-500",
     };
   }
   if (pct < 0.7) {
     return {
       label: "Wounded",
       pillClass: "bg-amber-950/40 text-amber-200 border border-amber-900/50",
-      barClass: "bg-amber-400",
     };
   }
   return {
     label: "Healthy",
     pillClass:
       "bg-emerald-950/40 text-emerald-200 border border-emerald-900/50",
-    barClass: "bg-emerald-400",
   };
 }
 
@@ -129,6 +126,12 @@ export default function AbilityCard({
 
   const isDead = hpCur <= 0;
 
+  // ✅ Smooth gradient colour (red → amber → green)
+  const hpColor = hpBarColorFromPct(hpPct);
+
+  // Optional: pulse when low but not dead
+  const lowHpPulse = !isDead && hpPct > 0 && hpPct <= 0.25;
+
   return (
     <div
       className={`flex flex-col ${cfg.gap} ${cfg.padding} rounded-2xl bg-zinc-900/70 border border-zinc-800/60 shadow-lg shadow-black/40`}
@@ -184,8 +187,16 @@ export default function AbilityCard({
 
             <div className="h-2 w-full rounded-full bg-zinc-950/60 border border-zinc-800/70 overflow-hidden">
               <div
-                className={`h-full ${status.barClass}`}
-                style={{ width: `${Math.round(hpPct * 100)}%` }}
+                className={[
+                  "h-full transition-[width] duration-300",
+                  lowHpPulse ? "animate-pulse" : "",
+                ].join(" ")}
+                style={{
+                  width: `${Math.round(hpPct * 100)}%`,
+                  backgroundColor: isDead
+                    ? "rgba(113,113,122,1)" // zinc-500-ish when dead
+                    : hpColor,
+                }}
               />
             </div>
           </div>
@@ -228,7 +239,6 @@ export default function AbilityCard({
         {/* DEAD OVERLAY (on top of everything from health down) */}
         {isDead && (
           <div className="pointer-events-none absolute inset-0 z-20 flex flex-col items-center justify-center">
-            {/* subtle dark veil so overlay reads clearly */}
             <div className="absolute inset-0 rounded-xl bg-zinc-950/35" />
             <div className="relative flex flex-col items-center">
               <div className="text-4xl leading-none drop-shadow">💀</div>
