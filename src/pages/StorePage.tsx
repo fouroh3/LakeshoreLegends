@@ -38,9 +38,7 @@ const attrCardSelected =
   "border-cyan-400/40 bg-cyan-400/10 hover:bg-cyan-400/10";
 
 function isSheetErrorLike(v: any) {
-  const s = String(v ?? "")
-    .trim()
-    .toUpperCase();
+  const s = String(v ?? "").trim().toUpperCase();
   return (
     s === "#REF!" ||
     s === "#N/A" ||
@@ -52,9 +50,7 @@ function isSheetErrorLike(v: any) {
 
 function cleanText(v: any) {
   if (v == null) return "";
-  const s = String(v)
-    .replace(/\u00A0/g, " ")
-    .trim();
+  const s = String(v).replace(/\u00A0/g, " ").trim();
   if (!s) return "";
   if (isSheetErrorLike(s)) return "";
   return s;
@@ -97,6 +93,56 @@ function rosterBaseAttr(s: Student, t: AttrKey) {
     CHA: "cha",
   };
   return Number(anyS?.[map[t]] ?? 0);
+}
+
+// ---------- Retry helper (spike-friendly) ----------
+function isTransientPurchaseError(err: any) {
+  const msg = String(err?.message ?? err ?? "").toLowerCase();
+  return (
+    msg.includes("failed to fetch") ||
+    msg.includes("network") ||
+    msg.includes("timeout") ||
+    msg.includes("timed out") ||
+    msg.includes("rate") ||
+    msg.includes("tempor") ||
+    msg.includes("try again") ||
+    msg.includes("service unavailable") ||
+    msg.includes("503") ||
+    msg.includes("502") ||
+    msg.includes("504")
+  );
+}
+
+function sleep(ms: number) {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+async function spendXpWithRetry(
+  args: Parameters<typeof spendXp>[0],
+  opts?: { retries?: number; baseDelayMs?: number }
+) {
+  const retries = opts?.retries ?? 3;
+  const baseDelayMs = opts?.baseDelayMs ?? 250;
+
+  let lastErr: any = null;
+
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      return await spendXp(args);
+    } catch (e: any) {
+      lastErr = e;
+
+      // Only retry if this looks transient, AND we have attempts left
+      if (!isTransientPurchaseError(e) || attempt === retries) throw e;
+
+      // Backoff + jitter so 60 iPads don't retry in sync
+      const jitter = Math.floor(Math.random() * baseDelayMs);
+      const delay = baseDelayMs * (attempt + 1) + jitter;
+      await sleep(delay);
+    }
+  }
+
+  throw lastErr ?? new Error("Purchase failed");
 }
 
 export default function StorePage({ onBack }: Props) {
@@ -332,6 +378,7 @@ export default function StorePage({ onBack }: Props) {
 
     setSpending(true);
     setSpendErr(null);
+
     try {
       if (!hasEnoughPoints)
         throw new Error("Not enough XP to buy a point yet.");
@@ -339,19 +386,29 @@ export default function StorePage({ onBack }: Props) {
       if (!pin.trim()) throw new Error("Enter the Store PIN.");
       if (!confirmOk) throw new Error("Confirm your StudentID to purchase.");
 
-      const res = await spendXp({
-        studentId: (selected as any).id,
-        pin: pin.trim(),
-        target: pendingTarget,
-        points: 1,
-      });
+      // ✅ Burst-friendly: retry transient failures
+      const res = await spendXpWithRetry(
+        {
+          studentId: (selected as any).id,
+          pin: pin.trim(),
+          target: pendingTarget,
+          points: 1,
+        },
+        { retries: 3, baseDelayMs: 250 }
+      );
 
-      if (res.attrs) setServerAttrs(res.attrs);
+      // ✅ Use server response directly (no extra round trip unless needed)
+      if (res?.attrs) setServerAttrs(res.attrs);
 
-      const nextSummary =
-        res.summary ?? (await getXpSummary((selected as any).id));
-      setSummary(nextSummary);
-      if (nextSummary.attrs) setServerAttrs(nextSummary.attrs);
+      if (res?.summary) {
+        setSummary(res.summary as XpSummary);
+        if ((res.summary as any)?.attrs) setServerAttrs((res.summary as any).attrs);
+      } else {
+        // Backward compatibility if API doesn't return summary
+        const nextSummary = await getXpSummary((selected as any).id);
+        setSummary(nextSummary);
+        if (nextSummary.attrs) setServerAttrs(nextSummary.attrs);
+      }
 
       setToast(`✅ Purchased +1 ${pendingTarget}`);
       setTimeout(() => setToast(null), 1800);
@@ -588,7 +645,7 @@ export default function StorePage({ onBack }: Props) {
                     </div>
                   </div>
 
-                  {/* ✅ PIN + CONFIRM ABOVE ATTRIBUTE SELECTION (as before) */}
+                  {/* ✅ PIN + CONFIRM ABOVE ATTRIBUTE SELECTION */}
                   <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div className="rounded-2xl border border-zinc-800/80 bg-black/20 px-3 py-2">
                       <div className={label}>Store PIN</div>
