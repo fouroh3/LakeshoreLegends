@@ -2,8 +2,7 @@
 import AbilitiesGrid from "./AbilitiesGrid";
 import AbilityCard from "./AbilityCard";
 import type { Student } from "../types";
-import { Fragment, useEffect, useMemo, useState } from "react";
-import { fetchHpMap } from "../hpApi";
+import { Fragment, useMemo, useState } from "react";
 
 type Density = "comfortable" | "compact" | "ultra";
 
@@ -48,17 +47,6 @@ type Props = {
   setAttrFilterMin: (n: number) => void;
 };
 
-const HP_POLL_MS = 25_000;
-
-function normId(id: string | undefined | null) {
-  return String(id ?? "")
-    .replace(/\u00A0/g, " ")
-    .replace(/[–—]/g, "-")
-    .replace(/\s+/g, "")
-    .trim()
-    .toUpperCase();
-}
-
 function skillsToArray(skills: Student["skills"]): string[] {
   if (!skills) return [];
   if (Array.isArray(skills))
@@ -102,39 +90,6 @@ export default function AbilitiesDashboard({
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [activeIndex, setActiveIndex] = useState<number>(-1);
 
-  const [hpMap, setHpMap] = useState<
-    Map<string, { baseHP: number; currentHP: number }>
-  >(() => new Map());
-
-  // ✅ Poll HP every ~25s (pause if tab hidden, refresh on return)
-  useEffect(() => {
-    let cancelled = false;
-
-    const tick = async () => {
-      if (typeof document !== "undefined" && document.hidden) return;
-      try {
-        const m = await fetchHpMap();
-        if (!cancelled) setHpMap(m);
-      } catch {
-        // never crash the dashboard because of HP polling
-      }
-    };
-
-    tick();
-    const id = window.setInterval(tick, HP_POLL_MS);
-
-    const onVis = () => {
-      if (!document.hidden) tick();
-    };
-    document.addEventListener("visibilitychange", onVis);
-
-    return () => {
-      cancelled = true;
-      window.clearInterval(id);
-      document.removeEventListener("visibilitychange", onVis);
-    };
-  }, []);
-
   const toggleHR = (hr: string) => {
     setSelectedHRs(
       selectedHRs.includes(hr)
@@ -168,7 +123,7 @@ export default function AbilitiesDashboard({
     };
 
     for (const s of data) {
-      const full = `${s.first ?? ""} ${s.last ?? ""}`.trim();
+      const full = `${(s as any).first ?? ""} ${(s as any).last ?? ""}`.trim();
       if (full) add(full, "name");
     }
 
@@ -176,7 +131,7 @@ export default function AbilitiesDashboard({
     for (const g of guilds) if (g) add(g, "guild");
 
     for (const s of data) {
-      for (const sk of skillsToArray(s.skills)) add(sk, "skill");
+      for (const sk of skillsToArray((s as any).skills)) add(sk, "skill");
     }
 
     return items.slice(0, 20);
@@ -225,26 +180,26 @@ export default function AbilitiesDashboard({
     { type: "skill", label: "Skills", icon: "✨" },
   ] as const;
 
-  // ✅ actually use selectedGuilds (fixes TS warning + gives you guild filtering)
+  // ✅ actually use selectedGuilds
   const filteredData = useMemo(() => {
-    let out = data;
+    let out = data as any[];
 
     if (selectedHRs.length) {
       const set = new Set(selectedHRs);
-      out = out.filter((s) => set.has((s.homeroom ?? "").trim()));
+      out = out.filter((s) => set.has(String(s.homeroom ?? "").trim()));
     }
 
     if (selectedGuilds.length) {
       const set = new Set(selectedGuilds);
-      out = out.filter((s: any) => set.has(String(s.guild ?? "").trim()));
+      out = out.filter((s) => set.has(String(s.guild ?? "").trim()));
     }
 
     if (attrFilterKey && attrFilterMin > 0) {
       const key = attrFilterKey as keyof Student;
-      out = out.filter((s: any) => Number(s[key] ?? 0) >= attrFilterMin);
+      out = out.filter((s) => Number((s as any)[key] ?? 0) >= attrFilterMin);
     }
 
-    return out;
+    return out as Student[];
   }, [data, selectedHRs, selectedGuilds, attrFilterKey, attrFilterMin]);
 
   return (
@@ -343,6 +298,11 @@ export default function AbilitiesDashboard({
                   <option value="homeroom">Homeroom</option>
                   <option value="name-az">Name (A–Z)</option>
                   <option value="name-za">Name (Z–A)</option>
+
+                  {/* ✅ HP sorting (clear + non-redundant because max HP = 20) */}
+                  <option value="hp-desc">Health (Most HP Left)</option>
+                  <option value="hp-asc">Health (Least HP Left)</option>
+
                   <option value="strength">Strength</option>
                   <option value="dexterity">Dexterity</option>
                   <option value="constitution">Constitution</option>
@@ -494,7 +454,7 @@ export default function AbilitiesDashboard({
             </div>
           </div>
 
-          {/* Guilds (optional but now actually wired) */}
+          {/* Guilds */}
           {guilds.length > 0 && (
             <div className="w-full">
               <div className="flex flex-wrap gap-1.5 justify-center">
@@ -538,20 +498,18 @@ export default function AbilitiesDashboard({
           columns={columns}
           autoMinWidth={autoMinWidth}
         >
-          {filteredData.map((p, i) => {
-            const hpRow = hpMap.get(normId(p.id));
-            const personWithHp = hpRow
-              ? { ...p, baseHP: hpRow.baseHP, currentHP: hpRow.currentHP }
-              : p;
-
-            return (
-              <AbilityCard
-                key={p.id ?? `${p.first}-${p.last}-${p.homeroom}-${i}`}
-                person={personWithHp}
-                density={density}
-              />
-            );
-          })}
+          {filteredData.map((p, i) => (
+            <AbilityCard
+              key={
+                (p as any).id ??
+                `${(p as any).first}-${(p as any).last}-${
+                  (p as any).homeroom
+                }-${i}`
+              }
+              person={p}
+              density={density}
+            />
+          ))}
         </AbilitiesGrid>
       </div>
     </Fragment>

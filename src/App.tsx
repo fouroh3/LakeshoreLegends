@@ -12,6 +12,15 @@ import { fetchHpMap } from "./hpApi";
 type Density = "comfortable" | "compact" | "ultra";
 type GridMode = "auto" | "fixed";
 
+function normId(id: string | undefined | null) {
+  return String(id ?? "")
+    .replace(/\u00A0/g, " ")
+    .replace(/[–—]/g, "-")
+    .replace(/\s+/g, "")
+    .trim()
+    .toUpperCase();
+}
+
 export default function App() {
   // ✅ Route switch (dashboard unless ?view=battle or ?view=store)
   const view = useMemo(() => {
@@ -70,7 +79,7 @@ export default function App() {
         const hpMap = await fetchHpMap();
 
         const merged = data.map((s) => {
-          const hp = hpMap.get(String(s.id ?? "").toUpperCase());
+          const hp = hpMap.get(normId(String(s.id ?? "")));
           return hp
             ? { ...s, baseHP: hp.baseHP, currentHP: hp.currentHP }
             : { ...s };
@@ -94,11 +103,29 @@ export default function App() {
 
   // =====================
   // Keep HP in sync (dashboard only)
+  // - Poll every 25s
+  // - ONLY when tab is visible + focused (top window)
+  // - Refresh immediately on return/focus
   // =====================
   useEffect(() => {
     if (loading) return;
 
     let alive = true;
+
+    const shouldPoll = () => {
+      // Tab not visible -> don't poll
+      if (typeof document !== "undefined" && document.hidden) return false;
+
+      // Not the focused window/tab -> don't poll
+      if (
+        typeof document !== "undefined" &&
+        typeof document.hasFocus === "function"
+      ) {
+        if (!document.hasFocus()) return false;
+      }
+
+      return true;
+    };
 
     const tick = async () => {
       try {
@@ -107,10 +134,13 @@ export default function App() {
 
         setStudents((prev) =>
           prev.map((s) => {
-            const hp = hpMap.get(String(s.id ?? "").toUpperCase());
+            const hp = hpMap.get(normId(String(s.id ?? "")));
             if (!hp) return s;
+
+            // Avoid rerenders if unchanged
             if (s.baseHP === hp.baseHP && s.currentHP === hp.currentHP)
               return s;
+
             return { ...s, baseHP: hp.baseHP, currentHP: hp.currentHP };
           })
         );
@@ -119,12 +149,29 @@ export default function App() {
       }
     };
 
-    tick();
-    const t = window.setInterval(tick, 2500);
+    const wrappedTick = async () => {
+      if (!shouldPoll()) return;
+      await tick();
+    };
+
+    // Do an immediate update if we're actually active
+    wrappedTick();
+
+    const INTERVAL = 25_000;
+    const t = window.setInterval(wrappedTick, INTERVAL);
+
+    const onReturn = () => {
+      if (shouldPoll()) tick();
+    };
+
+    document.addEventListener("visibilitychange", onReturn);
+    window.addEventListener("focus", onReturn);
 
     return () => {
       alive = false;
       window.clearInterval(t);
+      document.removeEventListener("visibilitychange", onReturn);
+      window.removeEventListener("focus", onReturn);
     };
   }, [loading]);
 
@@ -144,8 +191,8 @@ export default function App() {
             .split(/[;,]/)
             .map((t) => t.trim())
             .filter(Boolean),
-      baseHP: Number(s.baseHP ?? 20),
-      currentHP: Number(s.currentHP ?? 20),
+      baseHP: Number((s as any).baseHP ?? 20),
+      currentHP: Number((s as any).currentHP ?? 20),
     }));
   }, [students]);
 
@@ -163,7 +210,7 @@ export default function App() {
   // Guilds
   const guilds = useMemo(() => {
     const set = new Set<string>();
-    for (const s of normalized) if (s.guild) set.add(s.guild);
+    for (const s of normalized) if ((s as any).guild) set.add((s as any).guild);
     return Array.from(set).sort((a, b) => a.localeCompare(b, "en"));
   }, [normalized]);
 
@@ -178,7 +225,9 @@ export default function App() {
     }
 
     if (selectedGuilds.length > 0) {
-      list = list.filter((s) => selectedGuilds.includes(String(s.guild ?? "")));
+      list = list.filter((s) =>
+        selectedGuilds.includes(String((s as any).guild ?? ""))
+      );
     }
 
     if (attrFilterKey) {
@@ -192,13 +241,15 @@ export default function App() {
       };
       const key = map[attrFilterKey];
       if (key) {
-        list = list.filter((s) => Number(s[key] ?? 0) >= attrFilterMin);
+        list = list.filter(
+          (s) => Number((s as any)[key] ?? 0) >= attrFilterMin
+        );
       }
     }
 
     const q = query.trim().toLowerCase();
     if (q) {
-      list = list.filter((p) => {
+      list = list.filter((p: any) => {
         const fullA = `${p.first} ${p.last}`.toLowerCase();
         const fullB = `${p.last} ${p.first}`.toLowerCase();
         const skills = (
@@ -211,7 +262,7 @@ export default function App() {
         )
           .join(" ")
           .toLowerCase();
-        const guild = (p.guild || "").toLowerCase();
+        const guild = String(p.guild || "").toLowerCase();
         return (
           fullA.includes(q) ||
           fullB.includes(q) ||
@@ -225,15 +276,28 @@ export default function App() {
       case "name-az":
         return list
           .slice()
-          .sort((a, b) =>
+          .sort((a: any, b: any) =>
             `${a.first} ${a.last}`.localeCompare(`${b.first} ${b.last}`)
           );
+
       case "name-za":
         return list
           .slice()
-          .sort((a, b) =>
+          .sort((a: any, b: any) =>
             `${b.first} ${b.last}`.localeCompare(`${a.first} ${a.last}`)
           );
+
+      // ✅ HP sorting (max HP is always 20, so "percent" == "current")
+      case "hp-desc":
+        return list
+          .slice()
+          .sort((a: any, b: any) => (b.currentHP ?? 0) - (a.currentHP ?? 0));
+
+      case "hp-asc":
+        return list
+          .slice()
+          .sort((a: any, b: any) => (a.currentHP ?? 0) - (b.currentHP ?? 0));
+
       case "strength":
       case "dexterity":
       case "constitution":
@@ -251,10 +315,12 @@ export default function App() {
         return list
           .slice()
           .sort(
-            (a, b) =>
-              Number(b[map[sortKey]] ?? 0) - Number(a[map[sortKey]] ?? 0)
+            (a: any, b: any) =>
+              Number((b as any)[map[sortKey]] ?? 0) -
+              Number((a as any)[map[sortKey]] ?? 0)
           );
       }
+
       default:
         return list.slice().sort((a, b) =>
           (a.homeroom ?? "").localeCompare(b.homeroom ?? "", "en", {

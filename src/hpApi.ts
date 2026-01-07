@@ -26,6 +26,13 @@ function toNumber(n: any, fallback = 0): number {
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
+function makeRequestId() {
+  // ✅ browser-safe id
+  const c: any = globalThis.crypto as any;
+  if (c && typeof c.randomUUID === "function") return c.randomUUID();
+  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
 /**
  * Pull current HP state map from Apps Script
  * Expected response: { ok: true, hp: [{ studentId, baseHP, currentHP }, ...] }
@@ -51,7 +58,12 @@ export async function fetchHpMap(): Promise<
     const id = normId(r?.studentId);
     if (!id) continue;
 
-    const baseHP = Math.max(1, Math.round(toNumber(r?.baseHP, 20)));
+    // ✅ max HP anyone will ever have is 20 (cap baseHP defensively)
+    const baseHP = Math.min(
+      20,
+      Math.max(1, Math.round(toNumber(r?.baseHP, 20)))
+    );
+
     const currentHP = Math.max(
       0,
       Math.min(baseHP, Math.round(toNumber(r?.currentHP, baseHP)))
@@ -68,6 +80,12 @@ type SubmitArgs = {
   delta: number; // negative = damage, positive = heal
   note?: string;
   sessionId: string;
+
+  /**
+   * ✅ Idempotency key
+   * If the same requestId is sent twice, Apps Script should treat the 2nd as a no-op.
+   */
+  requestId?: string;
 };
 
 /**
@@ -81,6 +99,7 @@ export async function submitHpDelta({
   delta,
   note = "",
   sessionId,
+  requestId,
 }: SubmitArgs): Promise<void> {
   const sid = stripQuotes(sessionId);
   const id = normId(studentId);
@@ -91,12 +110,14 @@ export async function submitHpDelta({
   if (!Number.isFinite(delta) || delta === 0) throw new Error("Invalid delta");
 
   const body = new URLSearchParams();
-  // ✅ These keys must match what your Apps Script expects
-  body.set("action", "log"); // <- if your script uses "submit" instead, change here ONLY
+  body.set("action", "log");
   body.set("sessionId", sid);
   body.set("studentId", id);
   body.set("delta", String(delta));
   body.set("note", note.trim());
+
+  // ✅ Always include a requestId for dedupe
+  body.set("requestId", String(requestId || makeRequestId()));
 
   const res = await fetch(HP_API_URL, {
     method: "POST",
@@ -110,7 +131,6 @@ export async function submitHpDelta({
   try {
     data = await res.json();
   } catch {
-    // Some scripts return text/html if misconfigured — make that an explicit failure
     const txt = await res.text().catch(() => "");
     throw new Error(
       `HP API returned non-JSON (${res.status}). ${txt.slice(0, 120)}`
