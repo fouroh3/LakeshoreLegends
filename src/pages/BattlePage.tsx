@@ -32,6 +32,8 @@ const PENDING_TTL_MS = 90_000;
 const HP_POLL_MS = 15_000;
 const HP_JITTER_MS = 4_000;
 
+const MAX_HP = 20;
+
 function usePageActive() {
   const [active, setActive] = useState(() => {
     const visible = document.visibilityState === "visible";
@@ -277,7 +279,7 @@ export default function BattlePage({ onBack }: Props) {
 
   const [showSessionInfo, setShowSessionInfo] = useState(false);
 
-  // ✅ Key fix: pending overrides stop “snap back” flicker
+  // ✅ pending overrides stop “snap back” flicker
   const pendingRef = useRef<
     Map<string, { expected: number; base: number; ts: number }>
   >(new Map());
@@ -381,11 +383,17 @@ export default function BattlePage({ onBack }: Props) {
           .map((r: any) => {
             const id = normId(r?.studentId);
             if (!id) return null;
-            const baseHP = Math.max(1, Math.round(toNumber(r?.baseHP, 20)));
+
+            const baseHP = Math.min(
+              MAX_HP,
+              Math.max(1, Math.round(toNumber(r?.baseHP, MAX_HP)))
+            );
+
             const currentHP = Math.max(
               0,
               Math.min(baseHP, Math.round(toNumber(r?.currentHP, baseHP)))
             );
+
             return { studentId: id, baseHP, currentHP } as HpStateRow;
           })
           .filter(Boolean);
@@ -456,7 +464,7 @@ export default function BattlePage({ onBack }: Props) {
     const fromApi = hpById.get(id);
     if (fromApi) return fromApi;
 
-    return { studentId: id, baseHP: 20, currentHP: 20 };
+    return { studentId: id, baseHP: MAX_HP, currentHP: MAX_HP };
   };
 
   const studentsInActiveHomeroom = useMemo(() => {
@@ -521,8 +529,14 @@ export default function BattlePage({ onBack }: Props) {
     });
   };
 
+  // ✅ create one nonce per submit click; requestIds become stable
+  const makeSubmitNonce = () => {
+    const c: any = (globalThis as any).crypto;
+    if (c && typeof c.randomUUID === "function") return c.randomUUID();
+    return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  };
+
   async function onSubmit() {
-    // ✅ extra hard guard against double-submit / double-tap
     if (submitting) return;
 
     setBanner(null);
@@ -547,10 +561,16 @@ export default function BattlePage({ onBack }: Props) {
     let fail = 0;
 
     try {
+      const cleanSessionId = stripQuotes(activeSessionId).trim();
+
+      // ✅ stable across the entire submit click
+      const submitNonce = makeSubmitNonce();
+
       for (const id of ids) {
         const hp = getDisplayHp(id);
         const before = hp.currentHP;
-        const base = Math.max(1, hp.baseHP || 20);
+
+        const base = Math.min(MAX_HP, Math.max(1, hp.baseHP || MAX_HP));
         const after = Math.max(0, Math.min(base, before + delta));
 
         pendingRef.current.set(id, { expected: after, base, ts: Date.now() });
@@ -569,15 +589,15 @@ export default function BattlePage({ onBack }: Props) {
         });
 
         try {
-          const cleanSessionId = String(activeSessionId)
-            .replace(/^["'‘’“”]+|["'‘’“”]+$/g, "")
-            .trim();
+          // ✅ idempotency: same session+student+submitNonce
+          const requestId = `${cleanSessionId}:${id}:${submitNonce}`;
 
           await submitHpDelta({
             studentId: id,
             delta,
             note: note.trim(),
             sessionId: cleanSessionId,
+            requestId,
           });
 
           ok++;
@@ -867,7 +887,7 @@ export default function BattlePage({ onBack }: Props) {
                             isSelected ? tileSelected : tileUnselected,
                           ].join(" ")}
                         >
-                          {/* ✅ dashboard-like gradient layers (behind content) */}
+                          {/* gradient layers */}
                           <div className="pointer-events-none absolute inset-0 z-0">
                             <div className="absolute -inset-10 opacity-70 bg-[radial-gradient(60%_60%_at_20%_10%,rgba(255,255,255,0.10),rgba(0,0,0,0)_60%)]" />
                             <div className="absolute inset-0 opacity-90 bg-gradient-to-br from-zinc-900/35 via-zinc-950/10 to-black/0" />

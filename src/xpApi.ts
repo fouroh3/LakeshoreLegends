@@ -36,14 +36,21 @@ export type XpSummary = {
   attrs?: AttrsBundle;
 };
 
-type SpendXpArgs = {
+export type SpendXpArgs = {
   studentId: string;
   pin: string;
   target: AttrKey;
   points: number;
+
+  /**
+   * ✅ Optional idempotency key.
+   * If you pass one, it MUST be unique per "Submit" click.
+   * If you don't pass one, we auto-generate.
+   */
+  requestId?: string;
 };
 
-type SpendXpResponse = {
+export type SpendXpResponse = {
   ok: true;
   studentId: string;
   target: AttrKey;
@@ -56,6 +63,12 @@ type SpendXpResponse = {
   attrs?: AttrsBundle;
   summary?: XpSummary;
   xpLastWriteIso?: string;
+
+  /** optional echo (Apps Script may echo it; we also inject it client-side) */
+  requestId?: string;
+
+  /** optional flag if server deduped */
+  deduped?: boolean;
 };
 
 const XP_API_URL =
@@ -71,6 +84,12 @@ function toBool(v: any): boolean {
   if (["true", "1", "yes", "y"].includes(s)) return true;
   if (["false", "0", "no", "n"].includes(s)) return false;
   return false;
+}
+
+function makeRequestId(): string {
+  const c: any = globalThis.crypto as any;
+  if (c && typeof c.randomUUID === "function") return c.randomUUID();
+  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
 async function fetchJson(url: string, init?: RequestInit) {
@@ -103,7 +122,6 @@ async function fetchJson(url: string, init?: RequestInit) {
 /* ---------------- API ---------------- */
 
 export async function getStoreState(): Promise<StoreState> {
-  // cache bust without extra headers
   const url = `${XP_API_URL}?action=xpState&t=${Date.now()}`;
   const data = await fetchJson(url);
 
@@ -155,6 +173,12 @@ export async function spendXp(args: SpendXpArgs): Promise<SpendXpResponse> {
   body.set("pin", args.pin);
   body.set("target", args.target);
   body.set("points", String(args.points));
+
+  // ✅ Idempotency key (dedupe double-tap / retries)
+  const requestId = String(args.requestId || makeRequestId());
+  body.set("requestId", requestId);
+
+  // cache bust
   body.set("t", String(Date.now()));
 
   const data = await fetchJson(XP_API_URL, {
@@ -163,5 +187,6 @@ export async function spendXp(args: SpendXpArgs): Promise<SpendXpResponse> {
     // NO headers — browser sets correct form header automatically
   });
 
-  return data as SpendXpResponse;
+  // ✅ Ensure requestId is available to the caller even if server doesn't echo it
+  return { ...(data as SpendXpResponse), requestId };
 }
