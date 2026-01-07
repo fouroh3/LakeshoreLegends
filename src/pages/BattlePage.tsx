@@ -32,6 +32,37 @@ const PENDING_TTL_MS = 90_000;
 const HP_POLL_MS = 15_000;
 const HP_JITTER_MS = 4_000;
 
+function usePageActive() {
+  const [active, setActive] = useState(() => {
+    const visible = document.visibilityState === "visible";
+    const focused =
+      typeof document.hasFocus === "function" ? document.hasFocus() : true;
+    return visible && focused;
+  });
+
+  useEffect(() => {
+    const recompute = () => {
+      const visible = document.visibilityState === "visible";
+      const focused =
+        typeof document.hasFocus === "function" ? document.hasFocus() : true;
+      setActive(visible && focused);
+    };
+
+    recompute();
+    window.addEventListener("focus", recompute);
+    window.addEventListener("blur", recompute);
+    document.addEventListener("visibilitychange", recompute);
+
+    return () => {
+      window.removeEventListener("focus", recompute);
+      window.removeEventListener("blur", recompute);
+      document.removeEventListener("visibilitychange", recompute);
+    };
+  }, []);
+
+  return active;
+}
+
 function stripQuotes(s: string | undefined | null): string {
   if (!s) return "";
   const t = String(s).trim();
@@ -218,6 +249,8 @@ function StatPill({
 }
 
 export default function BattlePage({ onBack }: Props) {
+  const pageActive = usePageActive();
+
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
@@ -265,8 +298,10 @@ export default function BattlePage({ onBack }: Props) {
     })();
   }, []);
 
-  // Battle_Control refresh
+  // Battle_Control refresh (only when page is active)
   useEffect(() => {
+    if (!pageActive) return;
+
     let alive = true;
 
     const loadBattleControl = async () => {
@@ -317,17 +352,19 @@ export default function BattlePage({ onBack }: Props) {
     };
 
     loadBattleControl();
-    const t = setInterval(loadBattleControl, 10000);
+    const t = window.setInterval(loadBattleControl, 10_000);
 
     return () => {
       alive = false;
-      clearInterval(t);
+      window.clearInterval(t);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeHomeroom]);
+  }, [pageActive, activeHomeroom]);
 
-  // ✅ HP refresh from API (use 15–19s with jitter)
+  // ✅ HP refresh from API (only when page is active)
   useEffect(() => {
+    if (!pageActive) return;
+
     let alive = true;
 
     const loadHpFromApi = async () => {
@@ -384,13 +421,13 @@ export default function BattlePage({ onBack }: Props) {
     loadHpFromApi();
 
     const jitter = Math.floor(Math.random() * HP_JITTER_MS);
-    const t = setInterval(loadHpFromApi, HP_POLL_MS + jitter);
+    const t = window.setInterval(loadHpFromApi, HP_POLL_MS + jitter);
 
     return () => {
       alive = false;
-      clearInterval(t);
+      window.clearInterval(t);
     };
-  }, []);
+  }, [pageActive]);
 
   const activeOptions = useMemo(() => {
     return battleRows
@@ -485,6 +522,9 @@ export default function BattlePage({ onBack }: Props) {
   };
 
   async function onSubmit() {
+    // ✅ extra hard guard against double-submit / double-tap
+    if (submitting) return;
+
     setBanner(null);
 
     if (!activeHomeroom || !activeSessionId) {
