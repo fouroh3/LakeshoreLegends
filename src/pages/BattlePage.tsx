@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { Student, Guild } from "../types";
 import { loadStudents } from "../data";
 import { submitHpDelta } from "../hpApi";
+import { getBossState, submitBossDelta, type BossState } from "../bossApi";
 import logoUrl from "../assets/Lakeshore Legends Logo.png";
 import { hpBarColorFromPct } from "../utils/hpColor";
 
@@ -18,6 +19,10 @@ type BattleControlRow = {
   homeroom: string;
   status: string;
   sessionId: string;
+  pairedHomeroom?: string;
+  bossKey?: string;
+  bossInstanceId?: string;
+  guildAttacks?: string;
 };
 
 const BATTLE_CONTROL_CSV =
@@ -25,12 +30,16 @@ const BATTLE_CONTROL_CSV =
 
 const HP_API_URL =
   "https://script.google.com/macros/s/AKfycbw6gMIFYPvaljF3Ls-waojzprU6bygZZonOIJeKLopN2NSKgkDT-EsRKznxQiGpth_6/exec";
+const GROUP_ACTION_KEY = "ll:groupAction";
 
 const PENDING_TTL_MS = 90_000;
+const BOSS_PENDING_TTL_MS = 8_000;
 
 // ✅ For MANY BattlePages open (one per table): do NOT poll every 3s.
 const HP_POLL_MS = 15_000;
 const HP_JITTER_MS = 4_000;
+const BATTLE_CONTROL_POLL_MS_TEACHER = 10_000;
+const BATTLE_CONTROL_POLL_MS_STUDENT = 5_000;
 
 const MAX_HP = 20;
 
@@ -167,6 +176,16 @@ type HpStatus = {
   pillClass: string;
 };
 
+type GroupAction = "ATTACK" | "HEAL";
+
+function prettifyBossKey(key: string) {
+  return stripQuotes(key)
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/\b\w/g, (m) => m.toUpperCase());
+}
+
 function hpStatus(current: number, base: number): HpStatus {
   const b = Math.max(1, base || 1);
   const pct = Math.max(0, Math.min(1, current / b));
@@ -263,10 +282,18 @@ export default function BattlePage({ onBack }: Props) {
   const [activeHomeroom, setActiveHomeroom] = useState<string>("");
   const [activeSessionId, setActiveSessionId] = useState<string>("");
 
+  const [bossState, setBossState] = useState<BossState | null>(null);
+  const [bossNote, setBossNote] = useState<string>("");
+  const [bossAttackAmount, setBossAttackAmount] = useState<number>(1);
+  const [bossSubmitting, setBossSubmitting] = useState(false);
+  const [bossError, setBossError] = useState<string | null>(null);
+
   const [guildFilter, setGuildFilter] = useState<Guild | "ALL">("ALL");
 
   const [multiSelect, setMultiSelect] = useState(true);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+
+  const [groupAction, setGroupAction] = useState<GroupAction>("HEAL");
 
   const [delta, setDelta] = useState<number>(-1);
   const [note, setNote] = useState<string>("");
@@ -283,8 +310,15 @@ export default function BattlePage({ onBack }: Props) {
   const pendingRef = useRef<
     Map<string, { expected: number; base: number; ts: number }>
   >(new Map());
+  const bossPendingRef = useRef<
+    Map<string, { expected: number; max: number; ts: number }>
+  >(new Map());
 
   const bcCsvUrlBusted = () => `${BATTLE_CONTROL_CSV}&_=${Date.now()}`;
+  const isTeacher = useMemo(() => {
+    const sp = new URLSearchParams(window.location.search);
+    return sp.get("teacher") === "1";
+  }, []);
 
   // Load students once
   useEffect(() => {
@@ -299,6 +333,21 @@ export default function BattlePage({ onBack }: Props) {
       }
     })();
   }, []);
+
+  useEffect(() => {
+    if (!activeHomeroom) return;
+    const stored = localStorage.getItem(`${GROUP_ACTION_KEY}:${activeHomeroom}`);
+    if (stored === "ATTACK" || stored === "HEAL") {
+      setGroupAction(stored);
+    } else {
+      setGroupAction("HEAL");
+    }
+  }, [activeHomeroom]);
+
+  useEffect(() => {
+    if (!activeHomeroom) return;
+    localStorage.setItem(`${GROUP_ACTION_KEY}:${activeHomeroom}`, groupAction);
+  }, [activeHomeroom, groupAction]);
 
   // Battle_Control refresh (only when page is active)
   useEffect(() => {
@@ -327,8 +376,27 @@ export default function BattlePage({ onBack }: Props) {
                 "BattleSessionID"
               )
             ).trim();
+            const pairedHomeroom = stripQuotes(
+              getCell(r, map, "PairedHomeroom", "Paired HomeRoom")
+            ).trim();
+            const bossKey = stripQuotes(getCell(r, map, "BossKey", "Boss Key")).trim();
+            const bossInstanceId = stripQuotes(
+              getCell(r, map, "BossInstanceId", "Boss Instance ID", "BossInstanceID")
+            ).trim();
+            const guildAttacks = stripQuotes(
+              getCell(r, map, "GuildAttacks", "Guild Attacks")
+            ).trim();
+
             if (!homeroom || !status || !sessionId) return null;
-            return { homeroom, status, sessionId };
+            return {
+              homeroom,
+              status,
+              sessionId,
+              pairedHomeroom,
+              bossKey,
+              bossInstanceId: bossInstanceId || sessionId,
+              guildAttacks,
+            };
           })
           .filter(Boolean) as BattleControlRow[];
 
@@ -354,14 +422,17 @@ export default function BattlePage({ onBack }: Props) {
     };
 
     loadBattleControl();
-    const t = window.setInterval(loadBattleControl, 10_000);
+    const t = window.setInterval(
+      loadBattleControl,
+      isTeacher ? BATTLE_CONTROL_POLL_MS_TEACHER : BATTLE_CONTROL_POLL_MS_STUDENT
+    );
 
     return () => {
       alive = false;
       window.clearInterval(t);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pageActive, activeHomeroom]);
+  }, [pageActive, activeHomeroom, isTeacher]);
 
   // ✅ HP refresh from API (only when page is active)
   useEffect(() => {
@@ -445,6 +516,69 @@ export default function BattlePage({ onBack }: Props) {
         a.homeroom.localeCompare(b.homeroom, "en", { numeric: true })
       );
   }, [battleRows]);
+
+  const currentBattleRow = useMemo(
+    () =>
+      battleRows.find(
+        (r) => r.homeroom === activeHomeroom && r.sessionId === activeSessionId
+      ) ?? null,
+    [battleRows, activeHomeroom, activeSessionId]
+  );
+
+  const hasBossConfigured = Boolean(currentBattleRow?.bossKey);
+  const guildAttacksOpen =
+    String(currentBattleRow?.guildAttacks ?? "").toUpperCase() === "OPEN";
+  const studentAttackMode = !isTeacher && groupAction === "ATTACK";
+  const studentHealMode = !isTeacher && groupAction === "HEAL";
+
+  useEffect(() => {
+    if (!pageActive) return;
+    if (!currentBattleRow?.bossKey || !currentBattleRow.bossInstanceId) {
+      setBossState(null);
+      setBossError(null);
+      return;
+    }
+
+    let alive = true;
+    const loadBoss = async () => {
+      try {
+        const next = await getBossState({
+          bossInstanceId: currentBattleRow.bossInstanceId || currentBattleRow.sessionId,
+          bossKey: currentBattleRow.bossKey ?? "",
+        });
+        if (!alive) return;
+
+        const now = Date.now();
+        const pending = bossPendingRef.current.get(next.bossInstanceId);
+        if (pending && now - pending.ts <= BOSS_PENDING_TTL_MS) {
+          if (next.currentHP === pending.expected) {
+            bossPendingRef.current.delete(next.bossInstanceId);
+            setBossState(next);
+          } else {
+            setBossState({ ...next, currentHP: pending.expected, maxHP: pending.max });
+          }
+        } else {
+          bossPendingRef.current.delete(next.bossInstanceId);
+          setBossState(next);
+        }
+      } catch {
+        if (!alive) return;
+        setBossError("Could not refresh boss state.");
+      }
+    };
+
+    loadBoss();
+    const t = window.setInterval(loadBoss, 10_000);
+    return () => {
+      alive = false;
+      window.clearInterval(t);
+    };
+  }, [
+    pageActive,
+    currentBattleRow?.bossInstanceId,
+    currentBattleRow?.bossKey,
+    currentBattleRow?.sessionId,
+  ]);
 
   const hpById = useMemo(() => {
     const m = new Map<string, HpStateRow>();
@@ -536,6 +670,123 @@ export default function BattlePage({ onBack }: Props) {
     return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
   };
 
+  const refreshBattleControlOnce = async (): Promise<BattleControlRow[]> => {
+    const text = await fetch(bcCsvUrlBusted()).then((r) => r.text());
+    const { headers, rows } = parseCSV(text);
+    const map = idxMap(headers);
+    const parsed: BattleControlRow[] = rows
+      .map((r) => {
+        const homeroom = stripQuotes(
+          getCell(r, map, "Homeroom", "HomeRoom", "HR", "Class", "Section")
+        ).trim();
+        const status = stripQuotes(getCell(r, map, "Status")).trim();
+        const sessionId = stripQuotes(
+          getCell(r, map, "ActiveBattleSessionID", "SessionID", "BattleSessionID")
+        ).trim();
+        const pairedHomeroom = stripQuotes(
+          getCell(r, map, "PairedHomeroom", "Paired HomeRoom")
+        ).trim();
+        const bossKey = stripQuotes(getCell(r, map, "BossKey", "Boss Key")).trim();
+        const bossInstanceId = stripQuotes(
+          getCell(r, map, "BossInstanceId", "Boss Instance ID", "BossInstanceID")
+        ).trim();
+        const guildAttacks = stripQuotes(
+          getCell(r, map, "GuildAttacks", "Guild Attacks")
+        ).trim();
+
+        if (!homeroom || !status || !sessionId) return null;
+        return {
+          homeroom,
+          status,
+          sessionId,
+          pairedHomeroom,
+          bossKey,
+          bossInstanceId: bossInstanceId || sessionId,
+          guildAttacks,
+        };
+      })
+      .filter(Boolean) as BattleControlRow[];
+
+    setBattleRows(parsed);
+    return parsed;
+  };
+
+  async function onSubmitBossAttack() {
+    if (!currentBattleRow?.bossKey || !currentBattleRow.bossInstanceId) {
+      setBossError(
+        "No boss configured for this battle yet. Set BossKey in Battle_Control …"
+      );
+      return;
+    }
+    if (bossSubmitting) return;
+    if (!Number.isFinite(bossAttackAmount) || bossAttackAmount <= 0) {
+      setBossError("Enter a valid Guild Total Attack amount.");
+      return;
+    }
+
+    if (studentHealMode) {
+      setBossError("Group Action is HEAL. Switch to ATTACK to damage the boss.");
+      return;
+    }
+
+    let row = currentBattleRow;
+
+    if (!isTeacher && studentAttackMode && !guildAttacksOpen) {
+      try {
+        const fresh = await refreshBattleControlOnce();
+        const refreshedRow =
+          fresh.find(
+            (r) =>
+              r.homeroom === activeHomeroom &&
+              r.sessionId === activeSessionId
+          ) ?? row;
+        row = refreshedRow;
+      } catch {
+        // ignore and keep existing row
+      }
+      const reopened = String(row?.guildAttacks ?? "").toUpperCase() === "OPEN";
+      if (!reopened) {
+        setBossError("Guild attacks are CLOSED");
+        return;
+      }
+    }
+
+    const cur = bossState;
+    if (!cur) {
+      setBossError("Boss state is still loading. Please try again.");
+      return;
+    }
+
+    setBossSubmitting(true);
+    setBossError(null);
+    const deltaValue = -Math.abs(Math.round(bossAttackAmount));
+    const optimisticHP = Math.max(0, Math.min(cur.maxHP, cur.currentHP + deltaValue));
+
+    bossPendingRef.current.set(cur.bossInstanceId, {
+      expected: optimisticHP,
+      max: cur.maxHP,
+      ts: Date.now(),
+    });
+    setBossState({ ...cur, currentHP: optimisticHP });
+
+    try {
+      await submitBossDelta({
+        bossInstanceId: cur.bossInstanceId,
+        bossKey: cur.bossKey,
+        delta: deltaValue,
+        source: bossNote.trim(),
+        requestId: `${activeSessionId}:${cur.bossInstanceId}:${makeSubmitNonce()}`,
+      });
+      setBossNote("");
+    } catch {
+      bossPendingRef.current.delete(cur.bossInstanceId);
+      setBossState(cur);
+      setBossError("Boss submit failed. Please try again.");
+    } finally {
+      setBossSubmitting(false);
+    }
+  }
+
   async function onSubmit() {
     if (submitting) return;
 
@@ -543,6 +794,13 @@ export default function BattlePage({ onBack }: Props) {
 
     if (!activeHomeroom || !activeSessionId) {
       setBanner({ type: "err", msg: "Pick an ACTIVE homeroom." });
+      return;
+    }
+    if (studentAttackMode) {
+      setBanner({
+        type: "err",
+        msg: "Group Action is ATTACK. Student heal/damage is disabled.",
+      });
       return;
     }
     if (selectedIds.length === 0) {
@@ -689,6 +947,13 @@ export default function BattlePage({ onBack }: Props) {
 
   const damageOptions = [-1, -2, -3, -4, -5];
   const healOptions = [1, 2, 3, 4, 5];
+
+  const bossName =
+    bossState?.bossName?.trim() || prettifyBossKey(currentBattleRow?.bossKey ?? "Boss");
+  const bossPct = bossState
+    ? Math.max(0, Math.min(1, bossState.currentHP / Math.max(1, bossState.maxHP)))
+    : 0;
+  const studentControlsDisabled = studentAttackMode;
 
   return (
     <div className="w-full h-[100dvh] overflow-hidden">
@@ -837,6 +1102,38 @@ export default function BattlePage({ onBack }: Props) {
                   )}
                 </div>
               </div>
+
+              {!isTeacher && (
+                <div className="mt-2 rounded-xl border border-zinc-800/60 bg-zinc-950/25 p-2">
+                  <div className={label}>Group Action</div>
+                  <div className="mt-1 grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setGroupAction("ATTACK")}
+                      className={[
+                        "rounded-xl py-2 text-sm font-semibold border transition",
+                        groupAction === "ATTACK"
+                          ? "border-red-400 bg-red-500/10 text-red-100 ring-2 ring-red-400/25"
+                          : "border-zinc-800/70 bg-zinc-950/40 text-zinc-200 hover:bg-zinc-900/60",
+                      ].join(" ")}
+                    >
+                      ATTACK
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setGroupAction("HEAL")}
+                      className={[
+                        "rounded-xl py-2 text-sm font-semibold border transition",
+                        groupAction === "HEAL"
+                          ? "border-emerald-400 bg-emerald-500/10 text-emerald-100 ring-2 ring-emerald-400/25"
+                          : "border-zinc-800/70 bg-zinc-950/40 text-zinc-200 hover:bg-zinc-900/60",
+                      ].join(" ")}
+                    >
+                      HEAL
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Main area */}
@@ -1014,20 +1311,119 @@ export default function BattlePage({ onBack }: Props) {
                   <div className="h-[22px] mb-2" />
 
                   <div className={[panel, "flex flex-col"].join(" ")}>
-                    <div className="flex items-center gap-2">
+                    <div className="text-[10px] uppercase tracking-widest text-zinc-500">
+                      Boss
+                    </div>
+
+                    {!hasBossConfigured ? (
+                      <div className="mt-2 rounded-xl border border-zinc-800/60 bg-zinc-950/20 p-2 text-[11px] text-zinc-400">
+                        No boss configured for this battle yet. Set BossKey in Battle_Control …
+                      </div>
+                    ) : (
+                      <div className="mt-2">
+                        <div className="text-sm font-semibold text-zinc-100">{bossName}</div>
+                        <div className="text-[11px] text-zinc-400 tabular-nums">
+                          {bossState ? `${bossState.currentHP}/${bossState.maxHP}` : "Loading..."}
+                        </div>
+                        <div className="mt-1 h-2 w-full rounded-full bg-zinc-900/70 border border-zinc-800/65 overflow-hidden">
+                          <div
+                            className="h-full transition-[width] duration-300"
+                            style={{
+                              width: `${Math.round(bossPct * 100)}%`,
+                              backgroundColor: hpBarColorFromPct(bossPct),
+                            }}
+                          />
+                        </div>
+
+                        {!studentHealMode && (
+                          <>
+                            <div className="mt-2 text-[10px] uppercase tracking-widest text-zinc-500 mb-1">
+                              Guild Total Attack
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="number"
+                                min={1}
+                                value={bossAttackAmount}
+                                onChange={(e) =>
+                                  setBossAttackAmount(
+                                    Math.max(1, Math.round(toNumber(e.target.value, 1)))
+                                  )
+                                }
+                                className={selectClass}
+                              />
+                              <button
+                                type="button"
+                                onClick={onSubmitBossAttack}
+                                disabled={
+                                  bossSubmitting ||
+                                  (!isTeacher && studentAttackMode && !guildAttacksOpen)
+                                }
+                                className={[
+                                  "rounded-xl px-3 py-2 text-sm font-semibold border transition",
+                                  bossSubmitting ||
+                                  (!isTeacher && studentAttackMode && !guildAttacksOpen)
+                                    ? "border-zinc-800/70 bg-zinc-900/60 text-zinc-400 cursor-not-allowed"
+                                    : "border-cyan-300/60 bg-cyan-400/10 text-cyan-100 hover:bg-cyan-400/15",
+                                ].join(" ")}
+                              >
+                                {bossSubmitting ? "Submitting…" : "Apply"}
+                              </button>
+                            </div>
+                            {bossSubmitting && (
+                              <div className="mt-1 text-[11px] text-cyan-200">Submitting…</div>
+                            )}
+                            {!isTeacher && studentAttackMode && !guildAttacksOpen && (
+                              <div className="mt-1 text-[11px] text-amber-300">
+                                Guild attacks are CLOSED
+                              </div>
+                            )}
+
+                            <div className="mt-2 text-[10px] uppercase tracking-widest text-zinc-500 mb-1">
+                              Breakdown / Note
+                            </div>
+                            <textarea
+                              value={bossNote}
+                              onChange={(e) => setBossNote(e.target.value)}
+                              placeholder="Optional note for this boss hit"
+                              className={selectClass}
+                              rows={2}
+                            />
+                          </>
+                        )}
+
+                        {studentHealMode && (
+                          <div className="mt-2 text-[11px] text-zinc-500">
+                            Group Action is HEAL. Boss attacks are disabled.
+                          </div>
+                        )}
+
+                        {bossError && (
+                          <div className="mt-2 rounded-xl px-3 py-2 text-sm border border-red-900/50 bg-red-950/30 text-red-200">
+                            {bossError}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    <div className="mt-3 border-t border-zinc-900/60" />
+
+                    <div className="flex items-center gap-2 mt-3">
                       <div className="text-[10px] uppercase tracking-widest text-zinc-500">
                         Damage / Heal
                       </div>
                       <div className="flex-1" />
                       <div className="text-[11px] text-zinc-400">
-                        Targets:{" "}
-                        <span className="text-zinc-200">
-                          {selectedIds.length}
-                        </span>
-                      </div>
+                        Targets: <span className="text-zinc-200">{selectedIds.length}</span>
                     </div>
 
-                    <div className="mt-2">
+                    {studentControlsDisabled && (
+                      <div className="mt-2 rounded-xl border border-zinc-800/60 bg-zinc-950/20 p-2 text-[11px] text-zinc-400">
+                        Group Action is ATTACK. Student damage/heal submit is disabled.
+                      </div>
+                    )}
+
+                    <div className={studentControlsDisabled ? "mt-2 opacity-40 pointer-events-none" : "mt-2"}>
                       <div className="text-[10px] uppercase tracking-widest text-zinc-500 mb-1">
                         Damage
                       </div>
@@ -1079,10 +1475,8 @@ export default function BattlePage({ onBack }: Props) {
 
                     <div className="mt-3 border-t border-zinc-900/60" />
 
-                    <div className="mt-3">
-                      <div className="text-[10px] uppercase tracking-widest text-zinc-500 mb-1">
-                        Note
-                      </div>
+                    <div className={studentControlsDisabled ? "mt-3 opacity-40 pointer-events-none" : "mt-3"}>
+                      <div className="text-[10px] uppercase tracking-widest text-zinc-500 mb-1">Note</div>
                       <input
                         value={note}
                         onChange={(e) => setNote(e.target.value)}
@@ -1098,9 +1492,7 @@ export default function BattlePage({ onBack }: Props) {
                         </div>
                         <div className={innerPanel}>
                           {selectedSkills.length === 0 ? (
-                            <div className="text-[11px] text-zinc-500">
-                              No skills listed.
-                            </div>
+                            <div className="text-[11px] text-zinc-500">No skills listed.</div>
                           ) : (
                             <div className="flex flex-wrap gap-1">
                               {selectedSkills.map((sk) => (
@@ -1126,10 +1518,10 @@ export default function BattlePage({ onBack }: Props) {
                     <button
                       type="button"
                       onClick={onSubmit}
-                      disabled={submitting}
+                      disabled={submitting || studentControlsDisabled}
                       className={[
                         "mt-2 rounded-2xl px-6 py-3 text-sm font-semibold transition border w-full",
-                        submitting
+                        submitting || studentControlsDisabled
                           ? "border-zinc-800/70 bg-zinc-900/60 text-zinc-400 cursor-not-allowed"
                           : "border-cyan-300/60 bg-cyan-400/10 text-cyan-100 hover:bg-cyan-400/15 ring-1 ring-cyan-300/15",
                       ].join(" ")}
@@ -1149,6 +1541,7 @@ export default function BattlePage({ onBack }: Props) {
                         {banner.msg}
                       </div>
                     )}
+                  </div>
                   </div>
                 </div>
               </div>
