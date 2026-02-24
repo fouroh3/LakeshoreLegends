@@ -1426,6 +1426,7 @@ export default function BattlePage({ onBack }: Props) {
                       <div className="flex-1" />
                       <div className="text-[11px] text-zinc-400">
                         Targets: <span className="text-zinc-200">{selectedIds.length}</span>
+                      </div>
                     </div>
 
                     {studentControlsDisabled && (
@@ -1552,7 +1553,6 @@ export default function BattlePage({ onBack }: Props) {
                         {banner.msg}
                       </div>
                     )}
-                  </div>
                   </div>
                 </div>
               </div>
