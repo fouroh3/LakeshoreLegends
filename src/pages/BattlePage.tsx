@@ -282,11 +282,14 @@ export default function BattlePage({ onBack }: Props) {
   const [activeHomeroom, setActiveHomeroom] = useState<string>("");
   const [activeSessionId, setActiveSessionId] = useState<string>("");
 
-  const [bossState, setBossState] = useState<BossState | null>(null);
+  const [guildAttacks, setGuildAttacks] = useState<"OPEN" | "CLOSED">("CLOSED");
+  const [bossKey, setBossKey] = useState<string>("");
+  const [bossInstanceId, setBossInstanceId] = useState<string>("");
+  const [boss, setBoss] = useState<BossState | null>(null);
   const [bossNote, setBossNote] = useState<string>("");
-  const [bossAttackAmount, setBossAttackAmount] = useState<number>(1);
+  const [bossDamage, setBossDamage] = useState<string>(""); // input
   const [bossSubmitting, setBossSubmitting] = useState(false);
-  const [bossError, setBossError] = useState<string | null>(null);
+  const [bossErr, setBossErr] = useState<string | null>(null);
 
   const [guildFilter, setGuildFilter] = useState<Guild | "ALL">("ALL");
 
@@ -525,17 +528,27 @@ export default function BattlePage({ onBack }: Props) {
     [battleRows, activeHomeroom, activeSessionId]
   );
 
-  const hasBossConfigured = Boolean(currentBattleRow?.bossKey);
-  const guildAttacksOpen =
-    String(currentBattleRow?.guildAttacks ?? "").toUpperCase() === "OPEN";
+  const hasBossConfigured = Boolean(bossKey);
+  const guildAttacksOpen = guildAttacks === "OPEN";
   const studentAttackMode = !isTeacher && groupAction === "ATTACK";
   const studentHealMode = !isTeacher && groupAction === "HEAL";
 
+
+  useEffect(() => {
+    const ga = String(currentBattleRow?.guildAttacks ?? "").toUpperCase() === "OPEN" ? "OPEN" : "CLOSED";
+    setGuildAttacks(ga);
+    setBossKey(stripQuotes(currentBattleRow?.bossKey ?? "").trim());
+    setBossInstanceId(
+      stripQuotes(currentBattleRow?.bossInstanceId ?? "").trim() ||
+        stripQuotes(currentBattleRow?.sessionId ?? "").trim()
+    );
+  }, [currentBattleRow]);
+
   useEffect(() => {
     if (!pageActive) return;
-    if (!currentBattleRow?.bossKey || !currentBattleRow.bossInstanceId) {
-      setBossState(null);
-      setBossError(null);
+    if (!bossKey || !bossInstanceId) {
+      setBoss(null);
+      setBossErr(null);
       return;
     }
 
@@ -543,8 +556,8 @@ export default function BattlePage({ onBack }: Props) {
     const loadBoss = async () => {
       try {
         const next = await getBossState({
-          bossInstanceId: currentBattleRow.bossInstanceId || currentBattleRow.sessionId,
-          bossKey: currentBattleRow.bossKey ?? "",
+          bossInstanceId,
+          bossKey,
         });
         if (!alive) return;
 
@@ -553,17 +566,17 @@ export default function BattlePage({ onBack }: Props) {
         if (pending && now - pending.ts <= BOSS_PENDING_TTL_MS) {
           if (next.currentHP === pending.expected) {
             bossPendingRef.current.delete(next.bossInstanceId);
-            setBossState(next);
+            setBoss(next);
           } else {
-            setBossState({ ...next, currentHP: pending.expected, maxHP: pending.max });
+            setBoss({ ...next, currentHP: pending.expected, maxHP: pending.max });
           }
         } else {
           bossPendingRef.current.delete(next.bossInstanceId);
-          setBossState(next);
+          setBoss(next);
         }
       } catch {
         if (!alive) return;
-        setBossError("Could not refresh boss state.");
+        setBossErr("Could not refresh boss state.");
       }
     };
 
@@ -575,9 +588,8 @@ export default function BattlePage({ onBack }: Props) {
     };
   }, [
     pageActive,
-    currentBattleRow?.bossInstanceId,
-    currentBattleRow?.bossKey,
-    currentBattleRow?.sessionId,
+    bossInstanceId,
+    bossKey,
   ]);
 
   const hpById = useMemo(() => {
@@ -712,20 +724,21 @@ export default function BattlePage({ onBack }: Props) {
   };
 
   async function onSubmitBossAttack() {
-    if (!currentBattleRow?.bossKey || !currentBattleRow.bossInstanceId) {
-      setBossError(
+    if (!bossKey || !bossInstanceId) {
+      setBossErr(
         "No boss configured for this battle yet. Set BossKey in Battle_Control …"
       );
       return;
     }
     if (bossSubmitting) return;
-    if (!Number.isFinite(bossAttackAmount) || bossAttackAmount <= 0) {
-      setBossError("Enter a valid Guild Total Attack amount.");
+    const parsedDamage = Number.parseInt(bossDamage, 10);
+    if (!Number.isFinite(parsedDamage) || parsedDamage <= 0) {
+      setBossErr("Enter a valid Guild Total Attack amount.");
       return;
     }
 
     if (studentHealMode) {
-      setBossError("Group Action is HEAL. Switch to ATTACK to damage the boss.");
+      setBossErr("Group Action is HEAL. Switch to ATTACK to damage the boss.");
       return;
     }
 
@@ -746,20 +759,20 @@ export default function BattlePage({ onBack }: Props) {
       }
       const reopened = String(row?.guildAttacks ?? "").toUpperCase() === "OPEN";
       if (!reopened) {
-        setBossError("Guild attacks are CLOSED");
+        setBossErr("Guild attacks are CLOSED");
         return;
       }
     }
 
-    const cur = bossState;
+    const cur = boss;
     if (!cur) {
-      setBossError("Boss state is still loading. Please try again.");
+      setBossErr("Boss state is still loading. Please try again.");
       return;
     }
 
     setBossSubmitting(true);
-    setBossError(null);
-    const deltaValue = -Math.abs(Math.round(bossAttackAmount));
+    setBossErr(null);
+    const deltaValue = -Math.abs(parsedDamage);
     const optimisticHP = Math.max(0, Math.min(cur.maxHP, cur.currentHP + deltaValue));
 
     bossPendingRef.current.set(cur.bossInstanceId, {
@@ -767,7 +780,7 @@ export default function BattlePage({ onBack }: Props) {
       max: cur.maxHP,
       ts: Date.now(),
     });
-    setBossState({ ...cur, currentHP: optimisticHP });
+    setBoss({ ...cur, currentHP: optimisticHP });
 
     try {
       await submitBossDelta({
@@ -780,8 +793,8 @@ export default function BattlePage({ onBack }: Props) {
       setBossNote("");
     } catch {
       bossPendingRef.current.delete(cur.bossInstanceId);
-      setBossState(cur);
-      setBossError("Boss submit failed. Please try again.");
+      setBoss(cur);
+      setBossErr("Boss submit failed. Please try again.");
     } finally {
       setBossSubmitting(false);
     }
@@ -949,9 +962,9 @@ export default function BattlePage({ onBack }: Props) {
   const healOptions = [1, 2, 3, 4, 5];
 
   const bossName =
-    bossState?.bossName?.trim() || prettifyBossKey(currentBattleRow?.bossKey ?? "Boss");
-  const bossPct = bossState
-    ? Math.max(0, Math.min(1, bossState.currentHP / Math.max(1, bossState.maxHP)))
+    boss?.bossName?.trim() || prettifyBossKey(bossKey || "Boss");
+  const bossPct = boss
+    ? Math.max(0, Math.min(1, boss.currentHP / Math.max(1, boss.maxHP)))
     : 0;
   const studentControlsDisabled = studentAttackMode;
 
@@ -1323,7 +1336,7 @@ export default function BattlePage({ onBack }: Props) {
                       <div className="mt-2">
                         <div className="text-sm font-semibold text-zinc-100">{bossName}</div>
                         <div className="text-[11px] text-zinc-400 tabular-nums">
-                          {bossState ? `${bossState.currentHP}/${bossState.maxHP}` : "Loading..."}
+                          {boss ? `${boss.currentHP}/${boss.maxHP}` : "Loading..."}
                         </div>
                         <div className="mt-1 h-2 w-full rounded-full bg-zinc-900/70 border border-zinc-800/65 overflow-hidden">
                           <div
@@ -1344,11 +1357,9 @@ export default function BattlePage({ onBack }: Props) {
                               <input
                                 type="number"
                                 min={1}
-                                value={bossAttackAmount}
+                                value={bossDamage}
                                 onChange={(e) =>
-                                  setBossAttackAmount(
-                                    Math.max(1, Math.round(toNumber(e.target.value, 1)))
-                                  )
+                                  setBossDamage(e.target.value)
                                 }
                                 className={selectClass}
                               />
@@ -1398,9 +1409,9 @@ export default function BattlePage({ onBack }: Props) {
                           </div>
                         )}
 
-                        {bossError && (
+                        {bossErr && (
                           <div className="mt-2 rounded-xl px-3 py-2 text-sm border border-red-900/50 bg-red-950/30 text-red-200">
-                            {bossError}
+                            {bossErr}
                           </div>
                         )}
                       </div>
