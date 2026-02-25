@@ -5,6 +5,9 @@ export const BATTLE_CONTROL_CSV =
 export const HP_API_URL =
   "https://script.google.com/macros/s/AKfycbw6gMIFYPvaljF3Ls-waojzprU6bygZZonOIJeKLopN2NSKgkDT-EsRKznxQiGpth_6/exec";
 
+export const BATTLE_GUILD_TOTALS_CSV =
+  "https://docs.google.com/spreadsheets/d/e/2PACX-1vSsHQNK1vvVY-V6nI4kOEilMlAdcnPCdM50QC3-mO4OQsoBDN0l_ROeTUoob3OhJpKD7zIZPXP1VrJw/pub?gid=2001284714&single=true&output=csv";
+
 export const GROUP_ACTION_KEY = "ll:groupAction";
 
 export const MAX_HP = 20;

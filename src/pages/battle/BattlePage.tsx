@@ -9,6 +9,7 @@ import { usePageActive } from "./hooks/usePageActive";
 import { useBattleControl } from "./hooks/useBattleControl";
 import { useHpState } from "./hooks/useHpState";
 import { useBossState } from "./hooks/useBossState";
+import { useGuildTotals } from "./hooks/useGuildTotals";
 
 import { GROUP_ACTION_KEY, MAX_HP } from "./battleConstants";
 import {
@@ -41,6 +42,7 @@ export default function BattlePage({ onBack }: Props) {
 
   const { battleRows, refreshOnce: refreshBattleControlOnce } =
     useBattleControl(pageActive, isTeacher);
+
   const { getDisplayHp, applyOptimisticHp, clearPending } =
     useHpState(pageActive);
 
@@ -76,12 +78,17 @@ export default function BattlePage({ onBack }: Props) {
   const [bossSubmitting, setBossSubmitting] = useState(false);
   const [bossSubmitErr, setBossSubmitErr] = useState<string | null>(null);
 
-  // ✅ NEW: boss banner + cooldown
   const [bossBanner, setBossBanner] = useState<{
     type: "ok" | "err";
     msg: string;
   } | null>(null);
   const [bossCooldownUntil, setBossCooldownUntil] = useState<number>(0);
+
+  // ✅ Guild totals
+  const { top: guildTotals, err: guildTotalsErr } = useGuildTotals(
+    pageActive,
+    activeSessionId
+  );
 
   // students load once
   useEffect(() => {
@@ -211,7 +218,6 @@ export default function BattlePage({ onBack }: Props) {
     setNote("");
     setDelta(-1);
 
-    // ✅ reset boss UI too
     setBossBanner(null);
     setBossSubmitErr(null);
     setBossDamage("");
@@ -324,7 +330,6 @@ export default function BattlePage({ onBack }: Props) {
     note,
   ]);
 
-  // ✅ Boss submit (adds success banner + cooldown + clears input)
   const onSubmitBossAttack = useCallback(async () => {
     setBossBanner(null);
 
@@ -466,8 +471,7 @@ export default function BattlePage({ onBack }: Props) {
               multiSelect={multiSelect}
               setMultiSelect={setMultiSelect}
               clearSelection={() => setSelectedIds([])}
-              groupAction={groupAction}
-              setGroupAction={setGroupAction}
+              // ✅ REMOVED: groupAction + setGroupAction (now RightRail only)
             />
 
             <div className="mt-2 rounded-2xl border border-zinc-900/60 bg-zinc-950/15 p-2">
@@ -512,6 +516,8 @@ export default function BattlePage({ onBack }: Props) {
                   banner={banner}
                   groupAction={groupAction}
                   setGroupAction={setGroupAction}
+                  guildTotals={guildTotals}
+                  guildTotalsErr={guildTotalsErr}
                 />
               </div>
             </div>
