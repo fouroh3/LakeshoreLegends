@@ -24,10 +24,14 @@ type Props = {
   setBossDamage: (v: string) => void;
   bossNote: string;
   setBossNote: (v: string) => void;
-  onSubmitBossAttack: () => void;
+  onSubmitBossAttack: (payload: { round: number; guild: string }) => void;
   bossSubmitErr: string | null;
   bossBanner: Banner;
   bossCooldownUntil: number;
+
+  // ✅ NEW: required by App Script locks
+  activeRound: number; // must be > 0 for ATTACK
+  activeGuild: string; // required for ATTACK lock (e.g., "Shadows")
 
   // Modes / permissions
   studentHealMode: boolean;
@@ -64,9 +68,12 @@ const input =
   "w-full rounded-xl bg-black/40 border border-zinc-800/70 px-3 py-2 text-sm text-white outline-none focus:border-white/25";
 const btn =
   "w-full rounded-xl px-3 py-2 text-sm font-semibold border transition disabled:opacity-50 disabled:cursor-not-allowed";
-const btnPrimary = "bg-cyan-500/15 border-cyan-300/40 hover:bg-cyan-500/20";
-const btnDanger = "bg-red-500/10 border-red-400/30 hover:bg-red-500/15";
-const btnSoft = "border-zinc-800/70 bg-zinc-950/25 hover:bg-zinc-950/35";
+const btnPrimary =
+  "bg-cyan-500/15 border-cyan-300/40 hover:bg-cyan-500/20";
+const btnDanger =
+  "bg-red-500/10 border-red-400/30 hover:bg-red-500/15";
+const btnSoft =
+  "border-zinc-800/70 bg-zinc-950/25 hover:bg-zinc-950/35";
 const pill =
   "px-2 py-1 rounded-full text-[11px] border border-zinc-800/70 bg-zinc-950/30";
 
@@ -83,42 +90,42 @@ function BannerBox({ banner }: { banner: Banner }) {
   );
 }
 
-export default function RightRail(props: Props) {
-  const {
-    hasBossConfigured,
-    bossName,
-    boss,
-    bossErr,
-    bossSubmitting,
-    bossDamage,
-    setBossDamage,
-    bossNote,
-    setBossNote,
-    onSubmitBossAttack,
-    bossSubmitErr,
-    bossBanner,
-    bossCooldownUntil,
-    studentHealMode,
-    studentAttackMode,
-    guildAttacksOpen,
-    isTeacher,
-    selectedCount,
-    studentControlsDisabled,
-    delta,
-    setDelta,
-    note,
-    setNote,
-    selectedStudents,
-    selectedSkills,
-    submitting,
-    onSubmit,
-    banner,
-    groupAction,
-    setGroupAction,
-    guildTotals,
-    guildTotalsErr,
-  } = props;
-
+export default function RightRail({
+  hasBossConfigured,
+  bossName,
+  boss,
+  bossErr,
+  bossSubmitting,
+  bossDamage,
+  setBossDamage,
+  bossNote,
+  setBossNote,
+  onSubmitBossAttack,
+  bossSubmitErr,
+  bossBanner,
+  bossCooldownUntil,
+  activeRound,
+  activeGuild,
+  studentHealMode,
+  studentAttackMode,
+  guildAttacksOpen,
+  isTeacher,
+  selectedCount,
+  studentControlsDisabled,
+  delta,
+  setDelta,
+  note,
+  setNote,
+  selectedStudents,
+  selectedSkills,
+  submitting,
+  onSubmit,
+  banner,
+  groupAction,
+  setGroupAction,
+  guildTotals,
+  guildTotalsErr,
+}: Props) {
   const bossPct = useMemo(() => {
     if (!boss) return 0;
     return Math.max(0, Math.min(1, boss.currentHP / Math.max(1, boss.maxHP)));
@@ -131,12 +138,30 @@ export default function RightRail(props: Props) {
     return ms > 0 ? ms : 0;
   }, [bossCooldownUntil]);
 
+  // Students: show only one panel based on toggle
+  // Teacher: show both
   const showAttackUi = isTeacher ? true : groupAction === "ATTACK";
   const showHealUi = isTeacher ? true : groupAction === "HEAL";
 
+  const attackDisabledReason = useMemo(() => {
+    if (!hasBossConfigured) return "No boss configured";
+    if (studentHealMode) return "Switch Group Action to ATTACK";
+    if (!isTeacher && !guildAttacksOpen) return "Guild attacks are CLOSED";
+    if (!activeRound || activeRound <= 0) return "Missing round";
+    if (!activeGuild) return "Missing guild";
+    return "";
+  }, [
+    hasBossConfigured,
+    studentHealMode,
+    isTeacher,
+    guildAttacksOpen,
+    activeRound,
+    activeGuild,
+  ]);
+
   return (
     <div className="min-h-0 overflow-auto pr-1">
-      {/* ✅ Sticky Header: Boss name + HP + status + (student) Group Action */}
+      {/* ✅ Sticky header: boss info always visible */}
       <div className="sticky top-0 z-20">
         <div className={`${card} p-3 bg-zinc-950/60 backdrop-blur`}>
           <div className="flex items-start justify-between gap-2">
@@ -174,7 +199,6 @@ export default function RightRail(props: Props) {
                 {boss ? `${boss.currentHP}/${boss.maxHP}` : "—"}
               </span>
             </div>
-
             <div className="mt-1 h-2 w-full rounded-full bg-zinc-900/70 border border-zinc-800/65 overflow-hidden">
               <div
                 className="h-full transition-[width] duration-300"
@@ -184,13 +208,12 @@ export default function RightRail(props: Props) {
                 }}
               />
             </div>
-
             {bossErr && (
               <div className="mt-2 text-xs text-red-200/80">{bossErr}</div>
             )}
           </div>
 
-          {/* ✅ Group Action toggle directly under header (student-facing only) */}
+          {/* ✅ Group Action toggle under boss header */}
           {!isTeacher && (
             <div className="mt-3">
               <div className={label}>Group Action</div>
@@ -218,11 +241,10 @@ export default function RightRail(props: Props) {
           )}
         </div>
 
-        {/* little separator so sticky doesn't “blend” */}
         <div className="h-2" />
       </div>
 
-      {/* ✅ ATTACK UI (only when ATTACK for students; always for teacher) */}
+      {/* ✅ ATTACK UI */}
       {showAttackUi && (
         <div className={`${card} p-3`}>
           <div className={label}>Boss Attack</div>
@@ -247,6 +269,20 @@ export default function RightRail(props: Props) {
               disabled={!hasBossConfigured || bossSubmitting}
             />
 
+            {/* helpful lock context */}
+            <div className="mt-1 flex items-center gap-2 flex-wrap">
+              <span className={pill}>
+                Round:{" "}
+                <span className="text-zinc-100 tabular-nums">
+                  {activeRound || "—"}
+                </span>
+              </span>
+              <span className={pill}>
+                Guild:{" "}
+                <span className="text-zinc-100 truncate">{activeGuild || "—"}</span>
+              </span>
+            </div>
+
             {bossSubmitErr && (
               <div className="text-xs text-red-200/80">{bossSubmitErr}</div>
             )}
@@ -254,16 +290,15 @@ export default function RightRail(props: Props) {
             <button
               type="button"
               className={`${btn} ${btnDanger}`}
-              onClick={onSubmitBossAttack}
+              onClick={() =>
+                onSubmitBossAttack({ round: activeRound, guild: activeGuild })
+              }
               disabled={
-                !hasBossConfigured ||
                 bossSubmitting ||
                 cooldownMs > 0 ||
-                studentHealMode
+                !!attackDisabledReason
               }
-              title={
-                studentHealMode ? "Switch Group Action to ATTACK" : undefined
-              }
+              title={attackDisabledReason || undefined}
             >
               {cooldownMs > 0
                 ? `Cooldown… ${(cooldownMs / 1000).toFixed(1)}s`
@@ -277,37 +312,59 @@ export default function RightRail(props: Props) {
         </div>
       )}
 
-      {/* ✅ HEAL UI (only when HEAL for students; always for teacher) */}
+      {/* ✅ HEAL UI */}
       {showHealUi && (
         <div className={`${card} p-3 mt-2`}>
           <div className="flex items-center justify-between">
             <div className={label}>Student Controls</div>
             <span className={pill}>
               Selected:{" "}
-              <span className="text-zinc-100 tabular-nums">
-                {selectedCount}
-              </span>
+              <span className="text-zinc-100 tabular-nums">{selectedCount}</span>
             </span>
           </div>
 
-          {/* Delta */}
+          {/* ✅ Delta pills */}
           <div className="mt-3">
             <div className={label}>Heal / Damage Amount</div>
-            <select
-              className={input}
-              value={String(delta)}
-              onChange={(e) => setDelta(Number(e.target.value))}
-              disabled={studentControlsDisabled}
-            >
-              <option value="-1">Damage -1</option>
-              <option value="-2">Damage -2</option>
-              <option value="-3">Damage -3</option>
-              <option value="-5">Damage -5</option>
-              <option value="1">Heal +1</option>
-              <option value="2">Heal +2</option>
-              <option value="3">Heal +3</option>
-              <option value="5">Heal +5</option>
-            </select>
+
+            <div className="mt-2 grid grid-cols-4 gap-2">
+              {[
+                { v: -1, t: "-1" },
+                { v: -2, t: "-2" },
+                { v: -3, t: "-3" },
+                { v: -5, t: "-5" },
+                { v: 1, t: "+1" },
+                { v: 2, t: "+2" },
+                { v: 3, t: "+3" },
+                { v: 5, t: "+5" },
+              ].map((o) => {
+                const active = delta === o.v;
+                const isHeal = o.v > 0;
+
+                return (
+                  <button
+                    key={o.v}
+                    type="button"
+                    className={[
+                      "rounded-xl px-3 py-2 text-sm font-semibold border transition",
+                      active
+                        ? isHeal
+                          ? "bg-cyan-500/15 border-cyan-300/50"
+                          : "bg-red-500/10 border-red-400/45"
+                        : "border-zinc-800/70 bg-zinc-950/25 hover:bg-zinc-950/35",
+                      studentControlsDisabled
+                        ? "opacity-50 cursor-not-allowed"
+                        : "",
+                    ].join(" ")}
+                    onClick={() => setDelta(o.v)}
+                    disabled={studentControlsDisabled}
+                    title={isHeal ? "Heal" : "Damage"}
+                  >
+                    {o.t}
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           {/* Note */}
@@ -354,7 +411,7 @@ export default function RightRail(props: Props) {
         </div>
       )}
 
-      {/* Guild totals (always visible below actions) */}
+      {/* Guild totals */}
       <div className={`${card} p-3 mt-2`}>
         <div className={label}>Guild Totals (This Battle)</div>
 
