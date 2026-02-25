@@ -22,6 +22,10 @@ export default function RightRail(props: {
   onSubmitBossAttack: () => void;
   bossSubmitErr: string | null;
 
+  // ✅ NEW: boss banner + cooldown (to prevent double strikes)
+  bossBanner: { type: "ok" | "err"; msg: string } | null;
+  bossCooldownUntil: number;
+
   // Guild/action context
   isTeacher: boolean;
   studentHealMode: boolean;
@@ -55,6 +59,8 @@ export default function RightRail(props: {
     setBossNote,
     onSubmitBossAttack,
     bossSubmitErr,
+    bossBanner,
+    bossCooldownUntil,
     isTeacher,
     studentHealMode,
     studentAttackMode,
@@ -100,6 +106,8 @@ export default function RightRail(props: {
           setBossNote={setBossNote}
           onSubmitBossAttack={onSubmitBossAttack}
           bossSubmitErr={bossSubmitErr}
+          bossBanner={bossBanner}
+          bossCooldownUntil={bossCooldownUntil}
           studentHealMode={studentHealMode}
           studentAttackMode={studentAttackMode}
           guildAttacksOpen={guildAttacksOpen}

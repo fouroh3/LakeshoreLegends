@@ -18,6 +18,10 @@ export default function BattleBossPanel(props: {
   onSubmitBossAttack: () => void;
   bossSubmitErr: string | null;
 
+  // ✅ NEW (must match BossPanel)
+  bossBanner: { type: "ok" | "err"; msg: string } | null;
+  bossCooldownUntil: number;
+
   studentHealMode: boolean;
   studentAttackMode: boolean;
   guildAttacksOpen: boolean;

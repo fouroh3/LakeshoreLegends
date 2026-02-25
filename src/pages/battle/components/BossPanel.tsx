@@ -1,5 +1,5 @@
 // src/pages/battle/components/BossPanel.tsx
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { BossState } from "../../../bossApi";
 import { hpBarColorFromPct } from "../../../utils/hpColor";
 
@@ -22,6 +22,10 @@ export default function BossPanel(props: {
   onSubmitBossAttack: () => void;
   bossSubmitErr: string | null;
 
+  // ✅ NEW: success/error banner + cooldown
+  bossBanner: { type: "ok" | "err"; msg: string } | null;
+  bossCooldownUntil: number;
+
   studentHealMode: boolean;
   studentAttackMode: boolean;
   guildAttacksOpen: boolean;
@@ -39,6 +43,8 @@ export default function BossPanel(props: {
     setBossNote,
     onSubmitBossAttack,
     bossSubmitErr,
+    bossBanner,
+    bossCooldownUntil,
     studentHealMode,
     studentAttackMode,
     guildAttacksOpen,
@@ -50,8 +56,29 @@ export default function BossPanel(props: {
     return Math.max(0, Math.min(1, boss.currentHP / Math.max(1, boss.maxHP)));
   }, [boss]);
 
+  // ✅ cooldown timer (for button label + disable)
+  const [cooldownMsLeft, setCooldownMsLeft] = useState(0);
+
+  useEffect(() => {
+    const tick = () => {
+      const left = Math.max(0, bossCooldownUntil - Date.now());
+      setCooldownMsLeft(left);
+    };
+    tick();
+    const t = window.setInterval(tick, 100);
+    return () => window.clearInterval(t);
+  }, [bossCooldownUntil]);
+
+  const onCooldown = cooldownMsLeft > 0;
+
   const disableBossApply =
-    bossSubmitting || (!isTeacher && studentAttackMode && !guildAttacksOpen);
+    bossSubmitting ||
+    onCooldown ||
+    (!isTeacher && studentAttackMode && !guildAttacksOpen);
+
+  const cooldownLabel = onCooldown
+    ? `Wait ${(cooldownMsLeft / 1000).toFixed(1)}s`
+    : null;
 
   return (
     <div>
@@ -81,6 +108,20 @@ export default function BossPanel(props: {
             />
           </div>
 
+          {/* ✅ Boss success/error banner (shows even when there isn't an error) */}
+          {bossBanner && (
+            <div
+              className={[
+                "mt-2 rounded-xl px-3 py-2 text-sm border",
+                bossBanner.type === "ok"
+                  ? "border-emerald-900/40 bg-emerald-950/25 text-emerald-200"
+                  : "border-red-900/50 bg-red-950/30 text-red-200",
+              ].join(" ")}
+            >
+              {bossBanner.msg}
+            </div>
+          )}
+
           {studentHealMode ? (
             <div className="mt-2 text-[11px] text-zinc-500">
               Group Action is HEAL. Boss attacks are disabled.
@@ -98,6 +139,7 @@ export default function BossPanel(props: {
                   value={bossDamage}
                   onChange={(e) => setBossDamage(e.target.value)}
                   className={selectClass}
+                  disabled={bossSubmitting || onCooldown}
                 />
 
                 <button
@@ -110,14 +152,29 @@ export default function BossPanel(props: {
                       ? "border-zinc-800/70 bg-zinc-900/60 text-zinc-400 cursor-not-allowed"
                       : "border-cyan-300/60 bg-cyan-400/10 text-cyan-100 hover:bg-cyan-400/15",
                   ].join(" ")}
+                  title={
+                    onCooldown
+                      ? "Attack just submitted — cooldown active."
+                      : undefined
+                  }
                 >
-                  {bossSubmitting ? "Submitting…" : "Apply"}
+                  {bossSubmitting
+                    ? "Submitting…"
+                    : onCooldown
+                    ? cooldownLabel
+                    : "Apply"}
                 </button>
               </div>
 
               {!isTeacher && studentAttackMode && !guildAttacksOpen && (
                 <div className="mt-1 text-[11px] text-amber-300">
                   Guild attacks are CLOSED
+                </div>
+              )}
+
+              {onCooldown && (
+                <div className="mt-1 text-[11px] text-zinc-500">
+                  Attack locked briefly to prevent double-submit.
                 </div>
               )}
 
@@ -130,6 +187,7 @@ export default function BossPanel(props: {
                 placeholder="Optional note for this boss hit"
                 className={selectClass}
                 rows={2}
+                disabled={bossSubmitting || onCooldown}
               />
             </>
           )}

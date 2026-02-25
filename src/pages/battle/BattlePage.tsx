@@ -29,6 +29,8 @@ import RightRail from "./components/RightRail";
 
 type Props = { onBack: () => void };
 
+const BOSS_COOLDOWN_MS = 3000;
+
 export default function BattlePage({ onBack }: Props) {
   const pageActive = usePageActive();
 
@@ -74,6 +76,13 @@ export default function BattlePage({ onBack }: Props) {
   const [bossSubmitting, setBossSubmitting] = useState(false);
   const [bossSubmitErr, setBossSubmitErr] = useState<string | null>(null);
 
+  // ✅ NEW: boss banner + cooldown
+  const [bossBanner, setBossBanner] = useState<{
+    type: "ok" | "err";
+    msg: string;
+  } | null>(null);
+  const [bossCooldownUntil, setBossCooldownUntil] = useState<number>(0);
+
   // students load once
   useEffect(() => {
     (async () => {
@@ -88,7 +97,7 @@ export default function BattlePage({ onBack }: Props) {
     })();
   }, []);
 
-  // persist groupAction per homeroom (same behavior)
+  // persist groupAction per homeroom
   useEffect(() => {
     if (!activeHomeroom) return;
     const stored = localStorage.getItem(
@@ -103,7 +112,6 @@ export default function BattlePage({ onBack }: Props) {
     localStorage.setItem(`${GROUP_ACTION_KEY}:${activeHomeroom}`, groupAction);
   }, [activeHomeroom, groupAction]);
 
-  // active options + choose active homeroom
   const activeOptions = useMemo(() => {
     return battleRows
       .filter((r) => String(r.status).toUpperCase() === "ACTIVE")
@@ -120,7 +128,6 @@ export default function BattlePage({ onBack }: Props) {
       setActiveSessionId("");
       return;
     }
-    // keep current if still present, otherwise pick first
     const keep = actives.find((r) => r.homeroom === activeHomeroom);
     const pick = keep ?? actives[0];
     setActiveHomeroom(pick.homeroom);
@@ -155,7 +162,6 @@ export default function BattlePage({ onBack }: Props) {
   const studentHealMode = !isTeacher && groupAction === "HEAL";
   const studentControlsDisabled = studentAttackMode;
 
-  // roster for homeroom
   const studentsInActiveHomeroom = useMemo(() => {
     if (!activeHomeroom) return [];
     return students
@@ -176,7 +182,6 @@ export default function BattlePage({ onBack }: Props) {
     return studentsInActiveHomeroom.filter((s: any) => s.guild === guildFilter);
   }, [studentsInActiveHomeroom, guildFilter]);
 
-  // selection helpers
   const toggleSelect = useCallback(
     (idRaw: string) => {
       const id = normId(idRaw);
@@ -194,18 +199,24 @@ export default function BattlePage({ onBack }: Props) {
     [multiSelect]
   );
 
-  // keep selection valid when filtering
   useEffect(() => {
     const setVisible = new Set(visibleStudents.map((s) => normId(s.id)));
     setSelectedIds((prev) => prev.filter((id) => setVisible.has(normId(id))));
   }, [visibleStudents]);
 
-  // reset minor UI on homeroom change (same behavior)
+  // reset minor UI on homeroom change
   useEffect(() => {
     setSelectedIds([]);
     setBanner(null);
     setNote("");
     setDelta(-1);
+
+    // ✅ reset boss UI too
+    setBossBanner(null);
+    setBossSubmitErr(null);
+    setBossDamage("");
+    setBossNote("");
+    setBossCooldownUntil(0);
   }, [activeHomeroom]);
 
   const selectedStudents = useMemo(() => {
@@ -219,7 +230,6 @@ export default function BattlePage({ onBack }: Props) {
     return skillsToArray(selectedStudents[0].skills);
   }, [selectedStudents]);
 
-  // Submit student delta (logic unchanged, just moved)
   const onSubmit = useCallback(async () => {
     if (submitting) return;
     setBanner(null);
@@ -314,8 +324,16 @@ export default function BattlePage({ onBack }: Props) {
     note,
   ]);
 
-  // Submit boss attack (logic unchanged, just moved)
+  // ✅ Boss submit (adds success banner + cooldown + clears input)
   const onSubmitBossAttack = useCallback(async () => {
+    setBossBanner(null);
+
+    const now = Date.now();
+    if (now < bossCooldownUntil) {
+      setBossBanner({ type: "err", msg: "Hold up… attack already submitted." });
+      return;
+    }
+
     if (!bossKey || !bossInstanceId) {
       setBossSubmitErr(
         "No boss configured for this battle yet. Set BossKey in Battle_Control …"
@@ -336,7 +354,6 @@ export default function BattlePage({ onBack }: Props) {
       return;
     }
 
-    // if student + attack mode, enforce guildAttacksOpen (same behavior)
     if (!isTeacher && studentAttackMode && !guildAttacksOpen) {
       try {
         const fresh = await refreshBattleControlOnce();
@@ -384,14 +401,21 @@ export default function BattlePage({ onBack }: Props) {
           boss.bossInstanceId
         }:${makeSubmitNonce()}`,
       });
+
+      setBossBanner({ type: "ok", msg: "Boss hit submitted ✅" });
+      setBossCooldownUntil(Date.now() + BOSS_COOLDOWN_MS);
+
       setBossNote("");
+      setBossDamage("");
     } catch {
       clearBossPending(boss.bossInstanceId);
       setBossSubmitErr("Boss submit failed. Please try again.");
+      setBossBanner({ type: "err", msg: "Boss submit failed." });
     } finally {
       setBossSubmitting(false);
     }
   }, [
+    bossCooldownUntil,
     bossKey,
     bossInstanceId,
     bossSubmitting,
@@ -458,7 +482,6 @@ export default function BattlePage({ onBack }: Props) {
                 />
 
                 <RightRail
-                  // boss panel
                   hasBossConfigured={hasBossConfigured}
                   bossName={bossName}
                   boss={boss}
@@ -470,11 +493,12 @@ export default function BattlePage({ onBack }: Props) {
                   setBossNote={setBossNote}
                   onSubmitBossAttack={onSubmitBossAttack}
                   bossSubmitErr={bossSubmitErr}
+                  bossBanner={bossBanner}
+                  bossCooldownUntil={bossCooldownUntil}
                   studentHealMode={studentHealMode}
                   studentAttackMode={studentAttackMode}
                   guildAttacksOpen={guildAttacksOpen}
                   isTeacher={isTeacher}
-                  // student action panel
                   selectedCount={selectedIds.length}
                   studentControlsDisabled={studentControlsDisabled}
                   delta={delta}
@@ -486,6 +510,8 @@ export default function BattlePage({ onBack }: Props) {
                   submitting={submitting}
                   onSubmit={onSubmit}
                   banner={banner}
+                  groupAction={groupAction}
+                  setGroupAction={setGroupAction}
                 />
               </div>
             </div>

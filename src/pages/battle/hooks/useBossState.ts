@@ -1,9 +1,7 @@
 // src/pages/battle/hooks/useBossState.ts
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { getBossState, type BossState } from "../../../bossApi";
-
-const BOSS_POLL_MS = 10_000;
-const BOSS_PENDING_TTL_MS = 8_000;
+import { BOSS_POLL_MS, BOSS_PENDING_TTL_MS } from "../battleConstants";
 
 type PendingBoss = { expected: number; max: number; ts: number };
 
@@ -68,9 +66,9 @@ export function useBossState(
         }
 
         setBossErr(null);
-      } catch {
+      } catch (e: any) {
         if (!alive) return;
-        setBossErr("Could not refresh boss state.");
+        setBossErr(e?.message || "Could not refresh boss state.");
       }
     };
 
