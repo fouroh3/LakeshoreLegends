@@ -33,7 +33,7 @@ export function useBossState(
   useEffect(() => {
     if (!pageActive) return;
 
-    if (!bossKey || !bossInstanceId) {
+    if (!bossInstanceId) {
       setBoss(null);
       setBossErr(null);
       return;
@@ -43,7 +43,11 @@ export function useBossState(
 
     const loadBoss = async () => {
       try {
-        const next = await getBossState({ bossInstanceId, bossKey });
+        const next = await getBossState({
+          bossInstanceId,
+          bossKey: bossKey || undefined,
+        });
+
         if (!alive) return;
 
         const now = Date.now();
@@ -69,6 +73,7 @@ export function useBossState(
       } catch (e: any) {
         if (!alive) return;
         setBossErr(e?.message || "Could not refresh boss state.");
+        setBoss(null);
       }
     };
 

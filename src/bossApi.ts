@@ -2,12 +2,12 @@
 /**
  * Lakeshore Legends — Boss API client (robust + GAS-friendly CORS)
  *
- * Key fix: POST uses text/plain to avoid CORS preflight (OPTIONS), which GAS Web Apps
- * don't reliably support. Body is still JSON and your Apps Script parses it fine.
+ * GET:
+ *   ?action=bossstate&bossInstanceId=...&bossKey=...
+ *   bossKey is now optional on the client side.
  *
- * Also: action list aligned with your current Apps Script:
- *   GET  ?action=bossstate&bossInstanceId=...&bossKey=...
- *   POST ?action=bossdelta  (or bossDelta on client, script lowercases)
+ * POST:
+ *   ?action=bossdelta
  */
 
 export type BossState = {
@@ -20,8 +20,8 @@ export type BossState = {
 };
 
 export type GetBossStateArgs = {
-  bossKey: string;
   bossInstanceId: string;
+  bossKey?: string;
 };
 
 export type SubmitBossDeltaArgs = {
@@ -43,10 +43,8 @@ const API_URL =
   (import.meta as any).env?.VITE_HP_API_URL ||
   DEFAULT_API_URL;
 
-/** Your current Apps Script uses action=bossstate */
 const GET_ACTIONS = [
   "bossstate",
-  // kept for backwards-compat / old drafts:
   "bossState",
   "boss_state",
   "getBossState",
@@ -55,10 +53,8 @@ const GET_ACTIONS = [
   "getBoss",
 ] as const;
 
-/** Your current Apps Script doPost() expects action=bossdelta (lowercased) */
 const DELTA_ACTIONS = [
   "bossdelta",
-  // kept for backwards-compat / old drafts:
   "bossDelta",
   "boss_delta",
   "bossDamage",
@@ -73,24 +69,26 @@ function toNum(v: any, fallback = 0) {
 
 function normBossState(
   raw: any,
-  bossKey: string,
-  bossInstanceId: string
+  fallbackBossKey: string,
+  fallbackBossInstanceId: string
 ): BossState {
   const maxHP = Math.max(1, Math.round(toNum(raw?.maxHP, 1)));
   const currentHP = Math.max(0, Math.round(toNum(raw?.currentHP, 0)));
+
   return {
-    bossKey: String(raw?.bossKey ?? bossKey ?? "").trim(),
-    bossInstanceId: String(raw?.bossInstanceId ?? bossInstanceId ?? "").trim(),
-    bossName: String(raw?.bossName ?? raw?.name ?? bossKey ?? "Boss").trim(),
+    bossKey: String(raw?.bossKey ?? fallbackBossKey ?? "").trim(),
+    bossInstanceId: String(
+      raw?.bossInstanceId ?? fallbackBossInstanceId ?? ""
+    ).trim(),
+    bossName: String(
+      raw?.bossName ?? raw?.name ?? raw?.bossKey ?? fallbackBossKey ?? "Boss"
+    ).trim(),
     maxHP,
     currentHP: Math.min(maxHP, currentHP),
     updatedAt: raw?.updatedAt ? String(raw.updatedAt) : undefined,
   };
 }
 
-/**
- * Fetch JSON, but if GAS returns HTML (common on errors), include a snippet in the error.
- */
 async function fetchJsonStrict(url: string, init?: RequestInit) {
   const res = await fetch(url, init);
   const text = await res.text();
@@ -117,14 +115,17 @@ async function fetchJsonStrict(url: string, init?: RequestInit) {
 
 async function tryGetWithAction(
   action: string,
-  bossKey: string,
-  bossInstanceId: string
+  bossInstanceId: string,
+  bossKey?: string
 ) {
-  const url =
+  let url =
     `${API_URL}?action=${encodeURIComponent(action)}` +
-    `&bossKey=${encodeURIComponent(bossKey)}` +
     `&bossInstanceId=${encodeURIComponent(bossInstanceId)}` +
     `&_=${Date.now()}`;
+
+  if (bossKey) {
+    url += `&bossKey=${encodeURIComponent(bossKey)}`;
+  }
 
   const data = (await fetchJsonStrict(url, { method: "GET" })) as
     | ApiOk<any>
@@ -136,24 +137,29 @@ async function tryGetWithAction(
     throw new Error(msg);
   }
 
-  // Apps Script returns { ok:true, bossInstanceId, bossKey, bossName, maxHP, currentHP, updatedAt }
   const raw =
     (data as any).boss ?? (data as any).state ?? (data as any).data ?? data;
 
-  return normBossState(raw, bossKey, bossInstanceId);
+  return normBossState(raw, bossKey ?? "", bossInstanceId);
 }
 
 export async function getBossState(args: GetBossStateArgs): Promise<BossState> {
-  const bossKey = String(args.bossKey ?? "").trim();
   const bossInstanceId = String(args.bossInstanceId ?? "").trim();
-  if (!bossKey || !bossInstanceId)
-    throw new Error("Missing bossKey or bossInstanceId.");
+  const bossKey = String(args.bossKey ?? "").trim();
+
+  if (!bossInstanceId) {
+    throw new Error("Missing bossInstanceId.");
+  }
 
   let lastErr: any = null;
 
   for (const action of GET_ACTIONS) {
     try {
-      return await tryGetWithAction(action, bossKey, bossInstanceId);
+      return await tryGetWithAction(
+        action,
+        bossInstanceId,
+        bossKey || undefined
+      );
     } catch (e: any) {
       lastErr = e;
     }
@@ -164,11 +170,6 @@ export async function getBossState(args: GetBossStateArgs): Promise<BossState> {
   );
 }
 
-/**
- * GAS-friendly POST:
- * - Use Content-Type: text/plain to avoid CORS preflight (OPTIONS).
- * - Still send JSON as the body; your Apps Script JSON.parse(e.postData.contents) works.
- */
 async function tryDeltaWithAction(
   action: string,
   payload: SubmitBossDeltaArgs
@@ -176,7 +177,6 @@ async function tryDeltaWithAction(
   const url = `${API_URL}?action=${encodeURIComponent(action)}&_=${Date.now()}`;
 
   const body = JSON.stringify({
-    // include action too (harmless) so body-only handlers can still work
     action,
     bossKey: payload.bossKey,
     bossInstanceId: payload.bossInstanceId,
@@ -187,7 +187,6 @@ async function tryDeltaWithAction(
 
   const data = (await fetchJsonStrict(url, {
     method: "POST",
-    // IMPORTANT: text/plain prevents preflight for GAS web apps.
     headers: { "Content-Type": "text/plain;charset=utf-8" },
     body,
   })) as ApiOk<any> | ApiErr;
@@ -201,7 +200,6 @@ async function tryDeltaWithAction(
   const raw =
     (data as any).boss ?? (data as any).state ?? (data as any).data ?? null;
 
-  // Your script returns the fields at top-level (not nested), so fall back to `data`
   return normBossState(raw ?? data, payload.bossKey, payload.bossInstanceId);
 }
 
@@ -212,9 +210,13 @@ export async function submitBossDelta(
   const bossInstanceId = String(args.bossInstanceId ?? "").trim();
   const delta = Math.trunc(toNum(args.delta, 0));
 
-  if (!bossKey || !bossInstanceId)
+  if (!bossKey || !bossInstanceId) {
     throw new Error("Missing bossKey or bossInstanceId.");
-  if (!Number.isFinite(delta) || delta === 0) throw new Error("Invalid delta.");
+  }
+
+  if (!Number.isFinite(delta) || delta === 0) {
+    throw new Error("Invalid delta.");
+  }
 
   let lastErr: any = null;
 

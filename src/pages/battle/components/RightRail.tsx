@@ -29,9 +29,9 @@ type Props = {
   bossBanner: Banner;
   bossCooldownUntil: number;
 
-  // ✅ NEW: required by App Script locks
-  activeRound: number; // must be > 0 for ATTACK
-  activeGuild: string; // required for ATTACK lock (e.g., "Shadows")
+  // lock context
+  activeRound: number;
+  activeGuild: string;
 
   // Modes / permissions
   studentHealMode: boolean;
@@ -68,12 +68,9 @@ const input =
   "w-full rounded-xl bg-black/40 border border-zinc-800/70 px-3 py-2 text-sm text-white outline-none focus:border-white/25";
 const btn =
   "w-full rounded-xl px-3 py-2 text-sm font-semibold border transition disabled:opacity-50 disabled:cursor-not-allowed";
-const btnPrimary =
-  "bg-cyan-500/15 border-cyan-300/40 hover:bg-cyan-500/20";
-const btnDanger =
-  "bg-red-500/10 border-red-400/30 hover:bg-red-500/15";
-const btnSoft =
-  "border-zinc-800/70 bg-zinc-950/25 hover:bg-zinc-950/35";
+const btnPrimary = "bg-cyan-500/15 border-cyan-300/40 hover:bg-cyan-500/20";
+const btnDanger = "bg-red-500/10 border-red-400/30 hover:bg-red-500/15";
+const btnSoft = "border-zinc-800/70 bg-zinc-950/25 hover:bg-zinc-950/35";
 const pill =
   "px-2 py-1 rounded-full text-[11px] border border-zinc-800/70 bg-zinc-950/30";
 
@@ -88,6 +85,17 @@ function BannerBox({ banner }: { banner: Banner }) {
       {banner.msg}
     </div>
   );
+}
+
+function bossBadgeText(name: string) {
+  const words = String(name || "")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+
+  if (words.length === 0) return "B";
+  if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
+  return `${words[0][0] ?? ""}${words[1][0] ?? ""}`.toUpperCase();
 }
 
 export default function RightRail({
@@ -138,8 +146,6 @@ export default function RightRail({
     return ms > 0 ? ms : 0;
   }, [bossCooldownUntil]);
 
-  // Students: show only one panel based on toggle
-  // Teacher: show both
   const showAttackUi = isTeacher ? true : groupAction === "ATTACK";
   const showHealUi = isTeacher ? true : groupAction === "HEAL";
 
@@ -148,7 +154,6 @@ export default function RightRail({
     if (studentHealMode) return "Switch Group Action to ATTACK";
     if (!isTeacher && !guildAttacksOpen) return "Guild attacks are CLOSED";
     if (!activeRound || activeRound <= 0) return "Missing round";
-    if (!activeGuild) return "Missing guild";
     return "";
   }, [
     hasBossConfigured,
@@ -156,21 +161,25 @@ export default function RightRail({
     isTeacher,
     guildAttacksOpen,
     activeRound,
-    activeGuild,
   ]);
+
+  const bossBadge = useMemo(() => bossBadgeText(bossName), [bossName]);
 
   return (
     <div className="min-h-0 overflow-auto pr-1">
-      {/* ✅ Sticky header: boss info always visible */}
       <div className="sticky top-0 z-20">
-        <div className={`${card} p-3 bg-zinc-950/60 backdrop-blur`}>
-          <div className="flex items-start justify-between gap-2">
-            <div className="min-w-0">
-              <div className="text-lg font-extrabold tracking-wide text-zinc-100 truncate">
+        <div className={`${card} bg-zinc-950/60 p-3 backdrop-blur`}>
+          <div className="flex items-start gap-3">
+            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-amber-400/20 bg-gradient-to-br from-amber-300/12 via-yellow-200/6 to-transparent text-lg font-black tracking-wider text-amber-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
+              {bossBadge}
+            </div>
+
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-lg font-extrabold tracking-wide text-zinc-100">
                 {bossName}
               </div>
 
-              <div className="mt-1 flex items-center gap-2 flex-wrap">
+              <div className="mt-1 flex flex-wrap items-center gap-2">
                 <span className={pill}>
                   {hasBossConfigured ? "Boss Active" : "No Boss Set"}
                 </span>
@@ -191,7 +200,6 @@ export default function RightRail({
             </div>
           </div>
 
-          {/* Boss HP */}
           <div className="mt-3">
             <div className="flex items-center justify-between text-xs text-zinc-400">
               <span>Boss HP</span>
@@ -199,7 +207,8 @@ export default function RightRail({
                 {boss ? `${boss.currentHP}/${boss.maxHP}` : "—"}
               </span>
             </div>
-            <div className="mt-1 h-2 w-full rounded-full bg-zinc-900/70 border border-zinc-800/65 overflow-hidden">
+
+            <div className="mt-1 h-2 w-full overflow-hidden rounded-full border border-zinc-800/65 bg-zinc-900/70">
               <div
                 className="h-full transition-[width] duration-300"
                 style={{
@@ -208,12 +217,12 @@ export default function RightRail({
                 }}
               />
             </div>
+
             {bossErr && (
               <div className="mt-2 text-xs text-red-200/80">{bossErr}</div>
             )}
           </div>
 
-          {/* ✅ Group Action toggle under boss header */}
           {!isTeacher && (
             <div className="mt-3">
               <div className={label}>Group Action</div>
@@ -244,7 +253,6 @@ export default function RightRail({
         <div className="h-2" />
       </div>
 
-      {/* ✅ ATTACK UI */}
       {showAttackUi && (
         <div className={`${card} p-3`}>
           <div className={label}>Boss Attack</div>
@@ -269,19 +277,27 @@ export default function RightRail({
               disabled={!hasBossConfigured || bossSubmitting}
             />
 
-            {/* helpful lock context */}
-            <div className="mt-1 flex items-center gap-2 flex-wrap">
+            <div className="mt-1 flex flex-wrap items-center gap-2">
               <span className={pill}>
                 Round:{" "}
-                <span className="text-zinc-100 tabular-nums">
+                <span className="tabular-nums text-zinc-100">
                   {activeRound || "—"}
                 </span>
               </span>
               <span className={pill}>
                 Guild:{" "}
-                <span className="text-zinc-100 truncate">{activeGuild || "—"}</span>
+                <span className="truncate text-zinc-100">
+                  {activeGuild || "Any / not tagged"}
+                </span>
               </span>
             </div>
+
+            {!activeGuild && (
+              <div className="text-xs text-amber-200/80">
+                No guild is selected right now. The hit can still submit, but it
+                will not be tagged to a specific guild for round-lock context.
+              </div>
+            )}
 
             {bossSubmitErr && (
               <div className="text-xs text-red-200/80">{bossSubmitErr}</div>
@@ -294,9 +310,7 @@ export default function RightRail({
                 onSubmitBossAttack({ round: activeRound, guild: activeGuild })
               }
               disabled={
-                bossSubmitting ||
-                cooldownMs > 0 ||
-                !!attackDisabledReason
+                bossSubmitting || cooldownMs > 0 || !!attackDisabledReason
               }
               title={attackDisabledReason || undefined}
             >
@@ -312,18 +326,18 @@ export default function RightRail({
         </div>
       )}
 
-      {/* ✅ HEAL UI */}
       {showHealUi && (
-        <div className={`${card} p-3 mt-2`}>
+        <div className={`${card} mt-2 p-3`}>
           <div className="flex items-center justify-between">
             <div className={label}>Student Controls</div>
             <span className={pill}>
               Selected:{" "}
-              <span className="text-zinc-100 tabular-nums">{selectedCount}</span>
+              <span className="tabular-nums text-zinc-100">
+                {selectedCount}
+              </span>
             </span>
           </div>
 
-          {/* ✅ Delta pills */}
           <div className="mt-3">
             <div className={label}>Heal / Damage Amount</div>
 
@@ -346,14 +360,14 @@ export default function RightRail({
                     key={o.v}
                     type="button"
                     className={[
-                      "rounded-xl px-3 py-2 text-sm font-semibold border transition",
+                      "rounded-xl border px-3 py-2 text-sm font-semibold transition",
                       active
                         ? isHeal
-                          ? "bg-cyan-500/15 border-cyan-300/50"
-                          : "bg-red-500/10 border-red-400/45"
+                          ? "border-cyan-300/50 bg-cyan-500/15"
+                          : "border-red-400/45 bg-red-500/10"
                         : "border-zinc-800/70 bg-zinc-950/25 hover:bg-zinc-950/35",
                       studentControlsDisabled
-                        ? "opacity-50 cursor-not-allowed"
+                        ? "cursor-not-allowed opacity-50"
                         : "",
                     ].join(" ")}
                     onClick={() => setDelta(o.v)}
@@ -367,7 +381,6 @@ export default function RightRail({
             </div>
           </div>
 
-          {/* Note */}
           <div className="mt-3">
             <div className={label}>Note (optional)</div>
             <input
@@ -379,7 +392,6 @@ export default function RightRail({
             />
           </div>
 
-          {/* Quick info */}
           {selectedStudents.length === 1 && selectedSkills.length > 0 && (
             <div className="mt-3">
               <div className={label}>Selected Student Skills</div>
@@ -411,8 +423,7 @@ export default function RightRail({
         </div>
       )}
 
-      {/* Guild totals */}
-      <div className={`${card} p-3 mt-2`}>
+      <div className={`${card} mt-2 p-3`}>
         <div className={label}>Guild Totals (This Battle)</div>
 
         {guildTotalsErr && (
@@ -431,7 +442,7 @@ export default function RightRail({
               key={r.guild}
               className="flex items-center justify-between rounded-xl border border-zinc-900/60 bg-zinc-950/20 px-2 py-1"
             >
-              <div className="text-sm text-zinc-100 truncate">{r.guild}</div>
+              <div className="truncate text-sm text-zinc-100">{r.guild}</div>
               <div className="text-xs tabular-nums text-zinc-300">
                 <span className="text-zinc-500">DMG </span>
                 {r.damage}
