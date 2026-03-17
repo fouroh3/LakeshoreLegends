@@ -3,6 +3,7 @@ import { useMemo } from "react";
 import type { Student } from "../../../types";
 import type { BossState } from "../../../bossApi";
 import { hpBarColorFromPct } from "../../../utils/hpColor";
+import { getBossMeta } from "../battleBossMeta";
 
 type Banner = { type: "ok" | "err"; msg: string } | null;
 
@@ -164,19 +165,56 @@ export default function RightRail({
   ]);
 
   const bossBadge = useMemo(() => bossBadgeText(bossName), [bossName]);
+  const bossMeta = useMemo(() => getBossMeta(bossName), [bossName]);
+  const isLowBossHp = bossPct > 0 && bossPct <= 0.3;
 
   return (
     <div className="min-h-0 overflow-auto pr-1">
       <div className="sticky top-0 z-20">
-        <div className={`${card} bg-zinc-950/60 p-3 backdrop-blur`}>
-          <div className="flex items-start gap-3">
-            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-amber-400/20 bg-gradient-to-br from-amber-300/12 via-yellow-200/6 to-transparent text-lg font-black tracking-wider text-amber-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
-              {bossBadge}
+        <div
+          className={`${card} relative overflow-hidden p-3 backdrop-blur bg-zinc-950/60`}
+        >
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-amber-400/15 via-amber-300/5 to-transparent" />
+          <div className="pointer-events-none absolute inset-y-0 left-0 w-24 bg-gradient-to-r from-amber-300/8 to-transparent blur-xl" />
+
+          <div className="relative flex items-start gap-3">
+            <div className="relative flex h-14 w-14 shrink-0 items-center justify-center">
+              <div
+                className={[
+                  "absolute inset-0 rounded-2xl bg-amber-400/20 blur-md transition-all duration-300",
+                  bossSubmitting ? "opacity-90 scale-110" : "opacity-60",
+                ].join(" ")}
+              />
+
+              <div
+                className={[
+                  "relative h-14 w-14 overflow-hidden rounded-2xl",
+                  bossSubmitting ? "animate-pulse" : "",
+                ].join(" ")}
+              >
+                {bossMeta?.logo ? (
+                  <img
+                    src={bossMeta.logo}
+                    alt={bossMeta.questName}
+                    className="h-full w-full object-contain"
+                  />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center text-lg font-black tracking-wider text-amber-200">
+                    {bossBadge}
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="min-w-0 flex-1">
+              {bossMeta?.questName && (
+                <div className="truncate text-[11px] font-semibold uppercase tracking-[0.28em] text-amber-300/90 drop-shadow-[0_0_6px_rgba(251,191,36,0.35)]">
+                  {bossMeta.questName}
+                </div>
+              )}
+
               <div className="truncate text-lg font-extrabold tracking-wide text-zinc-100">
-                {bossName}
+                {bossMeta?.bossName || bossName}
               </div>
 
               <div className="mt-1 flex flex-wrap items-center gap-2">
@@ -200,7 +238,7 @@ export default function RightRail({
             </div>
           </div>
 
-          <div className="mt-3">
+          <div className="relative mt-3">
             <div className="flex items-center justify-between text-xs text-zinc-400">
               <span>Boss HP</span>
               <span className="tabular-nums text-zinc-200">
@@ -208,9 +246,14 @@ export default function RightRail({
               </span>
             </div>
 
-            <div className="mt-1 h-2 w-full overflow-hidden rounded-full border border-zinc-800/65 bg-zinc-900/70">
+            <div className="relative mt-1 h-2 w-full overflow-hidden rounded-full border border-zinc-800/65 bg-zinc-900/70">
               <div
-                className="h-full transition-[width] duration-300"
+                className={[
+                  "h-full transition-[width] duration-300",
+                  isLowBossHp
+                    ? "animate-[bossHpBlink_0.9s_ease-in-out_infinite]"
+                    : "",
+                ].join(" ")}
                 style={{
                   width: `${Math.round(bossPct * 100)}%`,
                   backgroundColor: boss ? bossBarColor : "rgba(113,113,122,1)",
@@ -218,36 +261,16 @@ export default function RightRail({
               />
             </div>
 
+            {isLowBossHp && boss && (
+              <div className="mt-1 text-[10px] uppercase tracking-[0.2em] text-amber-300/80">
+                Boss critical
+              </div>
+            )}
+
             {bossErr && (
               <div className="mt-2 text-xs text-red-200/80">{bossErr}</div>
             )}
           </div>
-
-          {!isTeacher && (
-            <div className="mt-3">
-              <div className={label}>Group Action</div>
-              <div className="mt-2 grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  className={`${btn} ${
-                    groupAction === "ATTACK" ? btnDanger : btnSoft
-                  }`}
-                  onClick={() => setGroupAction("ATTACK")}
-                >
-                  ATTACK
-                </button>
-                <button
-                  type="button"
-                  className={`${btn} ${
-                    groupAction === "HEAL" ? btnPrimary : btnSoft
-                  }`}
-                  onClick={() => setGroupAction("HEAL")}
-                >
-                  HEAL
-                </button>
-              </div>
-            </div>
-          )}
         </div>
 
         <div className="h-2" />
@@ -454,6 +477,17 @@ export default function RightRail({
           ))}
         </div>
       </div>
+
+      <style>{`
+        @keyframes shimmer {
+          0% {
+            transform: translateX(-140%);
+          }
+          100% {
+            transform: translateX(340%);
+          }
+        }
+      `}</style>
     </div>
   );
 }
