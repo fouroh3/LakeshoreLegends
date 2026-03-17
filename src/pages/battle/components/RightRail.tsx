@@ -1,5 +1,5 @@
 // src/pages/battle/components/RightRail.tsx
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { Student } from "../../../types";
 import type { BossState } from "../../../bossApi";
 import { hpBarColorFromPct } from "../../../utils/hpColor";
@@ -76,10 +76,12 @@ const pill =
 
 function BannerBox({ banner }: { banner: Banner }) {
   if (!banner) return null;
+
   const cls =
     banner.type === "ok"
       ? "border-emerald-500/30 bg-emerald-950/20 text-emerald-100"
       : "border-red-500/30 bg-red-950/20 text-red-100";
+
   return (
     <div className={`mt-2 rounded-xl border px-3 py-2 text-sm ${cls}`}>
       {banner.msg}
@@ -115,6 +117,7 @@ export default function RightRail({
   activeRound,
   activeGuild,
   studentHealMode,
+  studentAttackMode,
   guildAttacksOpen,
   isTeacher,
   selectedCount,
@@ -129,9 +132,33 @@ export default function RightRail({
   onSubmit,
   banner,
   groupAction,
+  setGroupAction,
   guildTotals,
   guildTotalsErr,
 }: Props) {
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    if (!bossCooldownUntil || bossCooldownUntil <= Date.now()) {
+      setNow(Date.now());
+      return;
+    }
+
+    const intervalId = window.setInterval(() => {
+      setNow(Date.now());
+    }, 100);
+
+    const timeoutMs = Math.max(0, bossCooldownUntil - Date.now());
+    const timeoutId = window.setTimeout(() => {
+      setNow(Date.now());
+    }, timeoutMs + 25);
+
+    return () => {
+      window.clearInterval(intervalId);
+      window.clearTimeout(timeoutId);
+    };
+  }, [bossCooldownUntil]);
+
   const bossPct = useMemo(() => {
     if (!boss) return 0;
     return Math.max(0, Math.min(1, boss.currentHP / Math.max(1, boss.maxHP)));
@@ -140,9 +167,9 @@ export default function RightRail({
   const bossBarColor = useMemo(() => hpBarColorFromPct(bossPct), [bossPct]);
 
   const cooldownMs = useMemo(() => {
-    const ms = bossCooldownUntil - Date.now();
+    const ms = bossCooldownUntil - now;
     return ms > 0 ? ms : 0;
-  }, [bossCooldownUntil]);
+  }, [bossCooldownUntil, now]);
 
   const showAttackUi = isTeacher ? true : groupAction === "ATTACK";
   const showHealUi = isTeacher ? true : groupAction === "HEAL";
@@ -152,6 +179,7 @@ export default function RightRail({
     if (studentHealMode) return "Switch Group Action to ATTACK";
     if (!isTeacher && !guildAttacksOpen) return "Guild attacks are CLOSED";
     if (!activeRound || activeRound <= 0) return "Missing round";
+    if (!activeGuild) return "Choose a guild first";
     return "";
   }, [
     hasBossConfigured,
@@ -159,6 +187,7 @@ export default function RightRail({
     isTeacher,
     guildAttacksOpen,
     activeRound,
+    activeGuild,
   ]);
 
   const bossBadge = useMemo(() => bossBadgeText(bossName), [bossName]);
@@ -172,6 +201,7 @@ export default function RightRail({
           className={`${card} relative overflow-hidden p-3 backdrop-blur bg-zinc-950/60`}
         >
           <div className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-amber-400/20 to-transparent" />
+
           <div className="relative flex items-start gap-3">
             <div className="relative flex h-14 w-14 shrink-0 items-center justify-center">
               <div
@@ -271,6 +301,38 @@ export default function RightRail({
         <div className="h-2" />
       </div>
 
+      {!isTeacher && (
+        <div className={`${card} mb-2 p-3`}>
+          <div className={label}>Group Action</div>
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              className={[
+                "rounded-xl border px-3 py-2 text-sm font-semibold transition",
+                groupAction === "ATTACK"
+                  ? "border-red-400/45 bg-red-500/10 text-white"
+                  : "border-zinc-800/70 bg-zinc-950/25 hover:bg-zinc-950/35 text-zinc-300",
+              ].join(" ")}
+              onClick={() => setGroupAction("ATTACK")}
+            >
+              Attack
+            </button>
+            <button
+              type="button"
+              className={[
+                "rounded-xl border px-3 py-2 text-sm font-semibold transition",
+                groupAction === "HEAL"
+                  ? "border-cyan-300/50 bg-cyan-500/15 text-white"
+                  : "border-zinc-800/70 bg-zinc-950/25 hover:bg-zinc-950/35 text-zinc-300",
+              ].join(" ")}
+              onClick={() => setGroupAction("HEAL")}
+            >
+              Heal / Damage
+            </button>
+          </div>
+        </div>
+      )}
+
       {showAttackUi && (
         <div className={`${card} p-3`}>
           <div className={label}>Boss Attack</div>
@@ -305,20 +367,19 @@ export default function RightRail({
               <span className={pill}>
                 Guild:{" "}
                 <span className="truncate text-zinc-100">
-                  {activeGuild || "Any / not tagged"}
+                  {activeGuild || "—"}
                 </span>
               </span>
             </div>
 
-            {!activeGuild && (
-              <div className="text-xs text-amber-200/80">
-                No guild is selected right now. The hit can still submit, but it
-                will not be tagged to a specific guild for round-lock context.
-              </div>
-            )}
-
             {bossSubmitErr && (
               <div className="text-xs text-red-200/80">{bossSubmitErr}</div>
+            )}
+
+            {!!attackDisabledReason && (
+              <div className="text-xs text-amber-200/80">
+                {attackDisabledReason}
+              </div>
             )}
 
             <button
@@ -356,18 +417,31 @@ export default function RightRail({
             </span>
           </div>
 
+          {!isTeacher && (
+            <div className="mt-2 text-xs text-zinc-400">
+              Mode:{" "}
+              {studentAttackMode
+                ? "Damage"
+                : studentHealMode
+                ? "Heal"
+                : "Mixed"}
+            </div>
+          )}
+
           <div className="mt-3">
             <div className={label}>Heal / Damage Amount</div>
 
-            <div className="mt-2 grid grid-cols-4 gap-2">
+            <div className="mt-2 grid grid-cols-5 gap-2">
               {[
                 { v: -1, t: "-1" },
                 { v: -2, t: "-2" },
                 { v: -3, t: "-3" },
+                { v: -4, t: "-4" },
                 { v: -5, t: "-5" },
                 { v: 1, t: "+1" },
                 { v: 2, t: "+2" },
                 { v: 3, t: "+3" },
+                { v: 4, t: "+4" },
                 { v: 5, t: "+5" },
               ].map((o) => {
                 const active = delta === o.v;
