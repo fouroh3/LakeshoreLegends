@@ -30,6 +30,10 @@ export type SubmitBossDeltaArgs = {
   delta: number;
   source?: string;
   requestId?: string;
+  round?: number;
+  guild?: string;
+  homeroom?: string;
+  actionType?: string;
 };
 
 type ApiOk<T> = { ok: true } & T;
@@ -183,6 +187,13 @@ async function tryDeltaWithAction(
     delta: Math.trunc(toNum(payload.delta, 0)),
     source: (payload.source ?? "").trim(),
     requestId: payload.requestId ?? "",
+    round:
+      payload.round != null && Number.isFinite(Number(payload.round))
+        ? Math.trunc(Number(payload.round))
+        : "",
+    guild: (payload.guild ?? "").trim(),
+    homeroom: (payload.homeroom ?? "").trim(),
+    actionType: (payload.actionType ?? "").trim(),
   });
 
   const data = (await fetchJsonStrict(url, {

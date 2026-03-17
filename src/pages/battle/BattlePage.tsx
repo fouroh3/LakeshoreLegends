@@ -118,10 +118,12 @@ export default function BattlePage({ onBack }: Props) {
 
   const activeOptions = useMemo(() => {
     return battleRows
-      .filter((r) => String(r.status).toUpperCase() === "ACTIVE")
+      .filter((r: any) => String(r.status).toUpperCase() === "ACTIVE")
       .slice()
-      .sort((a, b) =>
-        a.homeroom.localeCompare(b.homeroom, "en", { numeric: true })
+      .sort((a: any, b: any) =>
+        String(a.homeroom).localeCompare(String(b.homeroom), "en", {
+          numeric: true,
+        })
       );
   }, [battleRows]);
 
@@ -132,31 +134,33 @@ export default function BattlePage({ onBack }: Props) {
       return;
     }
 
-    const keep = activeOptions.find((r) => r.homeroom === activeHomeroom);
+    const keep = activeOptions.find((r: any) => r.homeroom === activeHomeroom);
     const pick = keep ?? activeOptions[0];
 
     if (pick.homeroom !== activeHomeroom) setActiveHomeroom(pick.homeroom);
-    if (pick.sessionId !== activeSessionId) setActiveSessionId(pick.sessionId);
+    if ((pick as any).activeBattleSessionId !== activeSessionId) {
+      setActiveSessionId((pick as any).activeBattleSessionId ?? "");
+    }
   }, [activeOptions, activeHomeroom, activeSessionId]);
 
   const currentBattleRow = useMemo(
     () =>
       battleRows.find(
-        (r) => r.homeroom === activeHomeroom && r.sessionId === activeSessionId
+        (r: any) =>
+          r.homeroom === activeHomeroom &&
+          r.activeBattleSessionId === activeSessionId
       ) ?? null,
     [battleRows, activeHomeroom, activeSessionId]
   );
 
   useEffect(() => {
-    const ga =
-      String(currentBattleRow?.guildAttacks ?? "").toUpperCase() === "OPEN"
-        ? "OPEN"
-        : "CLOSED";
+    const turn = String((currentBattleRow as any)?.turn ?? "").toUpperCase();
+    const ga = turn === "GUILD" ? "OPEN" : "CLOSED";
     setGuildAttacks(ga);
 
-    const instanceId =
-      stripQuotes(currentBattleRow?.bossInstanceId ?? "").trim() ||
-      stripQuotes(currentBattleRow?.sessionId ?? "").trim();
+    const instanceId = stripQuotes(
+      (currentBattleRow as any)?.bossInstanceId ?? ""
+    ).trim();
 
     setBossInstanceId(instanceId);
   }, [currentBattleRow]);
@@ -408,12 +412,13 @@ export default function BattlePage({ onBack }: Props) {
           const fresh = await refreshBattleControlOnce();
           const row =
             fresh.find(
-              (r) =>
-                r.homeroom === activeHomeroom && r.sessionId === activeSessionId
+              (r: any) =>
+                r.homeroom === activeHomeroom &&
+                r.activeBattleSessionId === activeSessionId
             ) ?? currentBattleRow;
 
           const reopened =
-            String(row?.guildAttacks ?? "").toUpperCase() === "OPEN";
+            String((row as any)?.turn ?? "").toUpperCase() === "GUILD";
 
           if (!reopened) {
             setBossSubmitErr("Guild attacks are CLOSED");
@@ -451,6 +456,10 @@ export default function BattlePage({ onBack }: Props) {
           requestId: `${activeSessionId}:${
             boss.bossInstanceId
           }:${makeSubmitNonce()}`,
+          round,
+          guild,
+          homeroom: activeHomeroom,
+          actionType: "ATTACK",
         });
 
         setBossBanner({ type: "ok", msg: "Boss hit submitted ✅" });
@@ -506,9 +515,9 @@ export default function BattlePage({ onBack }: Props) {
               activeOptions={activeOptions}
               activeHomeroom={activeHomeroom}
               setActiveHomeroom={(hr) => {
-                const row = activeOptions.find((r) => r.homeroom === hr);
+                const row = activeOptions.find((r: any) => r.homeroom === hr);
                 setActiveHomeroom(hr);
-                setActiveSessionId(row?.sessionId ?? "");
+                setActiveSessionId((row as any)?.activeBattleSessionId ?? "");
               }}
               guildFilter={guildFilter}
               setGuildFilter={setGuildFilter}
