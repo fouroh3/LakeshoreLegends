@@ -71,7 +71,6 @@ const btn =
   "w-full rounded-xl px-3 py-2 text-sm font-semibold border transition disabled:opacity-50 disabled:cursor-not-allowed";
 const btnPrimary = "bg-cyan-500/15 border-cyan-300/40 hover:bg-cyan-500/20";
 const btnDanger = "bg-red-500/10 border-red-400/30 hover:bg-red-500/15";
-const btnSoft = "border-zinc-800/70 bg-zinc-950/25 hover:bg-zinc-950/35";
 const pill =
   "px-2 py-1 rounded-full text-[11px] border border-zinc-800/70 bg-zinc-950/30";
 
@@ -116,7 +115,6 @@ export default function RightRail({
   activeRound,
   activeGuild,
   studentHealMode,
-  studentAttackMode,
   guildAttacksOpen,
   isTeacher,
   selectedCount,
@@ -131,7 +129,6 @@ export default function RightRail({
   onSubmit,
   banner,
   groupAction,
-  setGroupAction,
   guildTotals,
   guildTotalsErr,
 }: Props) {
@@ -174,9 +171,7 @@ export default function RightRail({
         <div
           className={`${card} relative overflow-hidden p-3 backdrop-blur bg-zinc-950/60`}
         >
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-amber-400/15 via-amber-300/5 to-transparent" />
-          <div className="pointer-events-none absolute inset-y-0 left-0 w-24 bg-gradient-to-r from-amber-300/8 to-transparent blur-xl" />
-
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-amber-400/20 to-transparent" />
           <div className="relative flex items-start gap-3">
             <div className="relative flex h-14 w-14 shrink-0 items-center justify-center">
               <div
@@ -479,12 +474,14 @@ export default function RightRail({
       </div>
 
       <style>{`
-        @keyframes shimmer {
-          0% {
-            transform: translateX(-140%);
+        @keyframes bossHpBlink {
+          0%, 100% {
+            opacity: 1;
+            filter: brightness(1);
           }
-          100% {
-            transform: translateX(340%);
+          50% {
+            opacity: 0.45;
+            filter: brightness(1.35);
           }
         }
       `}</style>
