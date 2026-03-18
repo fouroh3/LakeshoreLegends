@@ -1,4 +1,3 @@
-// src/pages/battle/components/RightRail.tsx
 import { useEffect, useMemo, useState } from "react";
 import type { Student } from "../../../types";
 import type { BossState } from "../../../bossApi";
@@ -18,6 +17,8 @@ type Props = {
   // Boss
   hasBossConfigured: boolean;
   bossName: string;
+  bossKey: string;
+  questName: string;
   boss: BossState | null;
   bossErr: string | null;
   bossSubmitting: boolean;
@@ -103,6 +104,8 @@ function bossBadgeText(name: string) {
 export default function RightRail({
   hasBossConfigured,
   bossName,
+  bossKey,
+  questName,
   boss,
   bossErr,
   bossSubmitting,
@@ -190,8 +193,30 @@ export default function RightRail({
     activeGuild,
   ]);
 
-  const bossBadge = useMemo(() => bossBadgeText(bossName), [bossName]);
-  const bossMeta = useMemo(() => getBossMeta(bossName), [bossName]);
+  const bossLookupValue = useMemo(() => {
+    return (
+      boss?.bossName?.trim() ||
+      bossName?.trim() ||
+      questName?.trim() ||
+      bossKey?.trim() ||
+      ""
+    );
+  }, [boss?.bossName, bossName, questName, bossKey]);
+
+  const bossBadge = useMemo(
+    () => bossBadgeText(bossLookupValue),
+    [bossLookupValue]
+  );
+
+  const bossMeta = useMemo(() => {
+    return (
+      getBossMeta(boss?.bossName || "") ||
+      getBossMeta(bossName || "") ||
+      getBossMeta(questName || "") ||
+      getBossMeta(bossKey || "")
+    );
+  }, [boss?.bossName, bossName, questName, bossKey]);
+
   const isLowBossHp = bossPct > 0 && bossPct <= 0.3;
 
   return (
@@ -220,7 +245,12 @@ export default function RightRail({
                 {bossMeta?.logo ? (
                   <img
                     src={bossMeta.logo}
-                    alt={bossMeta.questName}
+                    alt={
+                      bossMeta.questName ||
+                      bossMeta.bossName ||
+                      bossLookupValue ||
+                      "Boss"
+                    }
                     className="h-full w-full object-contain"
                   />
                 ) : (
@@ -232,14 +262,14 @@ export default function RightRail({
             </div>
 
             <div className="min-w-0 flex-1">
-              {bossMeta?.questName && (
+              {(bossMeta?.questName || questName) && (
                 <div className="truncate text-[11px] font-semibold uppercase tracking-[0.28em] text-amber-300/90 drop-shadow-[0_0_6px_rgba(251,191,36,0.35)]">
-                  {bossMeta.questName}
+                  {bossMeta?.questName || questName}
                 </div>
               )}
 
               <div className="truncate text-lg font-extrabold tracking-wide text-zinc-100">
-                {bossMeta?.bossName || bossName}
+                {bossMeta?.bossName || boss?.bossName || bossName || "Boss"}
               </div>
 
               <div className="mt-1 flex flex-wrap items-center gap-2">

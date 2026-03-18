@@ -31,6 +31,24 @@ type Props = { onBack: () => void };
 
 const BOSS_COOLDOWN_MS = 3000;
 
+function normalizeGuildKey(v: string) {
+  return String(v || "")
+    .trim()
+    .toUpperCase();
+}
+
+function makeBossAttackLockKey(args: {
+  bossInstanceId: string;
+  round: number;
+  guild: string;
+}) {
+  return [
+    String(args.bossInstanceId || "").trim(),
+    String(args.round || 0).trim(),
+    normalizeGuildKey(args.guild),
+  ].join("::");
+}
+
 export default function BattlePage({ onBack }: Props) {
   const pageActive = usePageActive();
 
@@ -55,9 +73,6 @@ export default function BattlePage({ onBack }: Props) {
   const [guildAttacks, setGuildAttacks] = useState<"OPEN" | "CLOSED">("CLOSED");
   const [bossInstanceId, setBossInstanceId] = useState("");
 
-  const { boss, setBoss, bossErr, applyOptimisticBoss, clearBossPending } =
-    useBossState(pageActive, "", bossInstanceId);
-
   const [guildFilter, setGuildFilter] = useState<Guild | "ALL">("ALL");
   const [multiSelect, setMultiSelect] = useState(true);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -81,10 +96,21 @@ export default function BattlePage({ onBack }: Props) {
   } | null>(null);
   const [bossCooldownUntil, setBossCooldownUntil] = useState<number>(0);
 
-  const { top: guildTotals, err: guildTotalsErr } = useGuildTotals(
-    pageActive,
-    activeSessionId
+  // confirmed + in-flight boss attack locks, exact per boss/round/guild
+  const [bossAttackLocks, setBossAttackLocks] = useState<Record<string, true>>(
+    {}
   );
+
+  const activeOptions = useMemo(() => {
+    return battleRows
+      .filter((r: any) => String(r.status).toUpperCase() === "ACTIVE")
+      .slice()
+      .sort((a: any, b: any) =>
+        String(a.homeroom).localeCompare(String(b.homeroom), "en", {
+          numeric: true,
+        })
+      );
+  }, [battleRows]);
 
   useEffect(() => {
     (async () => {
@@ -116,17 +142,6 @@ export default function BattlePage({ onBack }: Props) {
     localStorage.setItem(`${GROUP_ACTION_KEY}:${activeHomeroom}`, groupAction);
   }, [activeHomeroom, groupAction]);
 
-  const activeOptions = useMemo(() => {
-    return battleRows
-      .filter((r: any) => String(r.status).toUpperCase() === "ACTIVE")
-      .slice()
-      .sort((a: any, b: any) =>
-        String(a.homeroom).localeCompare(String(b.homeroom), "en", {
-          numeric: true,
-        })
-      );
-  }, [battleRows]);
-
   useEffect(() => {
     if (activeOptions.length === 0) {
       setActiveHomeroom("");
@@ -153,6 +168,14 @@ export default function BattlePage({ onBack }: Props) {
     [battleRows, activeHomeroom, activeSessionId]
   );
 
+  const currentBossKey = useMemo(() => {
+    return String((currentBattleRow as any)?.bossKey ?? "").trim();
+  }, [currentBattleRow]);
+
+  const currentQuestName = useMemo(() => {
+    return String((currentBattleRow as any)?.quest ?? "").trim();
+  }, [currentBattleRow]);
+
   useEffect(() => {
     const turn = String((currentBattleRow as any)?.turn ?? "").toUpperCase();
     const ga = turn === "GUILD" ? "OPEN" : "CLOSED";
@@ -164,6 +187,14 @@ export default function BattlePage({ onBack }: Props) {
 
     setBossInstanceId(instanceId);
   }, [currentBattleRow]);
+
+  const { boss, setBoss, bossErr, applyOptimisticBoss, clearBossPending } =
+    useBossState(pageActive, currentBossKey, bossInstanceId);
+
+  const { top: guildTotals, err: guildTotalsErr } = useGuildTotals(
+    pageActive,
+    activeSessionId
+  );
 
   const activeRound = useMemo(() => {
     const n = Number((currentBattleRow as any)?.round ?? 1);
@@ -195,6 +226,11 @@ export default function BattlePage({ onBack }: Props) {
   const studentAttackMode = !isTeacher && groupAction === "ATTACK";
   const studentHealMode = !isTeacher && groupAction === "HEAL";
   const studentControlsDisabled = studentAttackMode;
+
+  // clear local locks whenever battle context changes
+  useEffect(() => {
+    setBossAttackLocks({});
+  }, [bossInstanceId, activeRound, activeSessionId]);
 
   const studentsInActiveHomeroom = useMemo(() => {
     if (!activeHomeroom) return [];
@@ -367,6 +403,26 @@ export default function BattlePage({ onBack }: Props) {
   const onSubmitBossAttack = useCallback(
     async ({ round, guild }: { round: number; guild: string }) => {
       setBossBanner(null);
+      setBossSubmitErr(null);
+
+      const cleanGuild = String(guild || "").trim();
+      if (!cleanGuild) {
+        setBossSubmitErr("Missing guild.");
+        return;
+      }
+
+      const localKey = makeBossAttackLockKey({
+        bossInstanceId,
+        round,
+        guild: cleanGuild,
+      });
+
+      if (bossAttackLocks[localKey]) {
+        const msg = "This guild already attacked this round.";
+        setBossSubmitErr(msg);
+        setBossBanner({ type: "err", msg });
+        return;
+      }
 
       const now = Date.now();
       if (now < bossCooldownUntil) {
@@ -402,11 +458,6 @@ export default function BattlePage({ onBack }: Props) {
         return;
       }
 
-      if (!guild) {
-        setBossSubmitErr("Missing guild.");
-        return;
-      }
-
       if (!isTeacher && studentAttackMode && !guildAttacksOpen) {
         try {
           const fresh = await refreshBattleControlOnce();
@@ -435,9 +486,15 @@ export default function BattlePage({ onBack }: Props) {
         return;
       }
 
-      setBossSubmitting(true);
-      setBossSubmitErr(null);
+      // lock immediately for this exact guild in this exact round
+      setBossAttackLocks((prev) => ({
+        ...prev,
+        [localKey]: true,
+      }));
 
+      setBossSubmitting(true);
+
+      const previousHP = boss.currentHP;
       const deltaValue = -Math.abs(parsedDamage);
       const optimisticHP = Math.max(
         0,
@@ -448,18 +505,44 @@ export default function BattlePage({ onBack }: Props) {
       setBoss({ ...boss, currentHP: optimisticHP });
 
       try {
-        await submitBossDelta({
+        const result = await submitBossDelta({
           bossInstanceId: boss.bossInstanceId,
-          bossKey: boss.bossKey,
+          bossKey: boss.bossKey || currentBossKey,
           delta: deltaValue,
           source: bossNote.trim(),
           requestId: `${activeSessionId}:${
             boss.bossInstanceId
           }:${makeSubmitNonce()}`,
           round,
-          guild,
+          guild: cleanGuild,
           homeroom: activeHomeroom,
           actionType: "ATTACK",
+        });
+
+        if ((result as any)?.deduped) {
+          clearBossPending(boss.bossInstanceId);
+          setBoss({
+            ...boss,
+            currentHP: previousHP,
+          });
+          setBossSubmitErr(
+            (result as any)?.reason || "This guild already attacked this round."
+          );
+          setBossBanner({
+            type: "err",
+            msg:
+              (result as any)?.reason ||
+              "This guild already attacked this round.",
+          });
+          return;
+        }
+
+        setBoss({
+          ...boss,
+          currentHP:
+            typeof (result as any)?.currentHP === "number"
+              ? (result as any).currentHP
+              : optimisticHP,
         });
 
         setBossBanner({ type: "ok", msg: "Boss hit submitted ✅" });
@@ -468,6 +551,18 @@ export default function BattlePage({ onBack }: Props) {
         setBossDamage("");
       } catch {
         clearBossPending(boss.bossInstanceId);
+        setBoss({
+          ...boss,
+          currentHP: previousHP,
+        });
+
+        // request really failed, so remove the local lock
+        setBossAttackLocks((prev) => {
+          const next = { ...prev };
+          delete next[localKey];
+          return next;
+        });
+
         setBossSubmitErr("Boss submit failed. Please try again.");
         setBossBanner({ type: "err", msg: "Boss submit failed." });
       } finally {
@@ -477,6 +572,7 @@ export default function BattlePage({ onBack }: Props) {
     [
       bossCooldownUntil,
       bossInstanceId,
+      bossAttackLocks,
       bossSubmitting,
       bossDamage,
       studentHealMode,
@@ -489,13 +585,15 @@ export default function BattlePage({ onBack }: Props) {
       currentBattleRow,
       boss,
       bossNote,
+      currentBossKey,
       setBoss,
       applyOptimisticBoss,
       clearBossPending,
     ]
   );
 
-  const bossName = boss?.bossName?.trim() || "Boss";
+  const bossName =
+    boss?.bossName?.trim() || currentQuestName || currentBossKey || "Boss";
 
   return (
     <div className="w-full h-[100dvh] overflow-hidden">
@@ -542,6 +640,8 @@ export default function BattlePage({ onBack }: Props) {
                 <RightRail
                   hasBossConfigured={hasBossConfigured}
                   bossName={bossName}
+                  bossKey={currentBossKey}
+                  questName={currentQuestName}
                   boss={boss}
                   bossErr={bossErr}
                   bossSubmitting={bossSubmitting}
