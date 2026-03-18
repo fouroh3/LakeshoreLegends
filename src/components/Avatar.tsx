@@ -49,14 +49,14 @@ export default function Avatar({
       .join("")
       .slice(0, 2) || "LL";
 
+  const initialsSize = Math.max(16, Math.floor(size * 0.28));
+
   return (
-    // OUTER: no overflow so the badge can hang outside the corner
     <div
       className={`relative ${className}`}
       style={{ width: size, height: size }}
       aria-label={name}
     >
-      {/* INNER: masked box with rounded corners; this one clips the image/gradient */}
       <div
         className="absolute inset-0 rounded-2xl border border-zinc-800 overflow-hidden"
         style={{ background: bg }}
@@ -65,20 +65,26 @@ export default function Avatar({
           <img
             src={src}
             alt={name}
-            className="absolute inset-0 h-full w-full object-cover opacity-85 mix-blend-luminosity"
+            className="absolute inset-0 h-full w-full object-cover"
             draggable={false}
           />
         ) : null}
 
-        {/* initials */}
-        <div className="absolute inset-0 grid place-items-center">
-          <span className="text-zinc-50/95 font-semibold tracking-wide select-none text-base">
-            {initials}
-          </span>
-        </div>
+        {!src ? (
+          <>
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.10),transparent_68%)]" />
+            <div className="absolute inset-0 grid place-items-center">
+              <span
+                className="text-zinc-50/95 font-semibold tracking-wide select-none"
+                style={{ fontSize: initialsSize }}
+              >
+                {initials}
+              </span>
+            </div>
+          </>
+        ) : null}
       </div>
 
-      {/* corner-overlap badge (sits OUTSIDE the masked box) */}
       {badge ? (
         <div className="absolute top-0 right-0 translate-x-1/3 -translate-y-1/3 z-10 pointer-events-none">
           <div className="pointer-events-auto rounded-full bg-zinc-900/90 border border-zinc-700 shadow-md ring-2 ring-zinc-900 px-1.5 py-0.5 text-sm">

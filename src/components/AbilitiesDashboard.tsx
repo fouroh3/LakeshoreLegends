@@ -1,6 +1,6 @@
-// src/components/AbilitiesDashboard.tsx
 import AbilitiesGrid from "./AbilitiesGrid";
 import AbilityCard from "./AbilityCard";
+import CharacterProfileModal from "./CharacterProfileModal";
 import type { Student } from "../types";
 import { Fragment, useMemo, useState } from "react";
 
@@ -40,7 +40,6 @@ type Props = {
   setColumns: (n: number) => void;
   setAutoMinWidth: (n: number) => void;
 
-  // Battle filter props
   attrFilterKey: string;
   setAttrFilterKey: (k: string) => void;
   attrFilterMin: number;
@@ -89,6 +88,7 @@ export default function AbilitiesDashboard({
 }: Props) {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [activeIndex, setActiveIndex] = useState<number>(-1);
+  const [selectedPerson, setSelectedPerson] = useState<Student | null>(null);
 
   const toggleHR = (hr: string) => {
     setSelectedHRs(
@@ -106,7 +106,6 @@ export default function AbilitiesDashboard({
     );
   };
 
-  // Suggestions
   const suggestions: SuggestionItem[] = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return [];
@@ -180,7 +179,6 @@ export default function AbilitiesDashboard({
     { type: "skill", label: "Skills", icon: "✨" },
   ] as const;
 
-  // ✅ actually use selectedGuilds
   const filteredData = useMemo(() => {
     let out = data as any[];
 
@@ -207,9 +205,7 @@ export default function AbilitiesDashboard({
       {/* Controls */}
       <section className="w-full max-w-none px-4 sm:px-6 lg:px-8 py-4 border-b border-zinc-900">
         <div className="flex flex-col gap-4">
-          {/* Search + Sort + Battle Filter */}
           <div className="w-full flex flex-col gap-3 lg:flex-row lg:items-center lg:gap-4">
-            {/* Search */}
             <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:flex-1 relative">
               <label className="text-sm text-zinc-300 sm:mr-3">Search</label>
 
@@ -235,7 +231,6 @@ export default function AbilitiesDashboard({
                   className="w-full rounded-xl bg-zinc-900/70 border border-zinc-800 pl-9 pr-3 py-2 text-sm focus:ring-2 focus:ring-cyan-500/60"
                 />
 
-                {/* Autocomplete */}
                 {showSuggestions && allSuggestions.length > 0 && (
                   <div className="absolute mt-1 w-full max-h-72 overflow-auto rounded-xl border border-zinc-800 bg-zinc-950 shadow-xl z-20">
                     {sectionMeta.map(({ type, label, icon }) => {
@@ -285,7 +280,6 @@ export default function AbilitiesDashboard({
               </div>
             </div>
 
-            {/* Sort + Clear + Battle Filter */}
             <div className="flex flex-col items-center gap-2 sm:flex-row sm:items-center sm:justify-center sm:gap-3 lg:justify-end">
               <div className="flex items-center gap-2">
                 <label className="text-sm text-zinc-300">Sort</label>
@@ -298,11 +292,8 @@ export default function AbilitiesDashboard({
                   <option value="homeroom">Homeroom</option>
                   <option value="name-az">Name (A–Z)</option>
                   <option value="name-za">Name (Z–A)</option>
-
-                  {/* ✅ HP sorting (clear + non-redundant because max HP = 20) */}
                   <option value="hp-desc">Health (Most HP Left)</option>
                   <option value="hp-asc">Health (Least HP Left)</option>
-
                   <option value="strength">Strength</option>
                   <option value="dexterity">Dexterity</option>
                   <option value="constitution">Constitution</option>
@@ -359,7 +350,6 @@ export default function AbilitiesDashboard({
             </div>
           </div>
 
-          {/* Density / Card width / Reset */}
           <div className="w-full flex flex-col gap-3 md:flex-row md:items-center md:justify-center">
             <div className="w-full md:w-auto flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:justify-center">
               <div className="flex items-center gap-2">
@@ -421,7 +411,6 @@ export default function AbilitiesDashboard({
             </div>
           </div>
 
-          {/* Homerooms */}
           <div className="w-full">
             <div className="flex flex-wrap gap-1.5 justify-center">
               <button
@@ -454,7 +443,6 @@ export default function AbilitiesDashboard({
             </div>
           </div>
 
-          {/* Guilds */}
           {guilds.length > 0 && (
             <div className="w-full">
               <div className="flex flex-wrap gap-1.5 justify-center">
@@ -491,7 +479,6 @@ export default function AbilitiesDashboard({
         </div>
       </section>
 
-      {/* Cards */}
       <div className="w-full max-w-none px-2 sm:px-4 lg:px-6 py-4">
         <AbilitiesGrid
           mode="auto"
@@ -508,10 +495,17 @@ export default function AbilitiesDashboard({
               }
               person={p}
               density={density}
+              onClick={() => setSelectedPerson(p)}
             />
           ))}
         </AbilitiesGrid>
       </div>
+
+      <CharacterProfileModal
+        person={selectedPerson}
+        open={!!selectedPerson}
+        onClose={() => setSelectedPerson(null)}
+      />
     </Fragment>
   );
 }
