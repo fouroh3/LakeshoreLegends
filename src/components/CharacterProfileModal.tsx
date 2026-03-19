@@ -81,73 +81,73 @@ function getGuildTheme(guild?: string) {
     case "Scholars":
       return {
         softBorder: "border-amber-700/30",
-        softGlow: "shadow-[0_0_28px_rgba(245,158,11,0.12)]",
+        softGlow: "shadow-[0_0_24px_rgba(245,158,11,0.10)]",
         bannerText: "text-amber-100",
         portraitGlow:
-          "bg-[radial-gradient(circle_at_center,rgba(245,158,11,0.22),transparent_72%)]",
+          "bg-[radial-gradient(circle_at_center,rgba(245,158,11,0.18),transparent_72%)]",
         accentLine: "from-amber-500/30 via-amber-300/40 to-transparent",
         modalGlow:
-          "shadow-[0_0_0_1px_rgba(245,158,11,0.10),0_0_50px_rgba(245,158,11,0.10),0_30px_100px_rgba(0,0,0,0.7)]",
+          "shadow-[0_0_0_1px_rgba(245,158,11,0.08),0_0_36px_rgba(245,158,11,0.08),0_30px_100px_rgba(0,0,0,0.68)]",
         sigilText: "text-amber-300/10",
       };
     case "Shadows":
       return {
         softBorder: "border-violet-700/30",
-        softGlow: "shadow-[0_0_28px_rgba(168,85,247,0.14)]",
+        softGlow: "shadow-[0_0_24px_rgba(168,85,247,0.12)]",
         bannerText: "text-violet-100",
         portraitGlow:
-          "bg-[radial-gradient(circle_at_center,rgba(168,85,247,0.22),transparent_72%)]",
+          "bg-[radial-gradient(circle_at_center,rgba(168,85,247,0.18),transparent_72%)]",
         accentLine: "from-violet-500/30 via-violet-300/40 to-transparent",
         modalGlow:
-          "shadow-[0_0_0_1px_rgba(168,85,247,0.12),0_0_50px_rgba(168,85,247,0.12),0_30px_100px_rgba(0,0,0,0.7)]",
+          "shadow-[0_0_0_1px_rgba(168,85,247,0.10),0_0_36px_rgba(168,85,247,0.10),0_30px_100px_rgba(0,0,0,0.68)]",
         sigilText: "text-violet-300/10",
       };
     case "Guardians":
       return {
         softBorder: "border-sky-700/30",
-        softGlow: "shadow-[0_0_28px_rgba(56,189,248,0.14)]",
+        softGlow: "shadow-[0_0_24px_rgba(56,189,248,0.12)]",
         bannerText: "text-sky-100",
         portraitGlow:
-          "bg-[radial-gradient(circle_at_center,rgba(56,189,248,0.22),transparent_72%)]",
+          "bg-[radial-gradient(circle_at_center,rgba(56,189,248,0.18),transparent_72%)]",
         accentLine: "from-sky-500/30 via-sky-300/40 to-transparent",
         modalGlow:
-          "shadow-[0_0_0_1px_rgba(56,189,248,0.12),0_0_50px_rgba(56,189,248,0.12),0_30px_100px_rgba(0,0,0,0.7)]",
+          "shadow-[0_0_0_1px_rgba(56,189,248,0.10),0_0_36px_rgba(56,189,248,0.10),0_30px_100px_rgba(0,0,0,0.68)]",
         sigilText: "text-sky-300/10",
       };
     case "Blades":
       return {
         softBorder: "border-rose-700/30",
-        softGlow: "shadow-[0_0_28px_rgba(244,63,94,0.14)]",
+        softGlow: "shadow-[0_0_24px_rgba(244,63,94,0.12)]",
         bannerText: "text-rose-100",
         portraitGlow:
-          "bg-[radial-gradient(circle_at_center,rgba(244,63,94,0.22),transparent_72%)]",
+          "bg-[radial-gradient(circle_at_center,rgba(244,63,94,0.18),transparent_72%)]",
         accentLine: "from-rose-500/30 via-rose-300/40 to-transparent",
         modalGlow:
-          "shadow-[0_0_0_1px_rgba(244,63,94,0.12),0_0_50px_rgba(244,63,94,0.12),0_30px_100px_rgba(0,0,0,0.7)]",
+          "shadow-[0_0_0_1px_rgba(244,63,94,0.10),0_0_36px_rgba(244,63,94,0.10),0_30px_100px_rgba(0,0,0,0.68)]",
         sigilText: "text-rose-300/10",
       };
     case "Scouts":
       return {
         softBorder: "border-emerald-700/30",
-        softGlow: "shadow-[0_0_28px_rgba(16,185,129,0.14)]",
+        softGlow: "shadow-[0_0_24px_rgba(16,185,129,0.12)]",
         bannerText: "text-emerald-100",
         portraitGlow:
-          "bg-[radial-gradient(circle_at_center,rgba(16,185,129,0.22),transparent_72%)]",
+          "bg-[radial-gradient(circle_at_center,rgba(16,185,129,0.18),transparent_72%)]",
         accentLine: "from-emerald-500/30 via-emerald-300/40 to-transparent",
         modalGlow:
-          "shadow-[0_0_0_1px_rgba(16,185,129,0.12),0_0_50px_rgba(16,185,129,0.12),0_30px_100px_rgba(0,0,0,0.7)]",
+          "shadow-[0_0_0_1px_rgba(16,185,129,0.10),0_0_36px_rgba(16,185,129,0.10),0_30px_100px_rgba(0,0,0,0.68)]",
         sigilText: "text-emerald-300/10",
       };
     case "Diplomats":
       return {
         softBorder: "border-cyan-700/30",
-        softGlow: "shadow-[0_0_28px_rgba(34,211,238,0.14)]",
+        softGlow: "shadow-[0_0_24px_rgba(34,211,238,0.12)]",
         bannerText: "text-cyan-100",
         portraitGlow:
-          "bg-[radial-gradient(circle_at_center,rgba(34,211,238,0.22),transparent_72%)]",
+          "bg-[radial-gradient(circle_at_center,rgba(34,211,238,0.18),transparent_72%)]",
         accentLine: "from-cyan-500/30 via-cyan-300/40 to-transparent",
         modalGlow:
-          "shadow-[0_0_0_1px_rgba(34,211,238,0.12),0_0_50px_rgba(34,211,238,0.12),0_30px_100px_rgba(0,0,0,0.7)]",
+          "shadow-[0_0_0_1px_rgba(34,211,238,0.10),0_0_36px_rgba(34,211,238,0.10),0_30px_100px_rgba(0,0,0,0.68)]",
         sigilText: "text-cyan-300/10",
       };
     default:
@@ -156,10 +156,10 @@ function getGuildTheme(guild?: string) {
         softGlow: "",
         bannerText: "text-zinc-100",
         portraitGlow:
-          "bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.10),transparent_72%)]",
+          "bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.08),transparent_72%)]",
         accentLine: "from-zinc-500/15 via-zinc-300/15 to-transparent",
         modalGlow:
-          "shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_30px_100px_rgba(0,0,0,0.7)]",
+          "shadow-[0_0_0_1px_rgba(255,255,255,0.05),0_30px_100px_rgba(0,0,0,0.68)]",
         sigilText: "text-white/10",
       };
   }
@@ -175,9 +175,9 @@ function Panel({
   return (
     <div
       className={[
-        "relative overflow-hidden rounded-[28px] border border-zinc-800/90",
-        "bg-[linear-gradient(180deg,rgba(39,39,42,0.72),rgba(9,9,11,0.9))]",
-        "shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_20px_50px_rgba(0,0,0,0.35)]",
+        "relative overflow-hidden rounded-[26px] border border-zinc-800/90",
+        "bg-[linear-gradient(180deg,rgba(30,30,34,0.80),rgba(6,6,8,0.94))]",
+        "shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_18px_45px_rgba(0,0,0,0.32)]",
         className,
       ].join(" ")}
     >
@@ -236,7 +236,7 @@ function InventoryCardTile({
           <div className="truncate text-sm font-semibold text-zinc-100">
             {card.name}
           </div>
-          <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
+          <div className="mt-1 flex flex-wrap items-center gap-1.5">
             <span className="text-[9px] uppercase tracking-[0.18em] text-zinc-500">
               {card.type}
             </span>
@@ -418,10 +418,10 @@ function ItemDetailPanel({
   const rarity = getItemRarityClasses(card?.rarity);
 
   return (
-    <Panel className="h-full p-4">
+    <Panel className="p-4">
       <SectionHeading
         icon="🃏"
-        title="Item Detail"
+        title="Selected Item"
         right={
           onOpenLibrary ? (
             <button
@@ -436,50 +436,50 @@ function ItemDetailPanel({
       />
 
       {!card ? (
-        <div className="flex h-full min-h-[240px] items-center justify-center rounded-2xl border border-dashed border-zinc-800 bg-zinc-950/40 p-6 text-center">
+        <div className="flex min-h-[220px] items-center justify-center rounded-2xl border border-dashed border-zinc-800 bg-zinc-950/40 p-6 text-center">
           <div>
             <div className="text-3xl opacity-40">🃏</div>
             <div className="mt-3 text-sm font-medium text-zinc-300">
               Select an item to inspect
             </div>
             <div className="mt-1 text-xs text-zinc-500">
-              View its effect, status, and details.
+              Click any owned item to view its effect and details.
             </div>
           </div>
         </div>
       ) : (
-        <div className="flex h-full flex-col">
-          <div
-            className={`rounded-[24px] border border-zinc-800 bg-[linear-gradient(180deg,rgba(39,39,42,0.95),rgba(9,9,11,0.95))] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] ${rarity.glow}`}
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-2">
-                  <div className="text-[10px] uppercase tracking-[0.22em] text-zinc-500">
-                    {card.type}
-                  </div>
-                  {card.rarity ? (
-                    <span
-                      className={`rounded-full border px-2 py-0.5 text-[9px] uppercase tracking-[0.14em] ${rarity.badge}`}
-                    >
-                      {card.rarity}
-                    </span>
-                  ) : null}
+        <div
+          className={`rounded-[24px] border border-zinc-800 bg-[linear-gradient(180deg,rgba(39,39,42,0.95),rgba(9,9,11,0.95))] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] ${rarity.glow}`}
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="text-[10px] uppercase tracking-[0.22em] text-zinc-500">
+                  {card.type}
                 </div>
-
-                <div className="mt-1 text-xl font-semibold text-zinc-100">
-                  {card.name}
-                </div>
+                {card.rarity ? (
+                  <span
+                    className={`rounded-full border px-2 py-0.5 text-[9px] uppercase tracking-[0.14em] ${rarity.badge}`}
+                  >
+                    {card.rarity}
+                  </span>
+                ) : null}
               </div>
 
-              {card.quantity && card.quantity > 1 ? (
-                <div className="rounded-full border border-zinc-700 bg-zinc-900 px-2 py-1 text-xs text-zinc-300">
-                  x{card.quantity}
-                </div>
-              ) : null}
+              <div className="mt-1 text-xl font-semibold text-zinc-100">
+                {card.name}
+              </div>
             </div>
 
-            <div className="mt-4 flex aspect-[4/5] items-center justify-center rounded-2xl border border-zinc-800 bg-zinc-950/70 text-5xl text-zinc-600">
+            {card.quantity && card.quantity > 1 ? (
+              <div className="rounded-full border border-zinc-700 bg-zinc-900 px-2 py-1 text-xs text-zinc-300">
+                x{card.quantity}
+              </div>
+            ) : null}
+          </div>
+
+          <div className="mt-4 grid gap-4 lg:grid-cols-[220px_minmax(0,1fr)]">
+            <div className="flex aspect-[4/5] items-center justify-center rounded-2xl border border-zinc-800 bg-zinc-950/70 text-5xl text-zinc-600">
               {card.imageUrl ? (
                 <img
                   src={card.imageUrl}
@@ -491,7 +491,7 @@ function ItemDetailPanel({
               )}
             </div>
 
-            <div className="mt-4 space-y-4">
+            <div className="space-y-4">
               <div>
                 <div className="text-[10px] uppercase tracking-[0.18em] text-zinc-500">
                   Effect
@@ -593,7 +593,6 @@ export default function CharacterProfileModal({
     () => groupInventory(inventory),
     [inventory]
   );
-
   const allCards = useMemo(() => inventory, [inventory]);
 
   const selectedCard = useMemo(
@@ -637,7 +636,7 @@ export default function CharacterProfileModal({
 
       <div className="absolute inset-0 flex items-center justify-center p-3 md:p-5">
         <div
-          className={`relative h-[94vh] w-full max-w-[1600px] overflow-hidden rounded-[32px] border border-zinc-800 bg-zinc-950 ${guildTheme.modalGlow}`}
+          className={`relative h-[94vh] w-full max-w-[1450px] overflow-hidden rounded-[32px] border border-zinc-800 bg-zinc-950 ${guildTheme.modalGlow}`}
         >
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.04),transparent_30%)]" />
           <div className="pointer-events-none absolute inset-0 opacity-30 [background-image:linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] [background-size:24px_24px]" />
@@ -651,30 +650,30 @@ export default function CharacterProfileModal({
             ✕
           </button>
 
-          <div className="grid h-full w-full grid-cols-1 gap-4 p-4 xl:p-5 2xl:grid-cols-[320px_minmax(0,1fr)_360px]">
+          <div className="grid h-full w-full grid-cols-1 gap-4 overflow-auto p-4 xl:grid-cols-[300px_minmax(0,1fr)] xl:overflow-hidden xl:p-5">
             <aside className="flex min-h-0 flex-col gap-4">
               <Panel className="p-5">
                 <div className="relative flex justify-center">
                   <div
-                    className={`pointer-events-none absolute inset-0 flex items-center justify-center text-[180px] font-black leading-none ${guildTheme.sigilText}`}
+                    className={`pointer-events-none absolute inset-0 flex items-center justify-center text-[150px] font-black leading-none ${guildTheme.sigilText}`}
                   >
                     {getGuildSigil(person.guild)}
                   </div>
 
                   <div
-                    className={`relative rounded-[34px] p-[5px] ${guildTheme.portraitGlow} ${guildTheme.softGlow}`}
+                    className={`relative rounded-[30px] p-[5px] ${guildTheme.portraitGlow} ${guildTheme.softGlow}`}
                   >
                     <Avatar
                       name={fullName}
                       src={person.portraitUrl}
-                      size={210}
+                      size={170}
                       className="mx-auto"
                     />
                   </div>
                 </div>
 
-                <div className="mt-5 text-center">
-                  <div className="text-[2rem] font-semibold leading-none tracking-[0.01em] text-zinc-50">
+                <div className="mt-4 text-center">
+                  <div className="text-[1.85rem] font-semibold leading-tight text-zinc-50">
                     {fullName}
                   </div>
 
@@ -686,7 +685,7 @@ export default function CharacterProfileModal({
                     </div>
                   </div>
 
-                  <div className="mt-4 flex justify-center">
+                  <div className="mt-3 flex justify-center">
                     <span className="inline-flex min-h-[38px] items-center rounded-2xl border border-zinc-800 bg-zinc-900/90 px-4 py-1.5 text-sm font-medium text-zinc-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
                       {person.homeroom || "—"}
                     </span>
@@ -695,11 +694,11 @@ export default function CharacterProfileModal({
                   {person.guild ? (
                     <div className="mt-3 flex justify-center">
                       <div
-                        className={`inline-flex min-h-[54px] items-center gap-3 rounded-2xl border bg-zinc-900/95 px-4 py-2.5 ${guildTheme.softBorder} ${guildTheme.softGlow}`}
+                        className={`inline-flex min-h-[52px] items-center gap-3 rounded-2xl border bg-zinc-900/95 px-4 py-2 ${guildTheme.softBorder} ${guildTheme.softGlow}`}
                       >
-                        <GuildBadge guild={person.guild} size={38} />
+                        <GuildBadge guild={person.guild} size={34} />
                         <span
-                          className={`text-base font-semibold tracking-[0.10em] leading-none ${guildTheme.bannerText}`}
+                          className={`text-base font-semibold tracking-[0.08em] leading-none ${guildTheme.bannerText}`}
                         >
                           {person.guild}
                         </span>
@@ -708,7 +707,7 @@ export default function CharacterProfileModal({
                   ) : null}
 
                   <div
-                    className={`mx-auto mt-5 h-px w-28 bg-gradient-to-r ${guildTheme.accentLine}`}
+                    className={`mx-auto mt-5 h-px w-24 bg-gradient-to-r ${guildTheme.accentLine}`}
                   />
                 </div>
               </Panel>
@@ -716,8 +715,8 @@ export default function CharacterProfileModal({
               <HealthPanel current={hpCur} max={hpBase} />
             </aside>
 
-            <main className="grid min-h-0 grid-cols-1 grid-rows-[auto_auto_minmax(0,1fr)_auto] gap-4 2xl:grid-rows-[auto_auto_minmax(0,1fr)]">
-              <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.1fr_0.9fr]">
+            <main className="grid min-h-0 grid-cols-1 grid-rows-[auto_auto_minmax(0,1fr)_auto] gap-4 xl:overflow-hidden">
+              <div className="grid grid-cols-1 gap-4 2xl:grid-cols-[1.1fr_0.9fr]">
                 <AttributePanel person={person} />
                 <SkillsPanel skillList={skillList} />
               </div>
@@ -749,8 +748,8 @@ export default function CharacterProfileModal({
                 </div>
               </div>
 
-              <div className="min-h-0 overflow-hidden">
-                <div className="grid h-full grid-cols-1 gap-4 overflow-auto pr-1 xl:grid-cols-2">
+              <div className="min-h-0">
+                <div className="grid grid-cols-1 gap-4 xl:max-h-full xl:overflow-auto xl:pr-1 2xl:grid-cols-2">
                   <InventoryPanel
                     title="Relics"
                     icon="💠"
@@ -782,20 +781,11 @@ export default function CharacterProfileModal({
                 </div>
               </div>
 
-              <div className="2xl:hidden">
-                <ItemDetailPanel
-                  card={selectedCard}
-                  onOpenLibrary={onOpenLibrary}
-                />
-              </div>
-            </main>
-
-            <aside className="hidden min-h-0 2xl:block">
               <ItemDetailPanel
                 card={selectedCard}
                 onOpenLibrary={onOpenLibrary}
               />
-            </aside>
+            </main>
           </div>
         </div>
       </div>
