@@ -1,4 +1,5 @@
 // src/types.ts
+
 export type Guild =
   | "Scouts"
   | "Guardians"
@@ -14,6 +15,7 @@ export type Student = {
   last: string;
   homeroom: string;
 
+  // core stats
   str: number;
   dex: number;
   con: number;
@@ -21,11 +23,15 @@ export type Student = {
   wis: number;
   cha: number;
 
+  // gameplay data
   skills: string[] | string;
+  inventory?: string[]; // ✅ NEW (from Master sheet)
+
+  // optional visuals / metadata
   portraitUrl?: string;
   guild?: Guild;
 
-  // ✅ NEW: HP (from Apps Script)
+  // HP (from Apps Script)
   baseHP?: number;
   currentHP?: number;
 };
