@@ -4,20 +4,11 @@ import Avatar from "./Avatar";
 import StatBar from "./StatBar";
 import { GuildBadge } from "./GuildBadge";
 import { hpBarColorFromPct } from "../utils/hpColor";
-
-type InventoryCardType = "relic" | "potion" | "item" | "pet" | "other";
-
-type InventoryCard = {
-  id: string;
-  name: string;
-  type: InventoryCardType;
-  effect: string;
-  useText?: string;
-  quantity?: number;
-  isConsumed?: boolean;
-  isEquipped?: boolean;
-  imageUrl?: string;
-};
+import {
+  itemLibraryById,
+  itemLibraryByName,
+  type InventoryCard,
+} from "../data/itemLibrary";
 
 type Props = {
   person: any | null;
@@ -32,6 +23,59 @@ function skillsToArray(skills: any): string[] {
     .split(/[,;|]/g)
     .map((s) => s.trim())
     .filter(Boolean);
+}
+
+function normalizeInventory(rawInventory: any): InventoryCard[] {
+  if (!rawInventory) return [];
+
+  const rawItems = Array.isArray(rawInventory)
+    ? rawInventory
+    : String(rawInventory)
+        .split(/[,;|]/g)
+        .map((s) => s.trim())
+        .filter(Boolean);
+
+  return rawItems
+    .map((entry: any) => {
+      if (typeof entry === "string") {
+        const trimmed = entry.trim();
+        return (
+          itemLibraryById[trimmed] ||
+          itemLibraryByName[trimmed.toLowerCase()] ||
+          null
+        );
+      }
+
+      if (entry && typeof entry === "object") {
+        const rawId = String(entry.id ?? "").trim();
+        const rawName = String(entry.name ?? "")
+          .trim()
+          .toLowerCase();
+
+        const base =
+          (rawId ? itemLibraryById[rawId] : null) ||
+          (rawName ? itemLibraryByName[rawName] : null);
+
+        if (!base) return null;
+
+        return {
+          ...base,
+          quantity:
+            entry.quantity != null ? Number(entry.quantity) : base.quantity,
+          isConsumed:
+            entry.isConsumed != null
+              ? Boolean(entry.isConsumed)
+              : base.isConsumed,
+          isEquipped:
+            entry.isEquipped != null
+              ? Boolean(entry.isEquipped)
+              : base.isEquipped,
+        };
+      }
+
+      return null;
+    })
+    .filter(Boolean) as InventoryCard[];
 }
 
 function groupInventory(cards: InventoryCard[]) {
@@ -216,6 +260,17 @@ function InventoryCardTile({ card }: { card: InventoryCard }) {
       type="button"
       className="w-full rounded-2xl bg-zinc-950/50 p-2.5 text-left transition hover:-translate-y-[1px] hover:bg-zinc-900/70"
     >
+      {card.imageUrl ? (
+        <div className="mb-2 overflow-hidden rounded-xl border border-zinc-800/80 bg-zinc-950">
+          <img
+            src={card.imageUrl}
+            alt={card.name}
+            className="h-auto w-full object-cover"
+            loading="lazy"
+          />
+        </div>
+      ) : null}
+
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <div className="truncate text-xs font-semibold text-zinc-100">
@@ -355,9 +410,10 @@ export default function CharacterProfileModal({
     [person?.skills]
   );
 
-  const inventory: InventoryCard[] = useMemo(() => {
-    return Array.isArray(person?.inventory) ? person.inventory : [];
-  }, [person?.inventory]);
+  const inventory = useMemo(
+    () => normalizeInventory(person?.inventory),
+    [person?.inventory]
+  );
 
   const groupedInventory = useMemo(
     () => groupInventory(inventory),
