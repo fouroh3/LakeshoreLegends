@@ -37,8 +37,8 @@ function skillsToArray(skills: any): string[] {
     .filter(Boolean);
 }
 
-function resolveCardImage(id: string, existing?: string): string {
-  return existing || `/assets/cards/${id}.png`;
+function resolveCardImage(id: string): string {
+  return `/assets/cards/${id}.png`;
 }
 
 function normalizeInventory(rawInventory: any): ResolvedInventoryCard[] {
@@ -65,7 +65,7 @@ function normalizeInventory(rawInventory: any): ResolvedInventoryCard[] {
 
       out.push({
         ...base,
-        imageUrl: resolveCardImage(base.id, base.imageUrl),
+        imageUrl: resolveCardImage(base.id),
       });
       continue;
     }
@@ -94,7 +94,7 @@ function normalizeInventory(rawInventory: any): ResolvedInventoryCard[] {
           entry.isEquipped != null
             ? Boolean(entry.isEquipped)
             : base.isEquipped,
-        imageUrl: resolveCardImage(base.id, base.imageUrl),
+        imageUrl: resolveCardImage(base.id),
       });
     }
   }
@@ -445,34 +445,20 @@ function InventoryCardTile({
           : "border-zinc-800 bg-zinc-950/70 hover:-translate-y-[2px] hover:border-zinc-700 hover:bg-zinc-900/90"
       }`}
     >
-      <div className="relative aspect-[5/6.7] w-full overflow-hidden bg-zinc-950">
+      <div className="flex aspect-[5/6.7] w-full items-center justify-center overflow-hidden bg-zinc-950 p-2">
         {!imgError ? (
           <img
             src={card.imageUrl}
             alt={card.name}
-            className="h-full w-full object-cover object-center transition duration-300 group-hover:scale-[1.03]"
+            className="h-full w-full rounded-[14px] object-contain"
             loading="lazy"
             onError={() => setImgError(true)}
           />
         ) : (
-          <div className="flex h-full w-full items-center justify-center bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.05),transparent_55%)] p-3 text-center text-[10px] uppercase tracking-[0.16em] text-zinc-500">
+          <div className="flex h-full w-full items-center justify-center rounded-[14px] bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.05),transparent_55%)] p-3 text-center text-[10px] uppercase tracking-[0.16em] text-zinc-500">
             {card.type}
           </div>
         )}
-
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/55 via-black/10 to-transparent" />
-
-        <div className="absolute inset-x-0 bottom-0 p-2">
-          <div className="line-clamp-2 text-[11px] font-semibold leading-snug text-white drop-shadow">
-            {card.name}
-          </div>
-        </div>
-
-        {card.quantity && card.quantity > 1 ? (
-          <div className="absolute right-2 top-2 rounded-full border border-white/10 bg-black/70 px-2 py-0.5 text-[9px] font-semibold text-white shadow">
-            x{card.quantity}
-          </div>
-        ) : null}
       </div>
     </button>
   );
@@ -486,60 +472,65 @@ function EmptyDetailPanel({
   grouped: ReturnType<typeof groupInventory>;
 }) {
   return (
-    <div className="flex h-full min-h-[220px] flex-col justify-between rounded-[22px] border border-zinc-800 bg-zinc-950/45 p-4">
-      <div>
-        <div className="text-[10px] uppercase tracking-[0.18em] text-zinc-500">
-          Card Details
-        </div>
-        <div className="mt-2 text-lg font-semibold text-zinc-100">
-          Select a card
-        </div>
-        <div className="mt-2 text-sm leading-6 text-zinc-400">
-          Click any card in the inventory grid to view its details here.
-        </div>
-      </div>
-
-      <div className="grid gap-2 pt-4">
-        <div className="rounded-2xl border border-zinc-800 bg-zinc-900/55 px-3 py-2.5">
-          <div className="text-[10px] uppercase tracking-[0.16em] text-zinc-500">
-            Total Items
+    <div className="h-full min-h-0 overflow-y-auto rounded-[22px] border border-zinc-800 bg-zinc-950/45 p-4">
+      <div className="space-y-4">
+        <div>
+          <div className="text-[10px] uppercase tracking-[0.18em] text-zinc-500">
+            Card Details
           </div>
-          <div className="mt-1 text-xl font-semibold text-zinc-100">
-            {inventory.length}
+          <div className="mt-2 text-lg font-semibold text-zinc-100">
+            Select a card
+          </div>
+          <div className="mt-2 text-sm leading-6 text-zinc-400">
+            Click any card in the inventory grid to view its details here.
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-2">
-          <div className="rounded-2xl border border-zinc-800 bg-zinc-900/40 px-3 py-2">
+        <div className="grid gap-2 pt-2">
+          <div className="rounded-2xl border border-zinc-800 bg-zinc-900/55 px-3 py-2.5">
             <div className="text-[10px] uppercase tracking-[0.16em] text-zinc-500">
-              Relics
+              Total Items
             </div>
-            <div className="mt-1 text-sm font-semibold text-zinc-200">
-              {grouped.relic.length}
+            <div className="mt-1 text-xl font-semibold text-zinc-100">
+              {inventory.length}
             </div>
           </div>
-          <div className="rounded-2xl border border-zinc-800 bg-zinc-900/40 px-3 py-2">
-            <div className="text-[10px] uppercase tracking-[0.16em] text-zinc-500">
-              Potions
+
+          <div className="grid grid-cols-2 gap-2">
+            <div className="rounded-2xl border border-zinc-800 bg-zinc-900/40 px-3 py-2">
+              <div className="text-[10px] uppercase tracking-[0.16em] text-zinc-500">
+                Relics
+              </div>
+              <div className="mt-1 text-sm font-semibold text-zinc-200">
+                {grouped.relic.length}
+              </div>
             </div>
-            <div className="mt-1 text-sm font-semibold text-zinc-200">
-              {grouped.potion.length}
+
+            <div className="rounded-2xl border border-zinc-800 bg-zinc-900/40 px-3 py-2">
+              <div className="text-[10px] uppercase tracking-[0.16em] text-zinc-500">
+                Potions
+              </div>
+              <div className="mt-1 text-sm font-semibold text-zinc-200">
+                {grouped.potion.length}
+              </div>
             </div>
-          </div>
-          <div className="rounded-2xl border border-zinc-800 bg-zinc-900/40 px-3 py-2">
-            <div className="text-[10px] uppercase tracking-[0.16em] text-zinc-500">
-              Items
+
+            <div className="rounded-2xl border border-zinc-800 bg-zinc-900/40 px-3 py-2">
+              <div className="text-[10px] uppercase tracking-[0.16em] text-zinc-500">
+                Items
+              </div>
+              <div className="mt-1 text-sm font-semibold text-zinc-200">
+                {grouped.item.length}
+              </div>
             </div>
-            <div className="mt-1 text-sm font-semibold text-zinc-200">
-              {grouped.item.length}
-            </div>
-          </div>
-          <div className="rounded-2xl border border-zinc-800 bg-zinc-900/40 px-3 py-2">
-            <div className="text-[10px] uppercase tracking-[0.16em] text-zinc-500">
-              Other
-            </div>
-            <div className="mt-1 text-sm font-semibold text-zinc-200">
-              {grouped.other.length}
+
+            <div className="rounded-2xl border border-zinc-800 bg-zinc-900/40 px-3 py-2">
+              <div className="text-[10px] uppercase tracking-[0.16em] text-zinc-500">
+                Other
+              </div>
+              <div className="mt-1 text-sm font-semibold text-zinc-200">
+                {grouped.other.length}
+              </div>
             </div>
           </div>
         </div>
@@ -562,7 +553,7 @@ function SelectedCardPanel({
   }
 
   return (
-    <div className="rounded-[22px] border border-zinc-800 bg-zinc-950/55 p-4">
+    <div className="h-full min-h-0 overflow-y-auto rounded-[22px] border border-zinc-800 bg-zinc-950/55 p-4">
       <div className="space-y-4">
         <div>
           <div className="text-[10px] uppercase tracking-[0.18em] text-zinc-500">
@@ -604,6 +595,35 @@ function SelectedCardPanel({
               Quantity: {card.quantity}
             </span>
           ) : null}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function EmptyInventoryArea() {
+  return (
+    <div className="grid min-h-0 gap-3 xl:grid-cols-[minmax(0,1fr)_250px] xl:flex-1">
+      <div className="flex min-h-[320px] items-center justify-center rounded-[22px] border border-zinc-800 bg-zinc-950/35 p-6">
+        <div className="text-center">
+          <div className="text-base font-semibold text-zinc-200">
+            No items collected yet.
+          </div>
+          <div className="mt-2 text-sm text-zinc-500">
+            This legend’s inventory is currently empty.
+          </div>
+        </div>
+      </div>
+
+      <div className="rounded-[22px] border border-zinc-800 bg-zinc-950/45 p-4">
+        <div className="text-[10px] uppercase tracking-[0.18em] text-zinc-500">
+          Card Details
+        </div>
+        <div className="mt-2 text-lg font-semibold text-zinc-100">
+          No card selected
+        </div>
+        <div className="mt-2 text-sm leading-6 text-zinc-400">
+          When this player collects cards, details will appear here.
         </div>
       </div>
     </div>
@@ -653,17 +673,6 @@ function InventorySection({
     inventory.find((card) => card.id === selectedCardId) ||
     null;
 
-  if (!inventory.length) {
-    return (
-      <Surface className="p-4">
-        <SectionHeading icon="🎒" title="Inventory" />
-        <div className="rounded-[20px] bg-zinc-950/35 p-4 text-sm italic text-zinc-500">
-          No items collected yet.
-        </div>
-      </Surface>
-    );
-  }
-
   return (
     <Surface className="flex h-full min-h-0 flex-col p-4">
       <SectionHeading
@@ -672,38 +681,46 @@ function InventorySection({
         right={`${inventory.length} item${inventory.length === 1 ? "" : "s"}`}
       />
 
-      <div className="space-y-3">
-        <InventoryFilterTabs
-          grouped={grouped}
-          selected={filter}
-          onSelect={setFilter}
-        />
+      {!inventory.length ? (
+        <div className="flex min-h-0 flex-1 pt-1">
+          <EmptyInventoryArea />
+        </div>
+      ) : (
+        <div className="flex min-h-0 flex-1 flex-col space-y-3">
+          <InventoryFilterTabs
+            grouped={grouped}
+            selected={filter}
+            onSelect={setFilter}
+          />
 
-        <div className="grid min-h-0 gap-3 xl:grid-cols-[minmax(0,1fr)_250px]">
-          <div className="rounded-[22px] border border-zinc-800 bg-zinc-950/35 p-3">
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5">
-              {visibleCards.map((card) => (
-                <InventoryCardTile
-                  key={card.id}
-                  card={card}
-                  isSelected={selectedCardId === card.id}
-                  onSelect={(next) =>
-                    setSelectedCardId((prev) =>
-                      prev === next.id ? null : next.id
-                    )
-                  }
-                />
-              ))}
+          <div className="grid min-h-0 flex-1 gap-3 xl:grid-cols-[minmax(0,1fr)_250px]">
+            <div className="min-h-0 rounded-[22px] border border-zinc-800 bg-zinc-950/35 p-3">
+              <div className="grid max-h-full grid-cols-2 gap-3 overflow-y-auto pr-1 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5">
+                {visibleCards.map((card) => (
+                  <InventoryCardTile
+                    key={card.id}
+                    card={card}
+                    isSelected={selectedCardId === card.id}
+                    onSelect={(next) =>
+                      setSelectedCardId((prev) =>
+                        prev === next.id ? null : next.id
+                      )
+                    }
+                  />
+                ))}
+              </div>
+            </div>
+
+            <div className="min-h-0 overflow-hidden">
+              <SelectedCardPanel
+                card={selectedCard}
+                inventory={inventory}
+                grouped={grouped}
+              />
             </div>
           </div>
-
-          <SelectedCardPanel
-            card={selectedCard}
-            inventory={inventory}
-            grouped={grouped}
-          />
         </div>
-      </div>
+      )}
     </Surface>
   );
 }
@@ -726,7 +743,7 @@ function AttributeSection({ person }: { person: any }) {
 
 function SkillsSection({ skillList }: { skillList: string[] }) {
   return (
-    <Surface className="p-3">
+    <Surface className="p-3 pr-16">
       <SectionHeading
         icon="✨"
         title="Skills"
@@ -819,14 +836,12 @@ export default function CharacterProfileModal({
         >
           <button
             onClick={onClose}
-            className="absolute right-4 top-4 z-20 flex h-10 w-10 items-center justify-center rounded-full border border-zinc-800 bg-zinc-900/90 text-zinc-400 transition hover:bg-zinc-800 hover:text-white"
+            className="absolute right-3 top-3 z-20 flex h-10 w-10 items-center justify-center rounded-full border border-zinc-800 bg-zinc-900/90 text-zinc-400 transition hover:bg-zinc-800 hover:text-white"
             aria-label="Close"
             title="Close"
           >
             ✕
           </button>
-
-          <div className="pointer-events-none absolute inset-y-0 left-[300px] hidden w-px bg-gradient-to-b from-transparent via-zinc-800 to-transparent xl:block" />
 
           <div className="grid h-full w-full grid-cols-1 gap-4 overflow-auto p-4 xl:grid-cols-[270px_minmax(0,1fr)] xl:overflow-hidden">
             <aside className="min-h-0">
@@ -921,7 +936,7 @@ export default function CharacterProfileModal({
                   <CompanionPanel companion={companion} />
                 </div>
 
-                <div className="mt-auto pt-3 text-center text-[10px] uppercase tracking-[0.22em] text-zinc-600">
+                <div className="mt-auto pt-1 text-center text-[10px] uppercase tracking-[0.22em] text-zinc-600">
                   Character Profile
                 </div>
               </div>
@@ -934,7 +949,7 @@ export default function CharacterProfileModal({
                   <SkillsSection skillList={skillList} />
                 </div>
 
-                <div className="min-h-0 flex-1 xl:overflow-auto">
+                <div className="min-h-0 flex-1 xl:overflow-hidden">
                   <InventorySection inventory={inventory} />
                 </div>
               </div>
