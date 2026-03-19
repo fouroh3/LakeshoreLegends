@@ -95,24 +95,31 @@ function splitSkills(raw: any): string[] {
     .filter(Boolean);
 }
 
+function splitInventory(raw: any): string[] {
+  const s = String(raw ?? "").trim();
+  if (!s) return [];
+  return s
+    .split(/[;,|]/g)
+    .map((x) => x.trim())
+    .filter(Boolean);
+}
+
 /**
- * ✅ CRITICAL FIX:
- * Master sheet uses a single "Name" column (often "Last, First").
- * This parses it into { first, last } so the cards stop saying "Unnamed Legend".
+ * ✅ Master sheet uses a single "Name" column (often "Last, First").
+ * This parses it into { first, last }.
  */
 function splitName(nameRaw: any): { first: string; last: string } {
   const s = String(nameRaw ?? "").trim();
   if (!s) return { first: "", last: "" };
 
-  // "Last, First"
   if (s.includes(",")) {
     const [last, first] = s.split(",").map((x) => x.trim());
     return { first: first || "", last: last || "" };
   }
 
-  // "First Last ..." (fallback: last token is last name)
   const parts = s.split(/\s+/).filter(Boolean);
   if (parts.length === 1) return { first: parts[0], last: "" };
+
   return {
     first: parts.slice(0, -1).join(" "),
     last: parts[parts.length - 1],
@@ -127,7 +134,7 @@ function rowsToStudents(rows: string[][]): Student[] {
   const iId = pick(idx, "id", "studentid", "student id");
   const iName = pick(idx, "name", "student name");
 
-  // (optional separate columns — supported if present)
+  // optional separate columns
   const iFirst = pick(idx, "first", "firstname", "first name");
   const iLast = pick(idx, "last", "lastname", "last name");
 
@@ -142,6 +149,7 @@ function rowsToStudents(rows: string[][]): Student[] {
     "avatarurl"
   );
   const iSkills = pick(idx, "skills", "skill");
+  const iInventory = pick(idx, "inventory");
 
   // base stats
   const iStr = pick(idx, "str", "strength");
@@ -151,7 +159,7 @@ function rowsToStudents(rows: string[][]): Student[] {
   const iWis = pick(idx, "wis", "wisdom");
   const iCha = pick(idx, "cha", "charisma");
 
-  // bonus stats (accept many header variants)
+  // bonus stats
   const iStrB = pick(
     idx,
     "str_bonus",
@@ -205,9 +213,9 @@ function rowsToStudents(rows: string[][]): Student[] {
 
     const nameRaw = iName >= 0 ? String(row[iName] || "").trim() : "";
 
-    // Prefer explicit first/last columns if present, otherwise split Name
     let first = iFirst >= 0 ? String(row[iFirst] || "").trim() : "";
     let last = iLast >= 0 ? String(row[iLast] || "").trim() : "";
+
     if (!first && !last) {
       const parsed = splitName(nameRaw);
       first = parsed.first;
@@ -231,7 +239,6 @@ function rowsToStudents(rows: string[][]): Student[] {
     const bonusWis = iWisB >= 0 ? toNum(row[iWisB], 0) : 0;
     const bonusCha = iChaB >= 0 ? toNum(row[iChaB], 0) : 0;
 
-    // ✅ FINAL stats used by dashboard indicators
     const str = baseStr + bonusStr;
     const dex = baseDex + bonusDex;
     const con = baseCon + bonusCon;
@@ -241,8 +248,12 @@ function rowsToStudents(rows: string[][]): Student[] {
 
     const portraitUrl =
       iPortrait >= 0 ? String(row[iPortrait] || "").trim() : "";
+
     const skillsRaw = iSkills >= 0 ? row[iSkills] : "";
     const skills = splitSkills(skillsRaw);
+
+    const inventoryRaw = iInventory >= 0 ? row[iInventory] : "";
+    const inventory = splitInventory(inventoryRaw);
 
     const student: Student = {
       id,
@@ -256,6 +267,7 @@ function rowsToStudents(rows: string[][]): Student[] {
       wis,
       cha,
       skills: skills.length ? skills : skillsRaw ? String(skillsRaw) : [],
+      inventory,
       ...(guild ? ({ guild } as any) : {}),
       ...(portraitUrl ? { portraitUrl } : {}),
     };
@@ -272,14 +284,14 @@ export async function loadStudents(): Promise<Student[]> {
   const now = Date.now();
   if (cache && now - cache.at < CACHE_MS) return cache.students;
 
-  // ✅ cache-bust so new bonuses show after a purchase
   const url = `${SHEET_CSV_URL}${
     SHEET_CSV_URL.includes("?") ? "&" : "?"
   }t=${now}`;
 
   const res = await fetch(url, { cache: "no-store" });
-  if (!res.ok)
+  if (!res.ok) {
     throw new Error(`Failed to fetch roster CSV: HTTP ${res.status}`);
+  }
 
   const text = await res.text();
   const rows = parseCSV(text);

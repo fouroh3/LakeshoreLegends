@@ -10,6 +10,7 @@ type Density = "comfortable" | "compact" | "ultra";
 interface AbilityCardProps {
   person: any;
   density?: Density;
+  onClick?: () => void;
 }
 
 const densityConfig: Record<
@@ -68,6 +69,7 @@ function hpStatus(current: number, base: number) {
 export default function AbilityCard({
   person,
   density = "comfortable",
+  onClick,
 }: AbilityCardProps) {
   const {
     first,
@@ -125,18 +127,20 @@ export default function AbilityCard({
   const status = hpStatus(hpCur, hpBase);
 
   const isDead = hpCur <= 0;
-
-  // ✅ Smooth gradient colour (red → amber → green)
   const hpColor = hpBarColorFromPct(hpPct);
-
-  // Optional: pulse when low but not dead
   const lowHpPulse = !isDead && hpPct > 0 && hpPct <= 0.25;
 
   return (
-    <div
-      className={`flex flex-col ${cfg.gap} ${cfg.padding} rounded-2xl bg-zinc-900/70 border border-zinc-800/60 shadow-lg shadow-black/40`}
+    <button
+      type="button"
+      onClick={onClick}
+      className={[
+        `w-full text-left flex flex-col ${cfg.gap} ${cfg.padding} rounded-2xl bg-zinc-900/70 border border-zinc-800/60 shadow-lg shadow-black/40 transition`,
+        "hover:border-cyan-700/50 hover:bg-zinc-900/90 hover:-translate-y-[1px]",
+        "focus:outline-none focus:ring-2 focus:ring-cyan-500/50",
+      ].join(" ")}
     >
-      {/* HEADER (never greyed out) */}
+      {/* HEADER */}
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2.5 min-w-0">
           <Avatar name={fullName} src={portraitUrl} badge={badgeIcon} />
@@ -157,9 +161,7 @@ export default function AbilityCard({
         </div>
       </div>
 
-      {/* EVERYTHING FROM HEALTH DOWN */}
       <div className="relative">
-        {/* Grey-out layer (only affects the lower section) */}
         <div
           className={["relative", isDead ? "opacity-45 grayscale" : ""].join(
             " "
@@ -193,9 +195,7 @@ export default function AbilityCard({
                 ].join(" ")}
                 style={{
                   width: `${Math.round(hpPct * 100)}%`,
-                  backgroundColor: isDead
-                    ? "rgba(113,113,122,1)" // zinc-500-ish when dead
-                    : hpColor,
+                  backgroundColor: isDead ? "rgba(113,113,122,1)" : hpColor,
                 }}
               />
             </div>
@@ -236,7 +236,6 @@ export default function AbilityCard({
           </div>
         </div>
 
-        {/* DEAD OVERLAY (on top of everything from health down) */}
         {isDead && (
           <div className="pointer-events-none absolute inset-0 z-20 flex flex-col items-center justify-center">
             <div className="absolute inset-0 rounded-xl bg-zinc-950/35" />
@@ -249,6 +248,6 @@ export default function AbilityCard({
           </div>
         )}
       </div>
-    </div>
+    </button>
   );
 }
