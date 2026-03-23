@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import AbilitiesDashboard from "./components/AbilitiesDashboard";
+import CharacterProfileModal from "./components/CharacterProfileModal";
 import BattlePage from "./pages/BattlePage";
 import StorePage from "./pages/StorePage";
 import { loadStudents } from "./data";
@@ -35,13 +36,8 @@ export default function App() {
     window.location.href = url.toString();
   };
 
-  if (view === "battle") {
-    return <BattlePage onBack={goHome} />;
-  }
-
-  if (view === "store") {
-    return <StorePage onBack={goHome} />;
-  }
+  if (view === "battle") return <BattlePage onBack={goHome} />;
+  if (view === "store") return <StorePage onBack={goHome} />;
 
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
@@ -53,6 +49,8 @@ export default function App() {
   const [sortKey, setSortKey] = useState("homeroom");
   const [attrFilterKey, setAttrFilterKey] = useState("");
   const [attrFilterMin, setAttrFilterMin] = useState(0);
+
+  const [selectedPerson, setSelectedPerson] = useState<Student | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -94,9 +92,10 @@ export default function App() {
       if (typeof document !== "undefined" && document.hidden) return false;
       if (
         typeof document !== "undefined" &&
-        typeof document.hasFocus === "function"
+        typeof document.hasFocus === "function" &&
+        !document.hasFocus()
       ) {
-        if (!document.hasFocus()) return false;
+        return false;
       }
       return true;
     };
@@ -229,12 +228,14 @@ export default function App() {
           .join(" ")
           .toLowerCase();
         const guild = String(p.guild || "").toLowerCase();
+        const hr = String(p.homeroom || "").toLowerCase();
 
         return (
           fullA.includes(q) ||
           fullB.includes(q) ||
           skills.includes(q) ||
-          guild.includes(q)
+          guild.includes(q) ||
+          hr.includes(q)
         );
       });
     }
@@ -253,6 +254,13 @@ export default function App() {
           .sort((a: any, b: any) =>
             `${b.first} ${b.last}`.localeCompare(`${a.first} ${a.last}`)
           );
+
+      case "guild":
+        return list.slice().sort((a: any, b: any) =>
+          String(a.guild ?? "").localeCompare(String(b.guild ?? ""), "en", {
+            sensitivity: "base",
+          })
+        );
 
       case "hp-desc":
         return list
@@ -311,54 +319,66 @@ export default function App() {
     : `${filtered.length}/${students.length} shown`;
 
   return (
-    <div className="min-h-screen w-full bg-zinc-950 text-zinc-100">
-      <header className="sticky top-0 z-20 border-b border-zinc-800 bg-zinc-950/78 backdrop-blur">
-        <div className="mx-auto flex w-full max-w-[1600px] flex-col gap-3 px-4 py-3 sm:px-6 lg:px-8">
-          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <div className="flex min-w-0 items-center justify-center gap-3 md:justify-start">
-              <img
-                src={logoUrl}
-                alt="Lakeshore Legends"
-                className="h-10 w-auto shrink-0 select-none sm:h-11"
-                draggable={false}
-              />
-              <h1 className="text-center text-2xl font-bold leading-tight text-zinc-100 md:text-left">
-                Game Dashboard
-              </h1>
-            </div>
+    <div className="min-h-screen w-full bg-[radial-gradient(circle_at_top,rgba(40,60,120,0.12),transparent_40%),#0a0a0a] text-zinc-100">
+      <div className="pointer-events-none fixed inset-0 z-0 hidden lg:block">
+        <div className="absolute left-1/2 top-[160px] h-[440px] w-[1100px] -translate-x-1/2 rounded-full bg-cyan-500/[0.035] blur-3xl" />
+        <div className="absolute left-[22%] top-[260px] h-[320px] w-[320px] rounded-full bg-violet-500/[0.045] blur-3xl" />
+        <div className="absolute right-[18%] top-[340px] h-[360px] w-[360px] rounded-full bg-emerald-500/[0.04] blur-3xl" />
+      </div>
 
-            <div className="flex flex-wrap items-center justify-center gap-2 md:justify-end">
-              <button
-                onClick={() => {
-                  const url = new URL(window.location.href);
-                  url.searchParams.set("view", "store");
-                  window.location.href = url.toString();
-                }}
-                className="rounded-xl border border-zinc-800 bg-zinc-950/60 px-4 py-2 text-sm text-zinc-200 transition hover:bg-zinc-900"
-              >
-                Store
-              </button>
+      {!selectedPerson && (
+        <header className="sticky top-0 z-[80] border-b border-white/10 bg-[linear-gradient(180deg,rgba(10,14,24,0.92),rgba(7,10,18,0.82))] backdrop-blur-xl shadow-[0_10px_30px_rgba(0,0,0,0.35)]">
+          <div className="mx-auto flex w-full max-w-[1600px] flex-col gap-3 px-4 py-3 sm:px-6 lg:px-8">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <div className="flex min-w-0 items-center justify-center gap-3 md:justify-start">
+                <img
+                  src={logoUrl}
+                  alt="Lakeshore Legends"
+                  className="h-10 w-auto shrink-0 select-none sm:h-11"
+                  draggable={false}
+                />
+                <h1 className="text-center text-2xl font-bold leading-tight text-zinc-100 md:text-left">
+                  Game Dashboard
+                </h1>
+              </div>
 
-              <button
-                onClick={() => {
-                  const url = new URL(window.location.href);
-                  url.searchParams.set("view", "battle");
-                  window.location.href = url.toString();
-                }}
-                className="rounded-xl border border-zinc-800 bg-zinc-950/60 px-4 py-2 text-sm text-zinc-200 transition hover:bg-zinc-900"
-              >
-                Battle Mode
-              </button>
+              <div className="flex flex-wrap items-center justify-center gap-2 md:justify-end">
+                <button
+                  onClick={() => {
+                    const url = new URL(window.location.href);
+                    url.searchParams.set("view", "store");
+                    window.location.href = url.toString();
+                  }}
+                  className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/80 transition hover:border-white/20 hover:bg-white/10 hover:text-white"
+                >
+                  Store
+                </button>
 
-              <div className="min-w-[92px] text-center text-sm text-zinc-400 md:text-right">
-                {shownText}
+                <button
+                  onClick={() => {
+                    const url = new URL(window.location.href);
+                    url.searchParams.set("view", "battle");
+                    window.location.href = url.toString();
+                  }}
+                  className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/80 transition hover:border-white/20 hover:bg-white/10 hover:text-white"
+                >
+                  Battle Mode
+                </button>
+
+                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold text-white/70">
+                  {shownText}
+                </span>
               </div>
             </div>
           </div>
-        </div>
-      </header>
+        </header>
+      )}
 
-      <main className="w-full px-4 py-4 sm:px-6 lg:px-8">
+      <main
+        className={`relative z-[1] w-full px-4 pb-6 sm:px-6 lg:px-8 ${
+          selectedPerson ? "pt-4" : "pt-4"
+        }`}
+      >
         {err && (
           <div className="mx-auto mb-4 max-w-[1600px] rounded-xl border border-red-900/50 bg-red-950/40 px-4 py-3 text-red-200">
             {err}
@@ -386,9 +406,16 @@ export default function App() {
             setAttrFilterKey={setAttrFilterKey}
             attrFilterMin={attrFilterMin}
             setAttrFilterMin={setAttrFilterMin}
+            onSelectPerson={setSelectedPerson}
           />
         )}
       </main>
+
+      <CharacterProfileModal
+        person={selectedPerson}
+        open={!!selectedPerson}
+        onClose={() => setSelectedPerson(null)}
+      />
 
       <footer className="h-6" />
     </div>

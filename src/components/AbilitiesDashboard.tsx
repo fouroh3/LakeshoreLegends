@@ -1,14 +1,28 @@
 import { Fragment, useMemo, useState } from "react";
 import AbilitiesGrid from "./AbilitiesGrid";
 import AbilityCard from "./AbilityCard";
-import CharacterProfileModal from "./CharacterProfileModal";
 import type { Student } from "../types";
+
+type SortKey = string;
 
 type Props = {
   data: Student[];
+  query: string;
+  setQuery: (value: string) => void;
+  sortKey: SortKey;
+  setSortKey: (value: string) => void;
+  homerooms: string[];
+  selectedHRs: string[];
+  setSelectedHRs: (value: string[]) => void;
+  guilds: string[];
+  selectedGuilds: string[];
+  setSelectedGuilds: (value: string[]) => void;
+  attrFilterKey: string;
+  setAttrFilterKey: (value: string) => void;
+  attrFilterMin: number;
+  setAttrFilterMin: (value: number) => void;
+  onSelectPerson: (person: Student) => void;
 };
-
-type SortKey = "homeroom" | "name-az" | "name-za" | "guild";
 
 const GUILD_STYLES: Record<
   string,
@@ -60,27 +74,6 @@ function getFullName(student: Student) {
   return `${student.first ?? ""} ${student.last ?? ""}`.trim();
 }
 
-function normalizeText(value: unknown) {
-  return String(value ?? "")
-    .trim()
-    .toLowerCase();
-}
-
-function compareMaybeNumberThenText(a: unknown, b: unknown) {
-  const aNum = Number(a);
-  const bNum = Number(b);
-
-  const aIsNum = !Number.isNaN(aNum) && String(a ?? "").trim() !== "";
-  const bIsNum = !Number.isNaN(bNum) && String(b ?? "").trim() !== "";
-
-  if (aIsNum && bIsNum) return aNum - bNum;
-
-  return String(a ?? "").localeCompare(String(b ?? ""), undefined, {
-    numeric: true,
-    sensitivity: "base",
-  });
-}
-
 function PillButton({
   active,
   onClick,
@@ -109,40 +102,39 @@ function PillButton({
   );
 }
 
-export default function AbilitiesDashboard({ data }: Props) {
-  const [query, setQuery] = useState("");
-  const [sortKey, setSortKey] = useState<SortKey>("homeroom");
-
-  const [selectedHRs, setSelectedHRs] = useState<string[]>([]);
-  const [selectedGuilds, setSelectedGuilds] = useState<string[]>([]);
-
-  const [attrFilterKey, setAttrFilterKey] = useState("");
-  const [attrFilterMin, setAttrFilterMin] = useState(0);
-
+export default function AbilitiesDashboard({
+  data,
+  query,
+  setQuery,
+  sortKey,
+  setSortKey,
+  homerooms,
+  selectedHRs,
+  setSelectedHRs,
+  guilds,
+  selectedGuilds,
+  setSelectedGuilds,
+  attrFilterKey,
+  setAttrFilterKey,
+  attrFilterMin,
+  setAttrFilterMin,
+  onSelectPerson,
+}: Props) {
   const [advancedOpen, setAdvancedOpen] = useState(false);
-  const [selectedPerson, setSelectedPerson] = useState<Student | null>(null);
-
-  const homerooms = useMemo(() => {
-    return Array.from(
-      new Set(data.map((d) => String(d.homeroom ?? "").trim()).filter(Boolean))
-    ).sort((a, b) => compareMaybeNumberThenText(a, b));
-  }, [data]);
-
-  const guilds = useMemo(() => {
-    return Array.from(
-      new Set(data.map((d) => String(d.guild ?? "").trim()).filter(Boolean))
-    ).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
-  }, [data]);
 
   const toggleHR = (hr: string) => {
-    setSelectedHRs((prev) =>
-      prev.includes(hr) ? prev.filter((h) => h !== hr) : [...prev, hr]
+    setSelectedHRs(
+      selectedHRs.includes(hr)
+        ? selectedHRs.filter((h) => h !== hr)
+        : [...selectedHRs, hr]
     );
   };
 
   const toggleGuild = (guild: string) => {
-    setSelectedGuilds((prev) =>
-      prev.includes(guild) ? prev.filter((g) => g !== guild) : [...prev, guild]
+    setSelectedGuilds(
+      selectedGuilds.includes(guild)
+        ? selectedGuilds.filter((g) => g !== guild)
+        : [...selectedGuilds, guild]
     );
   };
 
@@ -156,88 +148,23 @@ export default function AbilitiesDashboard({ data }: Props) {
     setAdvancedOpen(false);
   };
 
-  const filteredData = useMemo(() => {
-    let out = [...data];
-
-    if (query.trim()) {
-      const q = normalizeText(query);
-      out = out.filter((s) => {
-        const fullName = getFullName(s).toLowerCase();
-        const homeroom = String(s.homeroom ?? "").toLowerCase();
-        const guild = String(s.guild ?? "").toLowerCase();
-
-        return (
-          fullName.includes(q) || homeroom.includes(q) || guild.includes(q)
-        );
-      });
-    }
-
-    if (selectedHRs.length) {
-      out = out.filter((s) => selectedHRs.includes(String(s.homeroom ?? "")));
-    }
-
-    if (selectedGuilds.length) {
-      out = out.filter((s) => selectedGuilds.includes(String(s.guild ?? "")));
-    }
-
-    if (attrFilterKey && attrFilterMin > 0) {
-      out = out.filter(
-        (s) => Number((s as any)[attrFilterKey] ?? 0) >= attrFilterMin
-      );
-    }
-
-    return out;
-  }, [data, query, selectedHRs, selectedGuilds, attrFilterKey, attrFilterMin]);
-
-  const sortedData = useMemo(() => {
-    const arr = [...filteredData];
-
-    arr.sort((a, b) => {
-      if (sortKey === "name-az") {
-        return getFullName(a).localeCompare(getFullName(b), undefined, {
-          sensitivity: "base",
-        });
-      }
-
-      if (sortKey === "name-za") {
-        return getFullName(b).localeCompare(getFullName(a), undefined, {
-          sensitivity: "base",
-        });
-      }
-
-      if (sortKey === "guild") {
-        const guildCompare = String(a.guild ?? "").localeCompare(
-          String(b.guild ?? ""),
-          undefined,
-          { sensitivity: "base" }
-        );
-        if (guildCompare !== 0) return guildCompare;
-
-        return getFullName(a).localeCompare(getFullName(b), undefined, {
-          sensitivity: "base",
-        });
-      }
-
-      const hrCompare = compareMaybeNumberThenText(a.homeroom, b.homeroom);
-      if (hrCompare !== 0) return hrCompare;
-
-      return getFullName(a).localeCompare(getFullName(b), undefined, {
-        sensitivity: "base",
-      });
-    });
-
-    return arr;
-  }, [filteredData, sortKey]);
-
   const activeFilterCount =
     selectedHRs.length +
     selectedGuilds.length +
     (query.trim() ? 1 : 0) +
     (attrFilterKey && attrFilterMin > 0 ? 1 : 0);
 
+  const filterStats = useMemo(
+    () => [
+      { label: "Shown", value: data.length },
+      { label: "Active Filters", value: activeFilterCount },
+    ],
+    [data.length, activeFilterCount]
+  );
+
   return (
     <Fragment>
-      <div className="px-3 pt-3 sm:px-4 lg:sticky lg:top-2 lg:z-40">
+      <div className="px-3 pt-3 sm:px-4">
         <div className="mx-auto max-w-[1380px]">
           <div className="rounded-[20px] border border-white/10 bg-[linear-gradient(180deg,rgba(10,14,24,0.9),rgba(7,10,18,0.82))] shadow-[0_12px_34px_rgba(0,0,0,0.3)] backdrop-blur-xl">
             <div className="px-3 py-3 sm:px-4 sm:py-3.5">
@@ -260,13 +187,21 @@ export default function AbilitiesDashboard({ data }: Props) {
                   <div className="flex flex-wrap items-center justify-center gap-2">
                     <select
                       value={sortKey}
-                      onChange={(e) => setSortKey(e.target.value as SortKey)}
+                      onChange={(e) => setSortKey(e.target.value)}
                       className="h-10 rounded-full border border-white/10 bg-white/8 px-4 text-[10px] font-semibold uppercase tracking-[0.16em] text-white outline-none transition hover:bg-white/10 sm:text-[11px]"
                     >
                       <option value="homeroom">Sort: Homeroom</option>
                       <option value="name-az">Sort: Name A–Z</option>
                       <option value="name-za">Sort: Name Z–A</option>
                       <option value="guild">Sort: Guild</option>
+                      <option value="hp-desc">Sort: HP High–Low</option>
+                      <option value="hp-asc">Sort: HP Low–High</option>
+                      <option value="strength">Sort: Strength</option>
+                      <option value="dexterity">Sort: Dexterity</option>
+                      <option value="constitution">Sort: Constitution</option>
+                      <option value="intelligence">Sort: Intelligence</option>
+                      <option value="wisdom">Sort: Wisdom</option>
+                      <option value="charisma">Sort: Charisma</option>
                     </select>
 
                     <button
@@ -291,12 +226,15 @@ export default function AbilitiesDashboard({ data }: Props) {
                   </div>
                 </div>
 
-                <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/45 sm:text-[11px]">
-                  <span>{sortedData.length} shown</span>
-                  <span>{data.length} total</span>
-                  {activeFilterCount > 0 && (
-                    <span>{activeFilterCount} active filters</span>
-                  )}
+                <div className="flex flex-wrap items-center justify-center gap-2">
+                  {filterStats.map((stat) => (
+                    <span
+                      key={stat.label}
+                      className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/65"
+                    >
+                      {stat.label}: {stat.value}
+                    </span>
+                  ))}
                 </div>
 
                 {advancedOpen && (
@@ -359,7 +297,7 @@ export default function AbilitiesDashboard({ data }: Props) {
                         <select
                           value={attrFilterKey}
                           onChange={(e) => setAttrFilterKey(e.target.value)}
-                          className="h-10 min-w-[160px] rounded-full border border-white/10 bg-white/8 px-4 text-sm text-white outline-none"
+                          className="h-10 min-w-[180px] rounded-full border border-white/10 bg-white/8 px-4 text-sm text-white outline-none"
                         >
                           <option value="">Any Attribute</option>
                           <option value="str">Strength</option>
@@ -377,12 +315,12 @@ export default function AbilitiesDashboard({ data }: Props) {
                           onChange={(e) =>
                             setAttrFilterMin(Number(e.target.value) || 0)
                           }
-                          className="h-10 w-[110px] rounded-full border border-white/10 bg-white/8 px-4 text-center text-sm text-white outline-none"
+                          className="h-10 w-[120px] rounded-full border border-white/10 bg-white/8 px-4 text-center text-sm text-white outline-none"
                           placeholder="Min"
                         />
 
                         <div className="text-center text-[11px] font-semibold uppercase tracking-[0.16em] text-white/45">
-                          Attribute minimum filter
+                          Minimum Attribute Score
                         </div>
                       </div>
                     </div>
@@ -397,23 +335,17 @@ export default function AbilitiesDashboard({ data }: Props) {
       <div className="px-3 pb-8 pt-4 sm:px-4 sm:pt-5">
         <div className="mx-auto max-w-[1380px]">
           <AbilitiesGrid>
-            {sortedData.map((person, index) => (
+            {data.map((person, index) => (
               <AbilityCard
                 key={`${person.id ?? getFullName(person)}-${index}`}
                 person={person}
                 density="compact"
-                onClick={() => setSelectedPerson(person)}
+                onClick={() => onSelectPerson(person)}
               />
             ))}
           </AbilitiesGrid>
         </div>
       </div>
-
-      <CharacterProfileModal
-        person={selectedPerson}
-        open={!!selectedPerson}
-        onClose={() => setSelectedPerson(null)}
-      />
     </Fragment>
   );
 }
