@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import AbilitiesDashboard from "./components/AbilitiesDashboard";
 import CharacterProfileModal from "./components/CharacterProfileModal";
 import BattlePage from "./pages/BattlePage";
-import StorePage from "./pages/StorePage";
+import StorePage from "./pages/store/StorePage";
 import { loadStudents } from "./data";
 import type { Student } from "./types";
 import logoUrl from "./assets/Lakeshore Legends Logo.png";
