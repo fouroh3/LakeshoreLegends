@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import Avatar from "./Avatar";
 import StatBar from "./StatBar";
@@ -27,6 +27,18 @@ type CompanionInfo = {
   imageUrl?: string;
   effect?: string;
 } | null;
+
+type GuildTheme = {
+  softBorder: string;
+  softGlow: string;
+  bannerText: string;
+  portraitGlow: string;
+  accentLine: string;
+  sigilText: string;
+  modalGlow: string;
+  selectedCardClass: string;
+  selectedCardGlow: string;
+};
 
 function skillsToArray(skills: any): string[] {
   if (!skills) return [];
@@ -160,7 +172,7 @@ function getGuildSigil(guild?: string) {
   }
 }
 
-function getGuildTheme(guild?: string) {
+function getGuildTheme(guild?: string): GuildTheme {
   switch ((guild || "").trim()) {
     case "Scholars":
       return {
@@ -173,6 +185,9 @@ function getGuildTheme(guild?: string) {
         sigilText: "text-amber-300/6",
         modalGlow:
           "shadow-[0_0_0_1px_rgba(245,158,11,0.06),0_0_26px_rgba(245,158,11,0.08),0_30px_100px_rgba(0,0,0,0.65)]",
+        selectedCardClass:
+          "border-amber-400/70 bg-amber-950/20 ring-1 ring-amber-400/35",
+        selectedCardGlow: "shadow-[0_14px_30px_rgba(245,158,11,0.18)]",
       };
     case "Shadows":
       return {
@@ -185,6 +200,9 @@ function getGuildTheme(guild?: string) {
         sigilText: "text-violet-300/6",
         modalGlow:
           "shadow-[0_0_0_1px_rgba(168,85,247,0.08),0_0_26px_rgba(168,85,247,0.08),0_30px_100px_rgba(0,0,0,0.65)]",
+        selectedCardClass:
+          "border-violet-400/70 bg-violet-950/20 ring-1 ring-violet-400/35",
+        selectedCardGlow: "shadow-[0_14px_30px_rgba(168,85,247,0.18)]",
       };
     case "Guardians":
       return {
@@ -197,6 +215,9 @@ function getGuildTheme(guild?: string) {
         sigilText: "text-sky-300/6",
         modalGlow:
           "shadow-[0_0_0_1px_rgba(56,189,248,0.08),0_0_26px_rgba(56,189,248,0.08),0_30px_100px_rgba(0,0,0,0.65)]",
+        selectedCardClass:
+          "border-sky-400/70 bg-sky-950/20 ring-1 ring-sky-400/35",
+        selectedCardGlow: "shadow-[0_14px_30px_rgba(56,189,248,0.18)]",
       };
     case "Blades":
       return {
@@ -209,6 +230,9 @@ function getGuildTheme(guild?: string) {
         sigilText: "text-rose-300/6",
         modalGlow:
           "shadow-[0_0_0_1px_rgba(244,63,94,0.08),0_0_26px_rgba(244,63,94,0.08),0_30px_100px_rgba(0,0,0,0.65)]",
+        selectedCardClass:
+          "border-rose-400/70 bg-rose-950/20 ring-1 ring-rose-400/35",
+        selectedCardGlow: "shadow-[0_14px_30px_rgba(244,63,94,0.20)]",
       };
     case "Scouts":
       return {
@@ -221,6 +245,9 @@ function getGuildTheme(guild?: string) {
         sigilText: "text-emerald-300/6",
         modalGlow:
           "shadow-[0_0_0_1px_rgba(16,185,129,0.08),0_0_26px_rgba(16,185,129,0.08),0_30px_100px_rgba(0,0,0,0.65)]",
+        selectedCardClass:
+          "border-emerald-400/70 bg-emerald-950/20 ring-1 ring-emerald-400/35",
+        selectedCardGlow: "shadow-[0_14px_30px_rgba(16,185,129,0.18)]",
       };
     case "Diplomats":
       return {
@@ -233,6 +260,9 @@ function getGuildTheme(guild?: string) {
         sigilText: "text-cyan-300/6",
         modalGlow:
           "shadow-[0_0_0_1px_rgba(34,211,238,0.08),0_0_26px_rgba(34,211,238,0.08),0_30px_100px_rgba(0,0,0,0.65)]",
+        selectedCardClass:
+          "border-cyan-400/70 bg-cyan-950/20 ring-1 ring-cyan-400/35",
+        selectedCardGlow: "shadow-[0_14px_30px_rgba(34,211,238,0.18)]",
       };
     default:
       return {
@@ -245,6 +275,9 @@ function getGuildTheme(guild?: string) {
         sigilText: "text-white/6",
         modalGlow:
           "shadow-[0_0_0_1px_rgba(255,255,255,0.05),0_30px_100px_rgba(0,0,0,0.65)]",
+        selectedCardClass:
+          "border-zinc-400/70 bg-zinc-900/95 ring-1 ring-zinc-400/25",
+        selectedCardGlow: "shadow-[0_14px_30px_rgba(0,0,0,0.34)]",
       };
   }
 }
@@ -284,12 +317,16 @@ function SectionHeading({
   className?: string;
 }) {
   return (
-    <div className={`mb-2 flex items-center justify-between ${className}`}>
-      <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+    <div
+      className={`mb-2 flex items-center justify-between gap-3 ${className}`}
+    >
+      <div className="flex min-w-0 items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-zinc-500">
         <span className="text-[11px]">{icon}</span>
         <span>{title}</span>
       </div>
-      {right ? <div className="text-[10px] text-zinc-500">{right}</div> : null}
+      {right ? (
+        <div className="shrink-0 text-[10px] text-zinc-500">{right}</div>
+      ) : null}
     </div>
   );
 }
@@ -303,7 +340,7 @@ function Surface({
 }) {
   return (
     <section
-      className={`rounded-[24px] border border-zinc-800/70 bg-[linear-gradient(180deg,rgba(24,24,27,0.86),rgba(9,9,11,0.9))] ${className}`}
+      className={`min-w-0 rounded-[24px] border border-zinc-800/70 bg-[linear-gradient(180deg,rgba(24,24,27,0.86),rgba(9,9,11,0.9))] ${className}`}
     >
       {children}
     </section>
@@ -316,10 +353,10 @@ function CompanionPanel({ companion }: { companion: CompanionInfo }) {
       <div className="rounded-[20px] border border-dashed border-zinc-800 bg-zinc-950/25 p-3">
         <SectionHeading icon="🐾" title="Companion" className="mb-2" />
         <div className="flex items-center gap-3">
-          <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-zinc-800 bg-zinc-900 text-xl text-zinc-600">
+          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-zinc-800 bg-zinc-900 text-xl text-zinc-600">
             ✦
           </div>
-          <div>
+          <div className="min-w-0">
             <div className="text-sm font-medium text-zinc-300">
               No companion
             </div>
@@ -336,7 +373,7 @@ function CompanionPanel({ companion }: { companion: CompanionInfo }) {
     <div className="rounded-[20px] border border-zinc-800 bg-zinc-950/35 p-3">
       <SectionHeading icon="🐾" title="Companion" className="mb-2" />
       <div className="flex items-center gap-3">
-        <div className="h-16 w-16 overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-950">
+        <div className="h-16 w-16 shrink-0 overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-950">
           {companion.imageUrl ? (
             <img
               src={companion.imageUrl}
@@ -428,10 +465,12 @@ function InventoryCardTile({
   card,
   isSelected,
   onSelect,
+  guildTheme,
 }: {
   card: ResolvedInventoryCard;
   isSelected: boolean;
   onSelect: (card: ResolvedInventoryCard) => void;
+  guildTheme: GuildTheme;
 }) {
   const [imgError, setImgError] = useState(false);
 
@@ -441,7 +480,7 @@ function InventoryCardTile({
       onClick={() => onSelect(card)}
       className={`group w-full overflow-hidden rounded-[20px] border text-left transition duration-200 ${
         isSelected
-          ? "border-zinc-500 bg-zinc-900/95 shadow-[0_14px_30px_rgba(0,0,0,0.34)]"
+          ? `${guildTheme.selectedCardClass} ${guildTheme.selectedCardGlow}`
           : "border-zinc-800 bg-zinc-950/70 hover:-translate-y-[2px] hover:border-zinc-700 hover:bg-zinc-900/90"
       }`}
     >
@@ -472,7 +511,7 @@ function EmptyDetailPanel({
   grouped: ReturnType<typeof groupInventory>;
 }) {
   return (
-    <div className="h-full min-h-0 overflow-y-auto rounded-[22px] border border-zinc-800 bg-zinc-950/45 p-4">
+    <div className="rounded-[22px] border border-zinc-800 bg-zinc-950/45 p-4">
       <div className="space-y-4">
         <div>
           <div className="text-[10px] uppercase tracking-[0.18em] text-zinc-500">
@@ -553,7 +592,7 @@ function SelectedCardPanel({
   }
 
   return (
-    <div className="h-full min-h-0 overflow-y-auto rounded-[22px] border border-zinc-800 bg-zinc-950/55 p-4">
+    <div className="rounded-[22px] border border-zinc-800 bg-zinc-950/55 p-4">
       <div className="space-y-4">
         <div>
           <div className="text-[10px] uppercase tracking-[0.18em] text-zinc-500">
@@ -603,7 +642,7 @@ function SelectedCardPanel({
 
 function EmptyInventoryArea() {
   return (
-    <div className="grid min-h-0 gap-3 xl:grid-cols-[minmax(0,1fr)_250px] xl:flex-1">
+    <div className="grid gap-3 min-[1320px]:grid-cols-[minmax(0,1fr)_250px]">
       <div className="flex min-h-[320px] items-center justify-center rounded-[22px] border border-zinc-800 bg-zinc-950/35 p-6">
         <div className="text-center">
           <div className="text-base font-semibold text-zinc-200">
@@ -632,12 +671,15 @@ function EmptyInventoryArea() {
 
 function InventorySection({
   inventory,
+  guildTheme,
 }: {
   inventory: ResolvedInventoryCard[];
+  guildTheme: GuildTheme;
 }) {
   const grouped = useMemo(() => groupInventory(inventory), [inventory]);
   const [filter, setFilter] = useState<InventoryFilter>("all");
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
+  const inlineDetailRef = useRef<HTMLDivElement | null>(null);
 
   const visibleCards = useMemo((): ResolvedInventoryCard[] => {
     switch (filter) {
@@ -673,8 +715,20 @@ function InventorySection({
     inventory.find((card) => card.id === selectedCardId) ||
     null;
 
+  useEffect(() => {
+    if (!selectedCard || !inlineDetailRef.current) return;
+
+    const hasRightRail = window.matchMedia("(min-width: 1320px)").matches;
+    if (hasRightRail) return;
+
+    inlineDetailRef.current.scrollIntoView({
+      behavior: "smooth",
+      block: "nearest",
+    });
+  }, [selectedCard]);
+
   return (
-    <Surface className="flex h-full min-h-0 flex-col p-4">
+    <Surface className="p-4">
       <SectionHeading
         icon="🎒"
         title="Inventory"
@@ -682,20 +736,30 @@ function InventorySection({
       />
 
       {!inventory.length ? (
-        <div className="flex min-h-0 flex-1 pt-1">
+        <div className="pt-1">
           <EmptyInventoryArea />
         </div>
       ) : (
-        <div className="flex min-h-0 flex-1 flex-col space-y-3">
+        <div className="space-y-3">
           <InventoryFilterTabs
             grouped={grouped}
             selected={filter}
             onSelect={setFilter}
           />
 
-          <div className="grid min-h-0 flex-1 gap-3 xl:grid-cols-[minmax(0,1fr)_250px]">
-            <div className="min-h-0 rounded-[22px] border border-zinc-800 bg-zinc-950/35 p-3">
-              <div className="grid max-h-full grid-cols-2 gap-3 overflow-y-auto pr-1 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5">
+          <div className="min-[1320px]:hidden">
+            <div ref={inlineDetailRef}>
+              <SelectedCardPanel
+                card={selectedCard}
+                inventory={inventory}
+                grouped={grouped}
+              />
+            </div>
+          </div>
+
+          <div className="grid gap-3 min-[1320px]:grid-cols-[minmax(0,1fr)_250px]">
+            <div className="rounded-[22px] border border-zinc-800 bg-zinc-950/35 p-3">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 min-[1080px]:grid-cols-4 min-[1500px]:grid-cols-5">
                 {visibleCards.map((card) => (
                   <InventoryCardTile
                     key={card.id}
@@ -706,12 +770,13 @@ function InventorySection({
                         prev === next.id ? null : next.id
                       )
                     }
+                    guildTheme={guildTheme}
                   />
                 ))}
               </div>
             </div>
 
-            <div className="min-h-0 overflow-hidden">
+            <div className="hidden min-w-0 min-[1320px]:block">
               <SelectedCardPanel
                 card={selectedCard}
                 inventory={inventory}
@@ -743,7 +808,7 @@ function AttributeSection({ person }: { person: any }) {
 
 function SkillsSection({ skillList }: { skillList: string[] }) {
   return (
-    <Surface className="p-3 pr-16">
+    <Surface className="p-3">
       <SectionHeading
         icon="✨"
         title="Skills"
@@ -830,9 +895,9 @@ export default function CharacterProfileModal({
         onClick={onClose}
       />
 
-      <div className="absolute inset-0 flex items-center justify-center p-3 md:p-5">
+      <div className="absolute inset-0 flex items-center justify-center p-2 sm:p-3 lg:p-5">
         <div
-          className={`relative flex h-[94vh] w-full max-w-[1480px] overflow-hidden rounded-[34px] border border-zinc-800 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.03),transparent_24%),linear-gradient(180deg,#0d0d11_0%,#08080a_100%)] shadow-2xl shadow-black/70 ${guildTheme.modalGlow}`}
+          className={`relative h-[94vh] w-full max-w-[1520px] overflow-y-auto overflow-x-hidden rounded-[34px] border border-zinc-800 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.03),transparent_24%),linear-gradient(180deg,#0d0d11_0%,#08080a_100%)] shadow-2xl shadow-black/70 ${guildTheme.modalGlow}`}
         >
           <button
             onClick={onClose}
@@ -843,9 +908,9 @@ export default function CharacterProfileModal({
             ✕
           </button>
 
-          <div className="grid h-full w-full grid-cols-1 gap-4 overflow-auto p-4 xl:grid-cols-[270px_minmax(0,1fr)] xl:overflow-hidden">
-            <aside className="min-h-0">
-              <div className="flex h-full flex-col rounded-[30px] border border-zinc-800/80 bg-[linear-gradient(180deg,rgba(17,17,21,0.96),rgba(8,8,10,0.96))] p-4">
+          <div className="grid w-full gap-4 p-4 min-[1080px]:min-h-full min-[1080px]:grid-cols-[280px_minmax(0,1fr)]">
+            <aside className="min-w-0">
+              <div className="rounded-[30px] border border-zinc-800/80 bg-[linear-gradient(180deg,rgba(17,17,21,0.96),rgba(8,8,10,0.96))] p-4 min-[1080px]:flex min-[1080px]:h-full min-[1080px]:flex-col">
                 <div className="relative flex justify-center">
                   <div
                     className={`pointer-events-none absolute inset-0 flex items-center justify-center text-[108px] font-black leading-none ${guildTheme.sigilText}`}
@@ -936,22 +1001,23 @@ export default function CharacterProfileModal({
                   <CompanionPanel companion={companion} />
                 </div>
 
-                <div className="mt-auto pt-1 text-center text-[10px] uppercase tracking-[0.22em] text-zinc-600">
+                <div className="pt-3 text-center text-[10px] uppercase tracking-[0.22em] text-zinc-600 min-[1080px]:mt-auto">
                   Character Profile
                 </div>
               </div>
             </aside>
 
-            <main className="min-h-0 xl:overflow-hidden">
-              <div className="flex h-full min-h-0 flex-col gap-3">
+            <main className="min-w-0">
+              <div className="space-y-3">
                 <div className="grid gap-3 xl:grid-cols-[minmax(0,1.45fr)_minmax(260px,0.55fr)]">
                   <AttributeSection person={person} />
                   <SkillsSection skillList={skillList} />
                 </div>
 
-                <div className="min-h-0 flex-1 xl:overflow-hidden">
-                  <InventorySection inventory={inventory} />
-                </div>
+                <InventorySection
+                  inventory={inventory}
+                  guildTheme={guildTheme}
+                />
               </div>
             </main>
           </div>
