@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import Avatar from "./Avatar";
-import StatBar from "./StatBar";
 import { GuildBadge } from "./GuildBadge";
 import { hpBarColorFromPct } from "../utils/hpColor";
 import {
@@ -38,6 +37,13 @@ type GuildTheme = {
   modalGlow: string;
   selectedCardClass: string;
   selectedCardGlow: string;
+  accentText: string;
+  accentBadge: string;
+  accentPanel: string;
+  accentBorder: string;
+  accentBgSoft: string;
+  accentGlowSoft: string;
+  shimmerClass: string;
 };
 
 function skillsToArray(skills: any): string[] {
@@ -180,14 +186,22 @@ function getGuildTheme(guild?: string): GuildTheme {
         softGlow: "shadow-[0_0_22px_rgba(245,158,11,0.10)]",
         bannerText: "text-amber-100",
         portraitGlow:
-          "bg-[radial-gradient(circle_at_center,rgba(245,158,11,0.14),transparent_72%)]",
+          "bg-[radial-gradient(circle_at_center,rgba(245,158,11,0.16),transparent_72%)]",
         accentLine: "from-amber-500/30 via-amber-300/30 to-transparent",
         sigilText: "text-amber-300/6",
         modalGlow:
           "shadow-[0_0_0_1px_rgba(245,158,11,0.06),0_0_26px_rgba(245,158,11,0.08),0_30px_100px_rgba(0,0,0,0.65)]",
         selectedCardClass:
           "border-amber-400/70 bg-amber-950/20 ring-1 ring-amber-400/35",
-        selectedCardGlow: "shadow-[0_14px_30px_rgba(245,158,11,0.18)]",
+        selectedCardGlow: "shadow-[0_14px_34px_rgba(245,158,11,0.22)]",
+        accentText: "text-amber-200",
+        accentBadge: "border-amber-500/30 bg-amber-500/10 text-amber-200",
+        accentPanel:
+          "before:bg-[linear-gradient(90deg,rgba(245,158,11,0.55),rgba(245,158,11,0.02))]",
+        accentBorder: "border-amber-400/25",
+        accentBgSoft: "bg-amber-500/[0.06]",
+        accentGlowSoft: "shadow-[0_0_18px_rgba(245,158,11,0.12)]",
+        shimmerClass: "from-transparent via-amber-200/12 to-transparent",
       };
     case "Shadows":
       return {
@@ -195,14 +209,22 @@ function getGuildTheme(guild?: string): GuildTheme {
         softGlow: "shadow-[0_0_22px_rgba(168,85,247,0.10)]",
         bannerText: "text-violet-100",
         portraitGlow:
-          "bg-[radial-gradient(circle_at_center,rgba(168,85,247,0.14),transparent_72%)]",
+          "bg-[radial-gradient(circle_at_center,rgba(168,85,247,0.16),transparent_72%)]",
         accentLine: "from-violet-500/30 via-violet-300/30 to-transparent",
         sigilText: "text-violet-300/6",
         modalGlow:
           "shadow-[0_0_0_1px_rgba(168,85,247,0.08),0_0_26px_rgba(168,85,247,0.08),0_30px_100px_rgba(0,0,0,0.65)]",
         selectedCardClass:
           "border-violet-400/70 bg-violet-950/20 ring-1 ring-violet-400/35",
-        selectedCardGlow: "shadow-[0_14px_30px_rgba(168,85,247,0.18)]",
+        selectedCardGlow: "shadow-[0_14px_34px_rgba(168,85,247,0.22)]",
+        accentText: "text-violet-200",
+        accentBadge: "border-violet-500/30 bg-violet-500/10 text-violet-200",
+        accentPanel:
+          "before:bg-[linear-gradient(90deg,rgba(168,85,247,0.55),rgba(168,85,247,0.02))]",
+        accentBorder: "border-violet-400/25",
+        accentBgSoft: "bg-violet-500/[0.06]",
+        accentGlowSoft: "shadow-[0_0_18px_rgba(168,85,247,0.12)]",
+        shimmerClass: "from-transparent via-violet-200/12 to-transparent",
       };
     case "Guardians":
       return {
@@ -210,14 +232,22 @@ function getGuildTheme(guild?: string): GuildTheme {
         softGlow: "shadow-[0_0_22px_rgba(56,189,248,0.10)]",
         bannerText: "text-sky-100",
         portraitGlow:
-          "bg-[radial-gradient(circle_at_center,rgba(56,189,248,0.14),transparent_72%)]",
+          "bg-[radial-gradient(circle_at_center,rgba(56,189,248,0.16),transparent_72%)]",
         accentLine: "from-sky-500/30 via-sky-300/30 to-transparent",
         sigilText: "text-sky-300/6",
         modalGlow:
           "shadow-[0_0_0_1px_rgba(56,189,248,0.08),0_0_26px_rgba(56,189,248,0.08),0_30px_100px_rgba(0,0,0,0.65)]",
         selectedCardClass:
           "border-sky-400/70 bg-sky-950/20 ring-1 ring-sky-400/35",
-        selectedCardGlow: "shadow-[0_14px_30px_rgba(56,189,248,0.18)]",
+        selectedCardGlow: "shadow-[0_14px_34px_rgba(56,189,248,0.22)]",
+        accentText: "text-sky-200",
+        accentBadge: "border-sky-500/30 bg-sky-500/10 text-sky-200",
+        accentPanel:
+          "before:bg-[linear-gradient(90deg,rgba(56,189,248,0.55),rgba(56,189,248,0.02))]",
+        accentBorder: "border-sky-400/25",
+        accentBgSoft: "bg-sky-500/[0.06]",
+        accentGlowSoft: "shadow-[0_0_18px_rgba(56,189,248,0.12)]",
+        shimmerClass: "from-transparent via-sky-200/12 to-transparent",
       };
     case "Blades":
       return {
@@ -225,14 +255,22 @@ function getGuildTheme(guild?: string): GuildTheme {
         softGlow: "shadow-[0_0_22px_rgba(244,63,94,0.10)]",
         bannerText: "text-rose-100",
         portraitGlow:
-          "bg-[radial-gradient(circle_at_center,rgba(244,63,94,0.14),transparent_72%)]",
+          "bg-[radial-gradient(circle_at_center,rgba(244,63,94,0.16),transparent_72%)]",
         accentLine: "from-rose-500/30 via-rose-300/30 to-transparent",
         sigilText: "text-rose-300/6",
         modalGlow:
           "shadow-[0_0_0_1px_rgba(244,63,94,0.08),0_0_26px_rgba(244,63,94,0.08),0_30px_100px_rgba(0,0,0,0.65)]",
         selectedCardClass:
           "border-rose-400/70 bg-rose-950/20 ring-1 ring-rose-400/35",
-        selectedCardGlow: "shadow-[0_14px_30px_rgba(244,63,94,0.20)]",
+        selectedCardGlow: "shadow-[0_14px_34px_rgba(244,63,94,0.26)]",
+        accentText: "text-rose-200",
+        accentBadge: "border-rose-500/30 bg-rose-500/10 text-rose-200",
+        accentPanel:
+          "before:bg-[linear-gradient(90deg,rgba(244,63,94,0.58),rgba(244,63,94,0.02))]",
+        accentBorder: "border-rose-400/25",
+        accentBgSoft: "bg-rose-500/[0.06]",
+        accentGlowSoft: "shadow-[0_0_18px_rgba(244,63,94,0.14)]",
+        shimmerClass: "from-transparent via-rose-200/14 to-transparent",
       };
     case "Scouts":
       return {
@@ -240,14 +278,22 @@ function getGuildTheme(guild?: string): GuildTheme {
         softGlow: "shadow-[0_0_22px_rgba(16,185,129,0.10)]",
         bannerText: "text-emerald-100",
         portraitGlow:
-          "bg-[radial-gradient(circle_at_center,rgba(16,185,129,0.14),transparent_72%)]",
+          "bg-[radial-gradient(circle_at_center,rgba(16,185,129,0.16),transparent_72%)]",
         accentLine: "from-emerald-500/30 via-emerald-300/30 to-transparent",
         sigilText: "text-emerald-300/6",
         modalGlow:
           "shadow-[0_0_0_1px_rgba(16,185,129,0.08),0_0_26px_rgba(16,185,129,0.08),0_30px_100px_rgba(0,0,0,0.65)]",
         selectedCardClass:
           "border-emerald-400/70 bg-emerald-950/20 ring-1 ring-emerald-400/35",
-        selectedCardGlow: "shadow-[0_14px_30px_rgba(16,185,129,0.18)]",
+        selectedCardGlow: "shadow-[0_14px_34px_rgba(16,185,129,0.22)]",
+        accentText: "text-emerald-200",
+        accentBadge: "border-emerald-500/30 bg-emerald-500/10 text-emerald-200",
+        accentPanel:
+          "before:bg-[linear-gradient(90deg,rgba(16,185,129,0.58),rgba(16,185,129,0.02))]",
+        accentBorder: "border-emerald-400/25",
+        accentBgSoft: "bg-emerald-500/[0.06]",
+        accentGlowSoft: "shadow-[0_0_18px_rgba(16,185,129,0.14)]",
+        shimmerClass: "from-transparent via-emerald-200/12 to-transparent",
       };
     case "Diplomats":
       return {
@@ -255,14 +301,22 @@ function getGuildTheme(guild?: string): GuildTheme {
         softGlow: "shadow-[0_0_22px_rgba(34,211,238,0.10)]",
         bannerText: "text-cyan-100",
         portraitGlow:
-          "bg-[radial-gradient(circle_at_center,rgba(34,211,238,0.14),transparent_72%)]",
+          "bg-[radial-gradient(circle_at_center,rgba(34,211,238,0.16),transparent_72%)]",
         accentLine: "from-cyan-500/30 via-cyan-300/30 to-transparent",
         sigilText: "text-cyan-300/6",
         modalGlow:
           "shadow-[0_0_0_1px_rgba(34,211,238,0.08),0_0_26px_rgba(34,211,238,0.08),0_30px_100px_rgba(0,0,0,0.65)]",
         selectedCardClass:
           "border-cyan-400/70 bg-cyan-950/20 ring-1 ring-cyan-400/35",
-        selectedCardGlow: "shadow-[0_14px_30px_rgba(34,211,238,0.18)]",
+        selectedCardGlow: "shadow-[0_14px_34px_rgba(34,211,238,0.22)]",
+        accentText: "text-cyan-200",
+        accentBadge: "border-cyan-500/30 bg-cyan-500/10 text-cyan-200",
+        accentPanel:
+          "before:bg-[linear-gradient(90deg,rgba(34,211,238,0.58),rgba(34,211,238,0.02))]",
+        accentBorder: "border-cyan-400/25",
+        accentBgSoft: "bg-cyan-500/[0.06]",
+        accentGlowSoft: "shadow-[0_0_18px_rgba(34,211,238,0.14)]",
+        shimmerClass: "from-transparent via-cyan-200/12 to-transparent",
       };
     default:
       return {
@@ -278,6 +332,14 @@ function getGuildTheme(guild?: string): GuildTheme {
         selectedCardClass:
           "border-zinc-400/70 bg-zinc-900/95 ring-1 ring-zinc-400/25",
         selectedCardGlow: "shadow-[0_14px_30px_rgba(0,0,0,0.34)]",
+        accentText: "text-zinc-200",
+        accentBadge: "border-zinc-500/30 bg-zinc-500/10 text-zinc-200",
+        accentPanel:
+          "before:bg-[linear-gradient(90deg,rgba(255,255,255,0.20),rgba(255,255,255,0.02))]",
+        accentBorder: "border-white/10",
+        accentBgSoft: "bg-white/[0.03]",
+        accentGlowSoft: "",
+        shimmerClass: "from-transparent via-white/10 to-transparent",
       };
   }
 }
@@ -303,6 +365,56 @@ function getHealthState(current: number, max: number) {
     label: "Healthy",
     classes: "border-emerald-700/40 bg-emerald-950/30 text-emerald-200",
   };
+}
+
+function getCardTypeBadgeClass(type: string, guildTheme: GuildTheme) {
+  switch (type) {
+    case "relic":
+      return guildTheme.accentBadge;
+    case "potion":
+      return "border-sky-500/30 bg-sky-500/10 text-sky-200";
+    case "item":
+      return "border-zinc-500/30 bg-zinc-500/10 text-zinc-200";
+    default:
+      return "border-zinc-600/30 bg-zinc-800/50 text-zinc-300";
+  }
+}
+
+function getCardFrameClasses(type: string) {
+  switch (type) {
+    case "relic":
+      return {
+        shell:
+          "border-amber-500/20 bg-[linear-gradient(180deg,rgba(120,90,20,0.10),rgba(10,10,12,0.95))]",
+        topGlow:
+          "bg-[radial-gradient(circle_at_top,rgba(245,158,11,0.14),transparent_50%)]",
+        corner: "text-amber-300/70",
+      };
+    case "potion":
+      return {
+        shell:
+          "border-sky-500/20 bg-[linear-gradient(180deg,rgba(20,70,120,0.10),rgba(10,10,12,0.95))]",
+        topGlow:
+          "bg-[radial-gradient(circle_at_top,rgba(56,189,248,0.14),transparent_50%)]",
+        corner: "text-sky-300/70",
+      };
+    case "item":
+      return {
+        shell:
+          "border-zinc-500/20 bg-[linear-gradient(180deg,rgba(120,120,120,0.08),rgba(10,10,12,0.95))]",
+        topGlow:
+          "bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.07),transparent_50%)]",
+        corner: "text-zinc-300/60",
+      };
+    default:
+      return {
+        shell:
+          "border-zinc-700/20 bg-[linear-gradient(180deg,rgba(70,70,70,0.07),rgba(10,10,12,0.95))]",
+        topGlow:
+          "bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.05),transparent_50%)]",
+        corner: "text-zinc-400/50",
+      };
+  }
 }
 
 function SectionHeading({
@@ -347,21 +459,50 @@ function Surface({
   );
 }
 
-function CompanionPanel({ companion }: { companion: CompanionInfo }) {
+function ShimmerSweep({
+  active,
+  className = "",
+}: {
+  active?: boolean;
+  className?: string;
+}) {
+  return (
+    <div
+      className={`pointer-events-none absolute inset-y-0 -left-1/3 w-1/3 rotate-[18deg] bg-gradient-to-r opacity-0 ${
+        active ? "animate-[shimmerSweep_1.2s_ease-out]" : ""
+      } ${className}`}
+    />
+  );
+}
+
+function CompanionPanel({
+  companion,
+  guildTheme,
+}: {
+  companion: CompanionInfo;
+  guildTheme: GuildTheme;
+}) {
   if (!companion) {
     return (
-      <div className="rounded-[20px] border border-dashed border-zinc-800 bg-zinc-950/25 p-3">
+      <div
+        className={`rounded-[20px] border border-dashed border-zinc-800 bg-zinc-950/25 p-3 ${guildTheme.accentGlowSoft}`}
+      >
         <SectionHeading icon="🐾" title="Companion" className="mb-2" />
         <div className="flex items-center gap-3">
-          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-zinc-800 bg-zinc-900 text-xl text-zinc-600">
-            ✦
+          <div
+            className={`relative flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-zinc-800 bg-zinc-900 ${guildTheme.accentBgSoft}`}
+          >
+            <div
+              className={`absolute inset-0 rounded-2xl ${guildTheme.portraitGlow} opacity-60`}
+            />
+            <div className="relative text-xl text-zinc-500">✦</div>
           </div>
           <div className="min-w-0">
-            <div className="text-sm font-medium text-zinc-300">
-              No companion
+            <div className="text-sm font-medium text-zinc-200">
+              No companion equipped
             </div>
-            <div className="mt-1 text-xs text-zinc-500">
-              This legend has no active pet or companion.
+            <div className="mt-1 text-xs leading-5 text-zinc-500">
+              This slot is empty. A bonded pet or companion will appear here.
             </div>
           </div>
         </div>
@@ -373,15 +514,20 @@ function CompanionPanel({ companion }: { companion: CompanionInfo }) {
     <div className="rounded-[20px] border border-zinc-800 bg-zinc-950/35 p-3">
       <SectionHeading icon="🐾" title="Companion" className="mb-2" />
       <div className="flex items-center gap-3">
-        <div className="h-16 w-16 shrink-0 overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-950">
+        <div
+          className={`relative h-16 w-16 shrink-0 overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-950 ${guildTheme.accentGlowSoft}`}
+        >
+          <div
+            className={`absolute inset-0 ${guildTheme.portraitGlow} opacity-40`}
+          />
           {companion.imageUrl ? (
             <img
               src={companion.imageUrl}
               alt={companion.name}
-              className="h-full w-full object-cover"
+              className="relative h-full w-full object-cover"
             />
           ) : (
-            <div className="flex h-full w-full items-center justify-center text-xl text-zinc-500">
+            <div className="relative flex h-full w-full items-center justify-center text-xl text-zinc-500">
               🐾
             </div>
           )}
@@ -473,31 +619,64 @@ function InventoryCardTile({
   guildTheme: GuildTheme;
 }) {
   const [imgError, setImgError] = useState(false);
+  const frame = getCardFrameClasses(card.type);
 
   return (
     <button
       type="button"
       onClick={() => onSelect(card)}
-      className={`group w-full overflow-hidden rounded-[20px] border text-left transition duration-200 ${
+      className={`group relative w-full overflow-hidden rounded-[22px] border text-left transition-all duration-250 ${
         isSelected
-          ? `${guildTheme.selectedCardClass} ${guildTheme.selectedCardGlow}`
-          : "border-zinc-800 bg-zinc-950/70 hover:-translate-y-[2px] hover:border-zinc-700 hover:bg-zinc-900/90"
+          ? `${guildTheme.selectedCardClass} ${guildTheme.selectedCardGlow} -translate-y-[2px] animate-[cardLock_260ms_ease-out]`
+          : `${frame.shell} hover:-translate-y-[2px] hover:border-zinc-600 hover:shadow-[0_12px_28px_rgba(0,0,0,0.26)]`
       }`}
     >
-      <div className="flex aspect-[5/6.7] w-full items-center justify-center overflow-hidden bg-zinc-950 p-2">
+      <ShimmerSweep
+        active={isSelected}
+        className={`bg-gradient-to-r ${guildTheme.shimmerClass}`}
+      />
+      <div className="relative flex aspect-[5/6.8] w-full items-center justify-center overflow-hidden p-2.5">
+        <div
+          className={`pointer-events-none absolute inset-0 ${frame.topGlow} opacity-90`}
+        />
+        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.03),transparent_22%,transparent_78%,rgba(255,255,255,0.02))]" />
+        <div
+          className={`pointer-events-none absolute right-2 top-2 text-[11px] ${frame.corner}`}
+        >
+          ✦
+        </div>
         {!imgError ? (
           <img
             src={card.imageUrl}
             alt={card.name}
-            className="h-full w-full rounded-[14px] object-contain"
+            className="relative h-full w-full rounded-[15px] object-contain transition-transform duration-300 group-hover:scale-[1.015]"
             loading="lazy"
             onError={() => setImgError(true)}
           />
         ) : (
-          <div className="flex h-full w-full items-center justify-center rounded-[14px] bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.05),transparent_55%)] p-3 text-center text-[10px] uppercase tracking-[0.16em] text-zinc-500">
+          <div className="relative flex h-full w-full items-center justify-center rounded-[15px] bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.05),transparent_55%)] p-3 text-center text-[10px] uppercase tracking-[0.16em] text-zinc-500">
             {card.type}
           </div>
         )}
+      </div>
+
+      <div className="border-t border-white/5 px-3 pb-3 pt-2">
+        <div className="truncate text-[11px] font-medium text-zinc-200">
+          {card.name}
+        </div>
+        <div className="mt-1 flex items-center gap-2">
+          <span
+            className={`rounded-full border px-2 py-0.5 text-[9px] uppercase tracking-[0.12em] ${getCardTypeBadgeClass(
+              card.type,
+              guildTheme
+            )}`}
+          >
+            {card.type}
+          </span>
+          {card.quantity && card.quantity > 1 ? (
+            <span className="text-[10px] text-zinc-500">x{card.quantity}</span>
+          ) : null}
+        </div>
       </div>
     </button>
   );
@@ -578,60 +757,123 @@ function EmptyDetailPanel({
   );
 }
 
-function SelectedCardPanel({
+function AnimatedSelectedCardPanel({
   card,
   inventory,
   grouped,
+  guildTheme,
 }: {
   card: ResolvedInventoryCard | null;
   inventory: ResolvedInventoryCard[];
   grouped: ReturnType<typeof groupInventory>;
+  guildTheme: GuildTheme;
 }) {
-  if (!card) {
+  const [displayCard, setDisplayCard] = useState<ResolvedInventoryCard | null>(
+    card
+  );
+  const [phase, setPhase] = useState<"in" | "out">("in");
+  const [shineKey, setShineKey] = useState(0);
+
+  useEffect(() => {
+    if (!card && !displayCard) return;
+    if (card?.id === displayCard?.id) return;
+
+    setPhase("out");
+    const t = window.setTimeout(() => {
+      setDisplayCard(card);
+      setPhase("in");
+      setShineKey((k) => k + 1);
+    }, 140);
+
+    return () => window.clearTimeout(t);
+  }, [card, displayCard]);
+
+  if (!displayCard) {
     return <EmptyDetailPanel inventory={inventory} grouped={grouped} />;
   }
 
   return (
-    <div className="rounded-[22px] border border-zinc-800 bg-zinc-950/55 p-4">
+    <div
+      className={`relative overflow-hidden rounded-[22px] border border-zinc-800 bg-zinc-950/55 p-4 transition-all duration-200 ${
+        phase === "out"
+          ? "translate-y-1 opacity-0"
+          : "translate-y-0 opacity-100"
+      }`}
+    >
+      <div
+        className={`pointer-events-none absolute inset-x-0 top-0 h-[2px] opacity-90 ${guildTheme.accentPanel}`}
+      />
+      <div
+        key={shineKey}
+        className={`pointer-events-none absolute inset-y-0 -left-1/3 w-1/3 rotate-[18deg] bg-gradient-to-r ${guildTheme.shimmerClass} animate-[shimmerSweep_1.15s_ease-out]`}
+      />
       <div className="space-y-4">
-        <div>
-          <div className="text-[10px] uppercase tracking-[0.18em] text-zinc-500">
-            Card Details
+        <div className="flex items-start gap-3">
+          <div
+            className={`relative h-24 w-[76px] shrink-0 overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900 ${guildTheme.accentGlowSoft}`}
+          >
+            <div
+              className={`absolute inset-0 ${guildTheme.portraitGlow} opacity-30`}
+            />
+            <img
+              src={displayCard.imageUrl}
+              alt={displayCard.name}
+              className="relative h-full w-full object-contain"
+            />
           </div>
-          <div className="mt-2 text-xl font-semibold leading-tight text-zinc-100">
-            {card.name}
-          </div>
-          <div className="mt-1 text-[10px] uppercase tracking-[0.18em] text-zinc-500">
-            {card.type}
+
+          <div className="min-w-0">
+            <div className="text-[10px] uppercase tracking-[0.18em] text-zinc-500">
+              Card Details
+            </div>
+            <div className="mt-1 text-xl font-semibold leading-tight text-zinc-100">
+              {displayCard.name}
+            </div>
+
+            <div className="mt-2 flex flex-wrap gap-2">
+              <span
+                className={`rounded-full border px-2.5 py-1 text-[10px] uppercase tracking-[0.14em] ${getCardTypeBadgeClass(
+                  displayCard.type,
+                  guildTheme
+                )}`}
+              >
+                {displayCard.type}
+              </span>
+
+              {displayCard.quantity && displayCard.quantity > 1 ? (
+                <span className="rounded-full border border-zinc-700 bg-zinc-900 px-2.5 py-1 text-[10px] text-zinc-300">
+                  Quantity: {displayCard.quantity}
+                </span>
+              ) : null}
+            </div>
           </div>
         </div>
 
-        <div className="rounded-[18px] border border-zinc-800 bg-zinc-900/40 p-3 text-sm leading-6 text-zinc-300">
-          {card.effect}
+        <div className="rounded-[18px] border border-zinc-800 bg-zinc-900/40 p-3">
+          <div className="mb-1 text-[10px] uppercase tracking-[0.18em] text-zinc-500">
+            Effect
+          </div>
+          <div className="text-sm leading-6 text-zinc-300">
+            {displayCard.effect}
+          </div>
         </div>
 
         <div className="flex flex-wrap gap-2">
-          {card.useText ? (
+          {displayCard.useText ? (
             <span className="rounded-full border border-zinc-700 bg-zinc-900 px-2.5 py-1 text-[10px] text-zinc-300">
-              {card.useText}
+              {displayCard.useText}
             </span>
           ) : null}
 
-          {card.isEquipped ? (
+          {displayCard.isEquipped ? (
             <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-1 text-[10px] text-emerald-200">
               Equipped
             </span>
           ) : null}
 
-          {card.isConsumed ? (
+          {displayCard.isConsumed ? (
             <span className="rounded-full border border-zinc-700 bg-zinc-800 px-2.5 py-1 text-[10px] text-zinc-300">
               Used
-            </span>
-          ) : null}
-
-          {card.quantity && card.quantity > 1 ? (
-            <span className="rounded-full border border-zinc-700 bg-zinc-900 px-2.5 py-1 text-[10px] text-zinc-300">
-              Quantity: {card.quantity}
             </span>
           ) : null}
         </div>
@@ -749,10 +991,11 @@ function InventorySection({
 
           <div className="min-[1320px]:hidden">
             <div ref={inlineDetailRef}>
-              <SelectedCardPanel
+              <AnimatedSelectedCardPanel
                 card={selectedCard}
                 inventory={inventory}
                 grouped={grouped}
+                guildTheme={guildTheme}
               />
             </div>
           </div>
@@ -777,10 +1020,11 @@ function InventorySection({
             </div>
 
             <div className="hidden min-w-0 min-[1320px]:block">
-              <SelectedCardPanel
+              <AnimatedSelectedCardPanel
                 card={selectedCard}
                 inventory={inventory}
                 grouped={grouped}
+                guildTheme={guildTheme}
               />
             </div>
           </div>
@@ -790,17 +1034,189 @@ function InventorySection({
   );
 }
 
-function AttributeSection({ person }: { person: any }) {
+function HeroBanner({
+  fullName,
+  person,
+  healthState,
+  guildTheme,
+}: {
+  fullName: string;
+  person: any;
+  healthState: { label: string; classes: string };
+  guildTheme: GuildTheme;
+}) {
   return (
-    <Surface className="p-3">
-      <SectionHeading icon="⚔️" title="Attributes" className="mb-2" />
-      <div className="grid grid-cols-1 gap-x-4 gap-y-1.5 sm:grid-cols-2">
-        <StatBar label="Strength" value={person.str} />
-        <StatBar label="Dexterity" value={person.dex} />
-        <StatBar label="Constitution" value={person.con} />
-        <StatBar label="Intelligence" value={person.int} />
-        <StatBar label="Wisdom" value={person.wis} />
-        <StatBar label="Charisma" value={person.cha} />
+    <div
+      className={`relative overflow-hidden rounded-[30px] border border-zinc-800/80 bg-[linear-gradient(180deg,rgba(17,17,21,0.96),rgba(8,8,10,0.96))] p-5 ${guildTheme.softGlow}`}
+    >
+      <ShimmerSweep
+        active
+        className={`bg-gradient-to-r ${guildTheme.shimmerClass}`}
+      />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.05),transparent_38%)]" />
+      <div
+        className={`pointer-events-none absolute -top-10 left-1/2 h-48 w-48 -translate-x-1/2 rounded-full blur-3xl ${guildTheme.portraitGlow} opacity-80`}
+      />
+      <div
+        className={`pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r ${guildTheme.accentLine}`}
+      />
+
+      <div className="relative flex flex-col items-center text-center">
+        <div className="relative flex justify-center">
+          <div
+            className={`pointer-events-none absolute inset-0 flex items-center justify-center text-[120px] font-black leading-none ${guildTheme.sigilText}`}
+          >
+            {getGuildSigil(person.guild)}
+          </div>
+
+          <div
+            className={`relative h-[176px] w-[176px] overflow-hidden rounded-[30px] border border-zinc-800 bg-zinc-950 shadow-[0_18px_38px_rgba(0,0,0,0.42)] ${guildTheme.softGlow}`}
+          >
+            <div className={`absolute inset-0 ${guildTheme.portraitGlow}`} />
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.12),transparent_48%)]" />
+            <div className="relative flex h-full w-full items-center justify-center">
+              <Avatar
+                name={fullName}
+                src={person.portraitUrl}
+                size={176}
+                className="h-full w-full"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-5">
+          <div className="text-[2rem] font-semibold leading-tight tracking-[-0.045em] text-zinc-50">
+            {fullName}
+          </div>
+
+          <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+            <span className="rounded-full border border-zinc-800 bg-zinc-900/85 px-3 py-1 text-[11px] font-medium text-zinc-300">
+              {person.homeroom || "—"}
+            </span>
+            <span
+              className={`rounded-full border px-3 py-1 text-[11px] font-medium ${healthState.classes}`}
+            >
+              {healthState.label}
+            </span>
+          </div>
+
+          {person.guild ? (
+            <div className="mt-4 flex justify-center">
+              <div
+                className={`inline-flex min-h-[50px] items-center gap-2.5 rounded-[18px] border bg-zinc-900/90 px-4 py-2.5 ${guildTheme.softBorder} ${guildTheme.accentGlowSoft}`}
+              >
+                <GuildBadge guild={person.guild} size={30} />
+                <span
+                  className={`text-sm font-semibold leading-none tracking-[0.08em] ${guildTheme.bannerText}`}
+                >
+                  {person.guild}
+                </span>
+              </div>
+            </div>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function StatRow({
+  label,
+  value,
+  maxValue,
+  isTop,
+  guildTheme,
+}: {
+  label: string;
+  value: number;
+  maxValue: number;
+  isTop: boolean;
+  guildTheme: GuildTheme;
+}) {
+  const pct = Math.max(0, Math.min(1, value / Math.max(1, maxValue)));
+  const fill = isTop ? hpBarColorFromPct(0.95) : hpBarColorFromPct(0.72);
+
+  return (
+    <div
+      className={`rounded-[18px] border p-3 transition ${
+        isTop
+          ? `${guildTheme.accentBorder} ${guildTheme.accentBgSoft} ${guildTheme.accentGlowSoft}`
+          : "border-zinc-800/70 bg-zinc-950/25"
+      }`}
+    >
+      <div className="mb-2 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <div
+            className={`h-2 w-2 rounded-full ${
+              isTop ? guildTheme.accentBgSoft : "bg-zinc-700"
+            } ${isTop ? guildTheme.accentGlowSoft : ""}`}
+            style={isTop ? { backgroundColor: fill } : undefined}
+          />
+          <span className="text-sm text-zinc-200">{label}</span>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {isTop ? (
+            <span
+              className={`text-[10px] uppercase tracking-[0.16em] ${guildTheme.accentText}`}
+            >
+              Peak
+            </span>
+          ) : null}
+          <span className="text-sm font-semibold text-zinc-100">{value}</span>
+        </div>
+      </div>
+
+      <div className="overflow-hidden rounded-full bg-zinc-950/80 p-[2px] shadow-[inset_0_0_8px_rgba(0,0,0,0.45)]">
+        <div className="h-3 overflow-hidden rounded-full bg-zinc-900/60">
+          <div
+            className="h-full rounded-full transition-[width] duration-500"
+            style={{
+              width: `${Math.round(pct * 100)}%`,
+              backgroundColor: fill,
+              boxShadow: `0 0 10px ${fill}55`,
+            }}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AttributeSection({
+  person,
+  guildTheme,
+}: {
+  person: any;
+  guildTheme: GuildTheme;
+}) {
+  const stats = [
+    ["Strength", Number(person.str ?? 0)],
+    ["Dexterity", Number(person.dex ?? 0)],
+    ["Constitution", Number(person.con ?? 0)],
+    ["Intelligence", Number(person.int ?? 0)],
+    ["Wisdom", Number(person.wis ?? 0)],
+    ["Charisma", Number(person.cha ?? 0)],
+  ] as const;
+
+  const highest = Math.max(...stats.map(([, v]) => v), 0);
+  const cap = Math.max(highest, 5);
+
+  return (
+    <Surface className="p-4">
+      <SectionHeading icon="⚔️" title="Attributes" className="mb-3" />
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        {stats.map(([label, value]) => (
+          <StatRow
+            key={label}
+            label={label}
+            value={value}
+            maxValue={cap}
+            isTop={value === highest && highest > 0}
+            guildTheme={guildTheme}
+          />
+        ))}
       </div>
     </Surface>
   );
@@ -808,15 +1224,15 @@ function AttributeSection({ person }: { person: any }) {
 
 function SkillsSection({ skillList }: { skillList: string[] }) {
   return (
-    <Surface className="p-3">
+    <Surface className="p-4 pr-20">
       <SectionHeading
         icon="✨"
         title="Skills"
         right={`${skillList.length} unlocked`}
-        className="mb-2"
+        className="mb-3"
       />
       {skillList.length === 0 ? (
-        <div className="rounded-[16px] bg-zinc-950/35 p-2.5 text-xs italic text-zinc-500">
+        <div className="rounded-[16px] bg-zinc-950/35 p-3 text-xs italic text-zinc-500">
           No skills unlocked yet.
         </div>
       ) : (
@@ -824,7 +1240,7 @@ function SkillsSection({ skillList }: { skillList: string[] }) {
           {skillList.map((skill) => (
             <span
               key={skill}
-              className="rounded-full border border-zinc-700 bg-zinc-900 px-3 py-1.5 text-[11px] text-zinc-200"
+              className="rounded-full border border-zinc-700 bg-zinc-900 px-3 py-1.5 text-[11px] text-zinc-200 transition hover:-translate-y-[1px] hover:border-zinc-500 hover:text-white"
             >
               {skill}
             </span>
@@ -840,6 +1256,18 @@ export default function CharacterProfileModal({
   open,
   onClose,
 }: Props) {
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    if (!open) {
+      setVisible(false);
+      return;
+    }
+
+    const frame = requestAnimationFrame(() => setVisible(true));
+    return () => cancelAnimationFrame(frame);
+  }, [open]);
+
   useEffect(() => {
     if (!open) return;
 
@@ -889,6 +1317,20 @@ export default function CharacterProfileModal({
 
   return (
     <div className="fixed inset-0 z-[100]">
+      <style>{`
+        @keyframes shimmerSweep {
+          0% { transform: translateX(-130%) rotate(18deg); opacity: 0; }
+          15% { opacity: 0.14; }
+          50% { opacity: 0.20; }
+          100% { transform: translateX(430%) rotate(18deg); opacity: 0; }
+        }
+        @keyframes cardLock {
+          0% { transform: translateY(0) scale(0.985); }
+          60% { transform: translateY(-3px) scale(1.01); }
+          100% { transform: translateY(-2px) scale(1); }
+        }
+      `}</style>
+
       <button
         aria-label="Close profile"
         className="absolute inset-0 bg-black/78 backdrop-blur-md"
@@ -897,127 +1339,115 @@ export default function CharacterProfileModal({
 
       <div className="absolute inset-0 flex items-center justify-center p-2 sm:p-3 lg:p-5">
         <div
-          className={`relative h-[94vh] w-full max-w-[1520px] overflow-y-auto overflow-x-hidden rounded-[34px] border border-zinc-800 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.03),transparent_24%),linear-gradient(180deg,#0d0d11_0%,#08080a_100%)] shadow-2xl shadow-black/70 ${guildTheme.modalGlow}`}
+          className={`relative h-[94vh] w-full max-w-[1520px] overflow-y-auto overflow-x-hidden rounded-[34px] border border-zinc-800 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.03),transparent_24%),linear-gradient(180deg,#0d0d11_0%,#08080a_100%)] shadow-2xl shadow-black/70 transition-all duration-300 ${
+            visible ? "translate-y-0 opacity-100" : "translate-y-2 opacity-0"
+          } ${guildTheme.modalGlow}`}
         >
           <button
             onClick={onClose}
-            className="absolute right-3 top-3 z-20 flex h-10 w-10 items-center justify-center rounded-full border border-zinc-800 bg-zinc-900/90 text-zinc-400 transition hover:bg-zinc-800 hover:text-white"
+            className="absolute right-4 top-4 z-30 flex h-12 w-12 items-center justify-center rounded-full border border-zinc-800 bg-zinc-900/92 text-zinc-400 transition hover:bg-zinc-800 hover:text-white min-[1080px]:right-5 min-[1080px]:top-5"
             aria-label="Close"
             title="Close"
           >
             ✕
           </button>
 
-          <div className="grid w-full gap-4 p-4 min-[1080px]:min-h-full min-[1080px]:grid-cols-[280px_minmax(0,1fr)]">
+          <div className="grid w-full gap-4 p-4 pt-16 min-[1080px]:min-h-full min-[1080px]:grid-cols-[300px_minmax(0,1fr)] min-[1080px]:pt-4">
             <aside className="min-w-0">
-              <div className="rounded-[30px] border border-zinc-800/80 bg-[linear-gradient(180deg,rgba(17,17,21,0.96),rgba(8,8,10,0.96))] p-4 min-[1080px]:flex min-[1080px]:h-full min-[1080px]:flex-col">
-                <div className="relative flex justify-center">
-                  <div
-                    className={`pointer-events-none absolute inset-0 flex items-center justify-center text-[108px] font-black leading-none ${guildTheme.sigilText}`}
-                  >
-                    {getGuildSigil(person.guild)}
-                  </div>
-
-                  <div
-                    className={`relative h-[168px] w-[168px] overflow-hidden rounded-[28px] border border-zinc-800 bg-zinc-950 shadow-[0_12px_30px_rgba(0,0,0,0.35)] ${guildTheme.softGlow}`}
-                  >
-                    <div
-                      className={`absolute inset-0 ${guildTheme.portraitGlow}`}
-                    />
-                    <div className="relative flex h-full w-full items-center justify-center">
-                      <Avatar
-                        name={fullName}
-                        src={person.portraitUrl}
-                        size={168}
-                        className="h-full w-full"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-4 text-center">
-                  <div className="text-[1.75rem] font-semibold leading-tight tracking-[-0.03em] text-zinc-50">
-                    {fullName}
-                  </div>
-
-                  <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
-                    <span className="rounded-full border border-zinc-800 bg-zinc-900/80 px-3 py-1 text-[11px] font-medium text-zinc-300">
-                      {person.homeroom || "—"}
-                    </span>
-                    <span
-                      className={`rounded-full border px-3 py-1 text-[11px] font-medium ${healthState.classes}`}
-                    >
-                      {healthState.label}
-                    </span>
-                  </div>
-
-                  {person.guild ? (
-                    <div className="mt-4 flex justify-center">
-                      <div
-                        className={`inline-flex min-h-[46px] items-center gap-2.5 rounded-2xl border bg-zinc-900/85 px-4 py-2 ${guildTheme.softBorder}`}
-                      >
-                        <GuildBadge guild={person.guild} size={28} />
-                        <span
-                          className={`text-sm font-semibold leading-none tracking-[0.06em] ${guildTheme.bannerText}`}
-                        >
-                          {person.guild}
-                        </span>
-                      </div>
-                    </div>
-                  ) : null}
+              <div className="space-y-4 min-[1080px]:flex min-[1080px]:h-full min-[1080px]:flex-col">
+                <div
+                  className={`transition-all duration-500 delay-75 ${
+                    visible
+                      ? "translate-y-0 opacity-100"
+                      : "translate-y-2 opacity-0"
+                  }`}
+                >
+                  <HeroBanner
+                    fullName={fullName}
+                    person={person}
+                    healthState={healthState}
+                    guildTheme={guildTheme}
+                  />
                 </div>
 
                 <div
-                  className={`mx-auto my-4 h-px w-20 bg-gradient-to-r ${guildTheme.accentLine}`}
-                />
-
-                <div className="space-y-3">
-                  <div className="rounded-[20px] border border-zinc-800 bg-zinc-950/35 p-3.5 text-left">
-                    <SectionHeading
-                      icon="❤️"
-                      title="Health"
-                      right={
-                        <span className="text-xs font-semibold text-zinc-100">
-                          {hpCur}/{hpBase}
-                        </span>
-                      }
-                      className="mb-2"
-                    />
-
-                    <div className="overflow-hidden rounded-full bg-zinc-950/80 p-[2px] shadow-[inset_0_0_8px_rgba(0,0,0,0.55)]">
-                      <div className="h-3.5 overflow-hidden rounded-full bg-zinc-900/60">
-                        <div
-                          className="h-full rounded-full transition-[width] duration-300"
-                          style={{
-                            width: `${Math.round(hpPct * 100)}%`,
-                            backgroundColor: hpFill,
-                            boxShadow: isDead ? "none" : `0 0 10px ${hpFill}55`,
-                          }}
+                  className={`transition-all duration-500 delay-150 ${
+                    visible
+                      ? "translate-y-0 opacity-100"
+                      : "translate-y-2 opacity-0"
+                  }`}
+                >
+                  <div className="rounded-[24px] border border-zinc-800/80 bg-[linear-gradient(180deg,rgba(17,17,21,0.96),rgba(8,8,10,0.96))] p-4 min-[1080px]:flex-1">
+                    <div className="space-y-3">
+                      <div className="rounded-[20px] border border-zinc-800 bg-zinc-950/35 p-3.5 text-left">
+                        <SectionHeading
+                          icon="❤️"
+                          title="Health"
+                          right={
+                            <span className="text-xs font-semibold text-zinc-100">
+                              {hpCur}/{hpBase}
+                            </span>
+                          }
+                          className="mb-2"
                         />
+
+                        <div className="overflow-hidden rounded-full bg-zinc-950/80 p-[2px] shadow-[inset_0_0_8px_rgba(0,0,0,0.55)]">
+                          <div className="h-3.5 overflow-hidden rounded-full bg-zinc-900/60">
+                            <div
+                              className="h-full rounded-full transition-[width] duration-500"
+                              style={{
+                                width: `${Math.round(hpPct * 100)}%`,
+                                backgroundColor: hpFill,
+                                boxShadow: isDead
+                                  ? "none"
+                                  : `0 0 12px ${hpFill}66`,
+                              }}
+                            />
+                          </div>
+                        </div>
                       </div>
+
+                      <CompanionPanel
+                        companion={companion}
+                        guildTheme={guildTheme}
+                      />
+                    </div>
+
+                    <div className="pt-4 text-center text-[10px] uppercase tracking-[0.22em] text-zinc-600 min-[1080px]:mt-auto">
+                      Character Profile
                     </div>
                   </div>
-
-                  <CompanionPanel companion={companion} />
-                </div>
-
-                <div className="pt-3 text-center text-[10px] uppercase tracking-[0.22em] text-zinc-600 min-[1080px]:mt-auto">
-                  Character Profile
                 </div>
               </div>
             </aside>
 
             <main className="min-w-0">
               <div className="space-y-3">
-                <div className="grid gap-3 xl:grid-cols-[minmax(0,1.45fr)_minmax(260px,0.55fr)]">
-                  <AttributeSection person={person} />
-                  <SkillsSection skillList={skillList} />
+                <div
+                  className={`transition-all duration-500 delay-200 ${
+                    visible
+                      ? "translate-y-0 opacity-100"
+                      : "translate-y-2 opacity-0"
+                  }`}
+                >
+                  <div className="grid gap-3 xl:grid-cols-[minmax(0,1.45fr)_minmax(280px,0.55fr)]">
+                    <AttributeSection person={person} guildTheme={guildTheme} />
+                    <SkillsSection skillList={skillList} />
+                  </div>
                 </div>
 
-                <InventorySection
-                  inventory={inventory}
-                  guildTheme={guildTheme}
-                />
+                <div
+                  className={`transition-all duration-500 delay-300 ${
+                    visible
+                      ? "translate-y-0 opacity-100"
+                      : "translate-y-2 opacity-0"
+                  }`}
+                >
+                  <InventorySection
+                    inventory={inventory}
+                    guildTheme={guildTheme}
+                  />
+                </div>
               </div>
             </main>
           </div>
