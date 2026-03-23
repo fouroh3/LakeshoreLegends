@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import Avatar from "./Avatar";
+import { hpStatus } from "../utils/hpStatus";
 import { GuildBadge } from "./GuildBadge";
 import { hpBarColorFromPct } from "../utils/hpColor";
 import {
@@ -342,29 +343,6 @@ function getGuildTheme(guild?: string): GuildTheme {
         shimmerClass: "from-transparent via-white/10 to-transparent",
       };
   }
-}
-
-function getHealthState(current: number, max: number) {
-  const pct = current / Math.max(1, max);
-
-  if (current <= 0) {
-    return {
-      label: "Defeated",
-      classes: "border-zinc-700 bg-zinc-900 text-zinc-300",
-    };
-  }
-
-  if (pct <= 0.5) {
-    return {
-      label: "Wounded",
-      classes: "border-amber-700/40 bg-amber-950/30 text-amber-200",
-    };
-  }
-
-  return {
-    label: "Healthy",
-    classes: "border-emerald-700/40 bg-emerald-950/30 text-emerald-200",
-  };
 }
 
 function getCardTypeBadgeClass(type: string, guildTheme: GuildTheme) {
@@ -1042,7 +1020,7 @@ function HeroBanner({
 }: {
   fullName: string;
   person: any;
-  healthState: { label: string; classes: string };
+  healthState: { label: string; pillClass: string };
   guildTheme: GuildTheme;
 }) {
   return (
@@ -1095,7 +1073,7 @@ function HeroBanner({
               {person.homeroom || "—"}
             </span>
             <span
-              className={`rounded-full border px-3 py-1 text-[11px] font-medium ${healthState.classes}`}
+              className={`rounded-full px-3 py-1 text-[11px] font-medium ${healthState.pillClass}`}
             >
               {healthState.label}
             </span>
@@ -1313,7 +1291,7 @@ export default function CharacterProfileModal({
   const hpFill = isDead ? "rgba(113,113,122,1)" : hpBarColorFromPct(hpPct);
 
   const guildTheme = getGuildTheme(person.guild);
-  const healthState = getHealthState(hpCur, hpBase);
+  const healthState = hpStatus(hpCur, hpBase);
 
   return (
     <div className="fixed inset-0 z-[100]">
@@ -1333,14 +1311,18 @@ export default function CharacterProfileModal({
 
       <button
         aria-label="Close profile"
-        className="absolute inset-0 bg-black/78 backdrop-blur-md"
+        className={`absolute inset-0 bg-black/78 backdrop-blur-md transition-opacity duration-300 ${
+          visible ? "opacity-100" : "opacity-0"
+        }`}
         onClick={onClose}
       />
 
-      <div className="absolute inset-0 flex items-center justify-center p-2 sm:p-3 lg:p-5">
+      <div className="absolute inset-0 flex items-center justify-center px-2 pb-2 pt-[76px] sm:px-3 sm:pb-3 sm:pt-[82px] lg:px-5 lg:pb-5 lg:pt-[100px]">
         <div
           className={`relative h-[94vh] w-full max-w-[1520px] overflow-y-auto overflow-x-hidden rounded-[34px] border border-zinc-800 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.03),transparent_24%),linear-gradient(180deg,#0d0d11_0%,#08080a_100%)] shadow-2xl shadow-black/70 transition-all duration-300 ${
-            visible ? "translate-y-0 opacity-100" : "translate-y-2 opacity-0"
+            visible
+              ? "translate-y-0 scale-100 opacity-100"
+              : "translate-y-3 scale-[0.985] opacity-0"
           } ${guildTheme.modalGlow}`}
         >
           <button
@@ -1391,6 +1373,14 @@ export default function CharacterProfileModal({
                           className="mb-2"
                         />
 
+                        <div className="mb-2">
+                          <span
+                            className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-medium ${healthState.pillClass}`}
+                          >
+                            {healthState.label}
+                          </span>
+                        </div>
+
                         <div className="overflow-hidden rounded-full bg-zinc-950/80 p-[2px] shadow-[inset_0_0_8px_rgba(0,0,0,0.55)]">
                           <div className="h-3.5 overflow-hidden rounded-full bg-zinc-900/60">
                             <div
@@ -1398,6 +1388,9 @@ export default function CharacterProfileModal({
                               style={{
                                 width: `${Math.round(hpPct * 100)}%`,
                                 backgroundColor: hpFill,
+                                backgroundImage: isDead
+                                  ? "none"
+                                  : `linear-gradient(90deg, ${hpFill}, ${hpFill}cc)`,
                                 boxShadow: isDead
                                   ? "none"
                                   : `0 0 12px ${hpFill}66`,

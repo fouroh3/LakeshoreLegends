@@ -1,9 +1,9 @@
-// src/components/AbilityCard.tsx
 import { useMemo } from "react";
 import Avatar from "./Avatar";
 import StatBar from "./StatBar";
 import { GuildBadge } from "./GuildBadge";
 import { hpBarColorFromPct } from "../utils/hpColor";
+import { hpStatus } from "../utils/hpStatus";
 
 type Density = "comfortable" | "compact" | "ultra";
 
@@ -15,60 +15,109 @@ interface AbilityCardProps {
 
 const densityConfig: Record<
   Density,
-  { padding: string; gap: string; statGap: string; textSize: string }
+  {
+    padding: string;
+    gap: string;
+    statGap: string;
+    avatarSize: number;
+    nameSize: string;
+    metaSize: string;
+    headerGap: string;
+  }
 > = {
   comfortable: {
     padding: "p-4",
     gap: "gap-3",
     statGap: "space-y-2",
-    textSize: "text-sm",
+    avatarSize: 58,
+    nameSize: "text-[17px]",
+    metaSize: "text-xs",
+    headerGap: "gap-3",
   },
   compact: {
     padding: "p-3",
     gap: "gap-2.5",
     statGap: "space-y-1.5",
-    textSize: "text-xs",
+    avatarSize: 54,
+    nameSize: "text-[16px]",
+    metaSize: "text-[11px]",
+    headerGap: "gap-3",
   },
   ultra: {
     padding: "p-2.5",
     gap: "gap-2",
-    statGap: "space-y-1.5",
-    textSize: "text-[11px]",
+    statGap: "space-y-1",
+    avatarSize: 50,
+    nameSize: "text-[15px]",
+    metaSize: "text-[10px]",
+    headerGap: "gap-2.5",
   },
 };
 
-function hpStatus(current: number, base: number) {
-  const b = Math.max(1, base || 1);
-  const pct = Math.max(0, Math.min(1, current / b));
-
-  if (current <= 0) {
-    return {
-      label: "Dead",
-      pillClass: "bg-zinc-800 text-zinc-200 border border-zinc-700",
-    };
+function getGuildTintClasses(guild?: string) {
+  switch (String(guild || "").trim()) {
+    case "Blades":
+      return {
+        glow: "shadow-[0_0_0_1px_rgba(244,63,94,0.10),0_14px_30px_rgba(0,0,0,0.34)]",
+        accent: "from-rose-400/18 via-rose-300/6 to-transparent",
+        ring: "hover:border-rose-500/35",
+        hoverGlow:
+          "group-hover:shadow-[0_0_0_1px_rgba(244,63,94,0.18),0_24px_44px_rgba(0,0,0,0.48),0_0_30px_rgba(244,63,94,0.08)]",
+      };
+    case "Guardians":
+      return {
+        glow: "shadow-[0_0_0_1px_rgba(56,189,248,0.10),0_14px_30px_rgba(0,0,0,0.34)]",
+        accent: "from-sky-400/18 via-sky-300/6 to-transparent",
+        ring: "hover:border-sky-500/35",
+        hoverGlow:
+          "group-hover:shadow-[0_0_0_1px_rgba(56,189,248,0.18),0_24px_44px_rgba(0,0,0,0.48),0_0_30px_rgba(56,189,248,0.08)]",
+      };
+    case "Shadows":
+      return {
+        glow: "shadow-[0_0_0_1px_rgba(168,85,247,0.10),0_14px_30px_rgba(0,0,0,0.34)]",
+        accent: "from-violet-400/18 via-violet-300/6 to-transparent",
+        ring: "hover:border-violet-500/35",
+        hoverGlow:
+          "group-hover:shadow-[0_0_0_1px_rgba(168,85,247,0.18),0_24px_44px_rgba(0,0,0,0.48),0_0_30px_rgba(168,85,247,0.08)]",
+      };
+    case "Scouts":
+      return {
+        glow: "shadow-[0_0_0_1px_rgba(16,185,129,0.10),0_14px_30px_rgba(0,0,0,0.34)]",
+        accent: "from-emerald-400/18 via-emerald-300/6 to-transparent",
+        ring: "hover:border-emerald-500/35",
+        hoverGlow:
+          "group-hover:shadow-[0_0_0_1px_rgba(16,185,129,0.18),0_24px_44px_rgba(0,0,0,0.48),0_0_30px_rgba(16,185,129,0.08)]",
+      };
+    case "Scholars":
+      return {
+        glow: "shadow-[0_0_0_1px_rgba(245,158,11,0.10),0_14px_30px_rgba(0,0,0,0.34)]",
+        accent: "from-amber-400/18 via-amber-300/6 to-transparent",
+        ring: "hover:border-amber-500/35",
+        hoverGlow:
+          "group-hover:shadow-[0_0_0_1px_rgba(245,158,11,0.18),0_24px_44px_rgba(0,0,0,0.48),0_0_30px_rgba(245,158,11,0.08)]",
+      };
+    case "Diplomats":
+      return {
+        glow: "shadow-[0_0_0_1px_rgba(34,211,238,0.10),0_14px_30px_rgba(0,0,0,0.34)]",
+        accent: "from-cyan-400/18 via-cyan-300/6 to-transparent",
+        ring: "hover:border-cyan-500/35",
+        hoverGlow:
+          "group-hover:shadow-[0_0_0_1px_rgba(34,211,238,0.18),0_24px_44px_rgba(0,0,0,0.48),0_0_30px_rgba(34,211,238,0.08)]",
+      };
+    default:
+      return {
+        glow: "shadow-[0_14px_30px_rgba(0,0,0,0.34)]",
+        accent: "from-white/8 via-white/[0.03] to-transparent",
+        ring: "hover:border-zinc-600/80",
+        hoverGlow:
+          "group-hover:shadow-[0_0_0_1px_rgba(255,255,255,0.08),0_24px_44px_rgba(0,0,0,0.48)]",
+      };
   }
-  if (pct < 0.4) {
-    return {
-      label: "Critical",
-      pillClass: "bg-red-950/50 text-red-200 border border-red-900/50",
-    };
-  }
-  if (pct < 0.7) {
-    return {
-      label: "Wounded",
-      pillClass: "bg-amber-950/40 text-amber-200 border border-amber-900/50",
-    };
-  }
-  return {
-    label: "Healthy",
-    pillClass:
-      "bg-emerald-950/40 text-emerald-200 border border-emerald-900/50",
-  };
 }
 
 export default function AbilityCard({
   person,
-  density = "comfortable",
+  density = "compact",
   onClick,
 }: AbilityCardProps) {
   const {
@@ -89,8 +138,8 @@ export default function AbilityCard({
   } = person;
 
   const cfg = densityConfig[density];
-
   const fullName = `${first ?? ""} ${last ?? ""}`.trim() || "Unnamed Legend";
+  const guildTint = getGuildTintClasses(guild);
 
   const { badgeIcon } = useMemo(() => {
     const stats = [
@@ -135,29 +184,57 @@ export default function AbilityCard({
       type="button"
       onClick={onClick}
       className={[
-        `w-full text-left flex flex-col ${cfg.gap} ${cfg.padding} rounded-2xl bg-zinc-900/70 border border-zinc-800/60 shadow-lg shadow-black/40 transition`,
-        "hover:border-cyan-700/50 hover:bg-zinc-900/90 hover:-translate-y-[1px]",
-        "focus:outline-none focus:ring-2 focus:ring-cyan-500/50",
+        `group relative flex w-full min-w-0 flex-col ${cfg.gap} ${cfg.padding} overflow-hidden rounded-[24px] text-left`,
+        "border border-zinc-800/70 bg-[linear-gradient(180deg,rgba(24,24,27,0.92),rgba(10,10,12,0.96))]",
+        guildTint.glow,
+        guildTint.hoverGlow,
+        guildTint.ring,
+        "transition-all duration-300 ease-out hover:-translate-y-[5px] hover:scale-[1.018] hover:bg-[linear-gradient(180deg,rgba(30,30,34,0.98),rgba(12,12,14,1))]",
+        "focus:outline-none focus:ring-2 focus:ring-cyan-500/45",
       ].join(" ")}
     >
-      {/* HEADER */}
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex items-center gap-2.5 min-w-0">
-          <Avatar name={fullName} src={portraitUrl} badge={badgeIcon} />
-          <div className="min-w-0">
+      <div
+        className={`pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b ${guildTint.accent}`}
+      />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.05),transparent_36%)] opacity-80" />
+      <div className="pointer-events-none absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent opacity-60" />
+      <div className="pointer-events-none absolute -left-1/3 top-0 h-full w-1/3 rotate-[18deg] bg-gradient-to-r from-transparent via-white/10 to-transparent opacity-0 transition-all duration-500 group-hover:left-[120%] group-hover:opacity-100" />
+
+      <div
+        className={`relative flex items-start justify-between ${cfg.headerGap}`}
+      >
+        <div className="flex min-w-0 flex-1 items-start gap-3">
+          <div className="relative mr-1 shrink-0">
+            <Avatar name={fullName} src={portraitUrl} size={cfg.avatarSize} />
+
+            <div className="absolute right-0 top-0 z-[1] flex h-5 w-5 translate-x-[2px] -translate-y-[2px] items-center justify-center rounded-full border border-white/10 bg-[radial-gradient(circle,rgba(30,30,40,0.95),rgba(10,10,14,0.95))] shadow-[0_2px_6px_rgba(0,0,0,0.18)]">
+              <span className="text-[9px] leading-none">{badgeIcon}</span>
+            </div>
+          </div>
+
+          <div className="min-w-0 flex-1 pr-1 pt-0.5">
             <div
-              className={`font-semibold text-zinc-50 leading-tight ${cfg.textSize}`}
+              className={[
+                cfg.nameSize,
+                "font-semibold leading-[1.08] tracking-tight text-zinc-100",
+                "drop-shadow-[0_0_6px_rgba(255,255,255,0.08)]",
+              ].join(" ")}
             >
-              <span className="break-words">{fullName}</span>
+              <span className="line-clamp-2 break-words">{fullName}</span>
+            </div>
+
+            <div
+              className={`mt-1 ${cfg.metaSize} font-medium tracking-[0.02em] text-zinc-500`}
+            >
+              {homeroom || "—"}
             </div>
           </div>
         </div>
 
-        <div className="flex flex-col items-center gap-1 flex-shrink-0">
-          <div className="inline-flex items-center justify-center px-2 py-0.5 rounded-full bg-zinc-900/80 border border-zinc-700/80 text-[10px] font-semibold text-zinc-200 whitespace-nowrap flex-shrink-0">
-            {homeroom || "—"}
+        <div className="shrink-0 pt-0.5">
+          <div className="rounded-full border border-zinc-800/80 bg-zinc-950/70 p-1 shadow-[0_4px_14px_rgba(0,0,0,0.25)] transition-transform duration-300 group-hover:scale-[1.04]">
+            <GuildBadge guild={guild} size={30} />
           </div>
-          <GuildBadge guild={guild} />
         </div>
       </div>
 
@@ -167,27 +244,26 @@ export default function AbilityCard({
             " "
           )}
         >
-          {/* HEALTH */}
-          <div className="mt-1">
-            <div className="flex items-center justify-between mb-1">
-              <div className="text-[10px] uppercase tracking-[0.16em] text-zinc-500">
+          <div className="mt-1 rounded-2xl border border-zinc-800/70 bg-zinc-950/25 p-2.5 transition-colors duration-300 group-hover:border-zinc-700/80 group-hover:bg-zinc-950/35">
+            <div className="mb-1 flex items-center justify-between">
+              <div className="text-[10px] uppercase tracking-[0.18em] text-zinc-500">
                 Health
               </div>
 
               <div className="flex items-center gap-2">
                 <span
-                  className={`px-2 py-0.5 rounded-full text-[10px] leading-[12px] ${status.pillClass}`}
+                  className={`rounded-full px-2 py-0.5 text-[10px] leading-[12px] ${status.pillClass}`}
                   title={status.label}
                 >
                   {status.label}
                 </span>
-                <span className="text-[10px] font-semibold text-zinc-200 tabular-nums">
+                <span className="tabular-nums text-[10px] font-semibold text-zinc-200">
                   {hpCur}/{hpBase}
                 </span>
               </div>
             </div>
 
-            <div className="h-2 w-full rounded-full bg-zinc-950/60 border border-zinc-800/70 overflow-hidden">
+            <div className="h-2.5 w-full overflow-hidden rounded-full border border-zinc-800/70 bg-zinc-950/70">
               <div
                 className={[
                   "h-full transition-[width] duration-300",
@@ -196,41 +272,74 @@ export default function AbilityCard({
                 style={{
                   width: `${Math.round(hpPct * 100)}%`,
                   backgroundColor: isDead ? "rgba(113,113,122,1)" : hpColor,
+                  backgroundImage: isDead
+                    ? "none"
+                    : `linear-gradient(90deg, ${hpColor}, ${hpColor}cc)`,
+                  boxShadow: isDead ? "none" : `0 0 12px ${hpColor}66`,
                 }}
               />
             </div>
           </div>
 
-          {/* STATS */}
-          <div className={`mt-3 ${cfg.statGap}`}>
+          <div className={`mt-2 ${cfg.statGap}`}>
             <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">
-              <StatBar label="Strength" value={Number(str) || 0} />
-              <StatBar label="Dexterity" value={Number(dex) || 0} />
-              <StatBar label="Constitution" value={Number(con) || 0} />
-              <StatBar label="Intelligence" value={Number(int) || 0} />
-              <StatBar label="Wisdom" value={Number(wis) || 0} />
-              <StatBar label="Charisma" value={Number(cha) || 0} />
+              <StatBar
+                label="Strength"
+                value={Number(str) || 0}
+                density="ultra"
+              />
+              <StatBar
+                label="Dexterity"
+                value={Number(dex) || 0}
+                density="ultra"
+              />
+              <StatBar
+                label="Constitution"
+                value={Number(con) || 0}
+                density="ultra"
+              />
+              <StatBar
+                label="Intelligence"
+                value={Number(int) || 0}
+                density="ultra"
+              />
+              <StatBar
+                label="Wisdom"
+                value={Number(wis) || 0}
+                density="ultra"
+              />
+              <StatBar
+                label="Charisma"
+                value={Number(cha) || 0}
+                density="ultra"
+              />
             </div>
           </div>
 
-          {/* SKILLS */}
-          <div className="mt-3">
-            <div className="text-[10px] uppercase tracking-[0.16em] text-zinc-500 mb-1">
+          <div className="mt-2.5">
+            <div className="mb-1 text-[10px] uppercase tracking-[0.18em] text-zinc-500">
               Skills
             </div>
 
             {skillList.length === 0 ? (
-              <div className="text-xs text-zinc-500 italic">No skills yet</div>
+              <div className="text-[11px] italic text-zinc-500">
+                No skills yet
+              </div>
             ) : (
               <div className="flex flex-wrap gap-1">
-                {skillList.map((skill) => (
+                {skillList.slice(0, 4).map((skill) => (
                   <span
                     key={skill}
-                    className="inline-flex items-center rounded-full bg-zinc-900/80 border border-zinc-700/80 px-2 py-0.5 text-[10px] text-zinc-200"
+                    className="inline-flex items-center rounded-full border border-zinc-700/80 bg-zinc-900/80 px-2 py-0.5 text-[10px] text-zinc-200 transition group-hover:border-zinc-600"
                   >
                     {skill}
                   </span>
                 ))}
+                {skillList.length > 4 ? (
+                  <span className="inline-flex items-center rounded-full border border-zinc-800 bg-zinc-950/85 px-2 py-0.5 text-[10px] text-zinc-400">
+                    +{skillList.length - 4}
+                  </span>
+                ) : null}
               </div>
             )}
           </div>

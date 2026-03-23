@@ -1,72 +1,109 @@
+import { Fragment, useMemo, useState } from "react";
 import AbilitiesGrid from "./AbilitiesGrid";
 import AbilityCard from "./AbilityCard";
-import CharacterProfileModal from "./CharacterProfileModal";
 import type { Student } from "../types";
-import { Fragment, useMemo, useState } from "react";
 
-type Density = "comfortable" | "compact" | "ultra";
-
-type SuggestionType = "name" | "homeroom" | "guild" | "skill";
-
-type SuggestionItem = {
-  text: string;
-  type: SuggestionType;
-};
+type SortKey = string;
 
 type Props = {
   data: Student[];
-  density: Density;
-
-  mode?: any;
-  columns: number;
-  autoMinWidth: number;
-
   query: string;
-  setQuery: (q: string) => void;
-
-  sortKey: string;
-  setSortKey: (k: string) => void;
-
+  setQuery: (value: string) => void;
+  sortKey: SortKey;
+  setSortKey: (value: string) => void;
   homerooms: string[];
   selectedHRs: string[];
-  setSelectedHRs: (hrs: string[]) => void;
-
+  setSelectedHRs: (value: string[]) => void;
   guilds: string[];
   selectedGuilds: string[];
-  setSelectedGuilds: (g: string[]) => void;
-
-  setDensity: (d: Density) => void;
-  setMode: (m: any) => void;
-  setColumns: (n: number) => void;
-  setAutoMinWidth: (n: number) => void;
-
+  setSelectedGuilds: (value: string[]) => void;
   attrFilterKey: string;
-  setAttrFilterKey: (k: string) => void;
+  setAttrFilterKey: (value: string) => void;
   attrFilterMin: number;
-  setAttrFilterMin: (n: number) => void;
+  setAttrFilterMin: (value: number) => void;
+  onSelectPerson: (person: Student) => void;
 };
 
-function skillsToArray(skills: Student["skills"]): string[] {
-  if (!skills) return [];
-  if (Array.isArray(skills))
-    return skills
-      .filter(Boolean)
-      .map((s) => String(s).trim())
-      .filter(Boolean);
+const GUILD_STYLES: Record<
+  string,
+  {
+    active: string;
+    idle: string;
+    ring: string;
+  }
+> = {
+  blades: {
+    active:
+      "border-rose-400/40 bg-rose-500/16 text-rose-100 shadow-[0_0_20px_rgba(244,63,94,0.16)]",
+    idle: "border-rose-500/20 bg-rose-500/8 text-rose-100/80 hover:bg-rose-500/14",
+    ring: "shadow-[inset_0_0_0_1px_rgba(244,63,94,0.12)]",
+  },
+  diplomats: {
+    active:
+      "border-cyan-400/40 bg-cyan-500/16 text-cyan-100 shadow-[0_0_20px_rgba(34,211,238,0.16)]",
+    idle: "border-cyan-500/20 bg-cyan-500/8 text-cyan-100/80 hover:bg-cyan-500/14",
+    ring: "shadow-[inset_0_0_0_1px_rgba(34,211,238,0.12)]",
+  },
+  guardians: {
+    active:
+      "border-sky-400/40 bg-sky-500/16 text-sky-100 shadow-[0_0_20px_rgba(56,189,248,0.16)]",
+    idle: "border-sky-500/20 bg-sky-500/8 text-sky-100/80 hover:bg-sky-500/14",
+    ring: "shadow-[inset_0_0_0_1px_rgba(56,189,248,0.12)]",
+  },
+  scholars: {
+    active:
+      "border-amber-400/40 bg-amber-500/16 text-amber-100 shadow-[0_0_20px_rgba(245,158,11,0.16)]",
+    idle: "border-amber-500/20 bg-amber-500/8 text-amber-100/80 hover:bg-amber-500/14",
+    ring: "shadow-[inset_0_0_0_1px_rgba(245,158,11,0.12)]",
+  },
+  scouts: {
+    active:
+      "border-emerald-400/40 bg-emerald-500/16 text-emerald-100 shadow-[0_0_20px_rgba(16,185,129,0.16)]",
+    idle: "border-emerald-500/20 bg-emerald-500/8 text-emerald-100/80 hover:bg-emerald-500/14",
+    ring: "shadow-[inset_0_0_0_1px_rgba(16,185,129,0.12)]",
+  },
+  shadows: {
+    active:
+      "border-violet-400/40 bg-violet-500/16 text-violet-100 shadow-[0_0_20px_rgba(168,85,247,0.16)]",
+    idle: "border-violet-500/20 bg-violet-500/8 text-violet-100/80 hover:bg-violet-500/14",
+    ring: "shadow-[inset_0_0_0_1px_rgba(168,85,247,0.12)]",
+  },
+};
 
-  const s = String(skills).trim();
-  if (!s) return [];
-  return s
-    .split(/[,;|]/g)
-    .map((x) => x.trim())
-    .filter(Boolean);
+function getFullName(student: Student) {
+  return `${student.first ?? ""} ${student.last ?? ""}`.trim();
+}
+
+function PillButton({
+  active,
+  onClick,
+  children,
+  className = "",
+}: {
+  active?: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={[
+        "rounded-full border px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] transition sm:text-[11px]",
+        active
+          ? "border-cyan-300/40 bg-cyan-400/16 text-cyan-100 shadow-[0_0_18px_rgba(34,211,238,0.14)]"
+          : "border-white/10 bg-white/6 text-white/72 hover:border-white/20 hover:bg-white/10 hover:text-white",
+        className,
+      ].join(" ")}
+    >
+      {children}
+    </button>
+  );
 }
 
 export default function AbilitiesDashboard({
   data,
-  density,
-  columns,
-  autoMinWidth,
   query,
   setQuery,
   sortKey,
@@ -77,18 +114,13 @@ export default function AbilitiesDashboard({
   guilds,
   selectedGuilds,
   setSelectedGuilds,
-  setDensity,
-  setMode,
-  setColumns,
-  setAutoMinWidth,
   attrFilterKey,
   setAttrFilterKey,
   attrFilterMin,
   setAttrFilterMin,
+  onSelectPerson,
 }: Props) {
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const [activeIndex, setActiveIndex] = useState<number>(-1);
-  const [selectedPerson, setSelectedPerson] = useState<Student | null>(null);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
 
   const toggleHR = (hr: string) => {
     setSelectedHRs(
@@ -98,414 +130,222 @@ export default function AbilitiesDashboard({
     );
   };
 
-  const toggleGuild = (g: string) => {
+  const toggleGuild = (guild: string) => {
     setSelectedGuilds(
-      selectedGuilds.includes(g)
-        ? selectedGuilds.filter((x) => x !== g)
-        : [...selectedGuilds, g]
+      selectedGuilds.includes(guild)
+        ? selectedGuilds.filter((g) => g !== guild)
+        : [...selectedGuilds, guild]
     );
   };
 
-  const suggestions: SuggestionItem[] = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return [];
-
-    const items: SuggestionItem[] = [];
-    const seen = new Set<string>();
-
-    const add = (text: string, type: SuggestionType) => {
-      const key = `${type}:${text.toLowerCase()}`;
-      if (seen.has(key)) return;
-      if (!text.toLowerCase().includes(q)) return;
-      seen.add(key);
-      items.push({ text, type });
-    };
-
-    for (const s of data) {
-      const full = `${(s as any).first ?? ""} ${(s as any).last ?? ""}`.trim();
-      if (full) add(full, "name");
-    }
-
-    for (const hr of homerooms) if (hr) add(hr, "homeroom");
-    for (const g of guilds) if (g) add(g, "guild");
-
-    for (const s of data) {
-      for (const sk of skillsToArray((s as any).skills)) add(sk, "skill");
-    }
-
-    return items.slice(0, 20);
-  }, [query, data, homerooms, guilds]);
-
-  const grouped = useMemo(() => {
-    const map: Record<SuggestionType, SuggestionItem[]> = {
-      name: [],
-      homeroom: [],
-      guild: [],
-      skill: [],
-    };
-    for (const s of suggestions) map[s.type].push(s);
-    return map;
-  }, [suggestions]);
-
-  const allSuggestions = suggestions;
-
-  const handleSelectSuggestion = (text: string) => {
-    setQuery(text);
-    setShowSuggestions(false);
-    setActiveIndex(-1);
+  const resetFilters = () => {
+    setQuery("");
+    setSortKey("homeroom");
+    setSelectedHRs([]);
+    setSelectedGuilds([]);
+    setAttrFilterKey("");
+    setAttrFilterMin(0);
+    setAdvancedOpen(false);
   };
 
-  const renderHighlighted = (text: string) => {
-    const q = query.trim();
-    if (!q) return <span>{text}</span>;
-    const idx = text.toLowerCase().indexOf(q.toLowerCase());
-    if (idx === -1) return <span>{text}</span>;
+  const activeFilterCount =
+    selectedHRs.length +
+    selectedGuilds.length +
+    (query.trim() ? 1 : 0) +
+    (attrFilterKey && attrFilterMin > 0 ? 1 : 0);
 
-    return (
-      <>
-        {text.slice(0, idx)}
-        <span className="text-cyan-300 font-medium">
-          {text.slice(idx, idx + q.length)}
-        </span>
-        {text.slice(idx + q.length)}
-      </>
-    );
-  };
-
-  const sectionMeta = [
-    { type: "name", label: "Names", icon: "🧑‍🎓" },
-    { type: "homeroom", label: "Homerooms", icon: "🏫" },
-    { type: "guild", label: "Guilds", icon: "🛡️" },
-    { type: "skill", label: "Skills", icon: "✨" },
-  ] as const;
-
-  const filteredData = useMemo(() => {
-    let out = data as any[];
-
-    if (selectedHRs.length) {
-      const set = new Set(selectedHRs);
-      out = out.filter((s) => set.has(String(s.homeroom ?? "").trim()));
-    }
-
-    if (selectedGuilds.length) {
-      const set = new Set(selectedGuilds);
-      out = out.filter((s) => set.has(String(s.guild ?? "").trim()));
-    }
-
-    if (attrFilterKey && attrFilterMin > 0) {
-      const key = attrFilterKey as keyof Student;
-      out = out.filter((s) => Number((s as any)[key] ?? 0) >= attrFilterMin);
-    }
-
-    return out as Student[];
-  }, [data, selectedHRs, selectedGuilds, attrFilterKey, attrFilterMin]);
+  const filterStats = useMemo(
+    () => [
+      { label: "Shown", value: data.length },
+      { label: "Active Filters", value: activeFilterCount },
+    ],
+    [data.length, activeFilterCount]
+  );
 
   return (
     <Fragment>
-      {/* Controls */}
-      <section className="w-full max-w-none px-4 sm:px-6 lg:px-8 py-4 border-b border-zinc-900">
-        <div className="flex flex-col gap-4">
-          <div className="w-full flex flex-col gap-3 lg:flex-row lg:items-center lg:gap-4">
-            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:flex-1 relative">
-              <label className="text-sm text-zinc-300 sm:mr-3">Search</label>
+      <div className="px-3 pt-3 sm:px-4">
+        <div className="mx-auto max-w-[1380px]">
+          <div className="rounded-[20px] border border-white/10 bg-[linear-gradient(180deg,rgba(10,14,24,0.9),rgba(7,10,18,0.82))] shadow-[0_12px_34px_rgba(0,0,0,0.3)] backdrop-blur-xl">
+            <div className="px-3 py-3 sm:px-4 sm:py-3.5">
+              <div className="flex flex-col items-center gap-3">
+                <div className="flex w-full flex-col items-center justify-center gap-2 lg:flex-row">
+                  <div className="w-full max-w-[420px]">
+                    <input
+                      value={query}
+                      onChange={(e) => setQuery(e.target.value)}
+                      placeholder="Search player, homeroom, or guild..."
+                      autoComplete="on"
+                      autoCorrect="off"
+                      autoCapitalize="none"
+                      spellCheck={false}
+                      name="dashboard-search"
+                      className="h-10 w-full rounded-full border border-white/10 bg-white/8 px-4 text-sm text-white outline-none transition placeholder:text-white/35 focus:border-cyan-300/35 focus:bg-white/10"
+                    />
+                  </div>
 
-              <div className="relative w-full sm:flex-1">
-                <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-zinc-500">
-                  🔍
-                </span>
+                  <div className="flex flex-wrap items-center justify-center gap-2">
+                    <select
+                      value={sortKey}
+                      onChange={(e) => setSortKey(e.target.value)}
+                      className="h-10 rounded-full border border-white/10 bg-white/8 px-4 text-[10px] font-semibold uppercase tracking-[0.16em] text-white outline-none transition hover:bg-white/10 sm:text-[11px]"
+                    >
+                      <option value="homeroom">Sort: Homeroom</option>
+                      <option value="name-az">Sort: Name A–Z</option>
+                      <option value="name-za">Sort: Name Z–A</option>
+                      <option value="guild">Sort: Guild</option>
+                      <option value="hp-desc">Sort: HP High–Low</option>
+                      <option value="hp-asc">Sort: HP Low–High</option>
+                      <option value="strength">Sort: Strength</option>
+                      <option value="dexterity">Sort: Dexterity</option>
+                      <option value="constitution">Sort: Constitution</option>
+                      <option value="intelligence">Sort: Intelligence</option>
+                      <option value="wisdom">Sort: Wisdom</option>
+                      <option value="charisma">Sort: Charisma</option>
+                    </select>
 
-                <input
-                  value={query}
-                  onChange={(e) => {
-                    setQuery(e.target.value);
-                    setShowSuggestions(true);
-                    setActiveIndex(-1);
-                  }}
-                  onFocus={() =>
-                    allSuggestions.length && setShowSuggestions(true)
-                  }
-                  onBlur={() =>
-                    setTimeout(() => setShowSuggestions(false), 100)
-                  }
-                  placeholder="Type a name, skill, guild, or homeroom (e.g., Stealth, Shadows, 8-3)"
-                  className="w-full rounded-xl bg-zinc-900/70 border border-zinc-800 pl-9 pr-3 py-2 text-sm focus:ring-2 focus:ring-cyan-500/60"
-                />
+                    <button
+                      type="button"
+                      onClick={() => setAdvancedOpen((prev) => !prev)}
+                      className={`h-10 rounded-full border px-4 text-[10px] font-semibold uppercase tracking-[0.16em] transition sm:text-[11px] ${
+                        advancedOpen
+                          ? "border-cyan-300/35 bg-cyan-400/16 text-cyan-100"
+                          : "border-white/10 bg-white/8 text-white/75 hover:bg-white/10 hover:text-white"
+                      }`}
+                    >
+                      Advanced
+                    </button>
 
-                {showSuggestions && allSuggestions.length > 0 && (
-                  <div className="absolute mt-1 w-full max-h-72 overflow-auto rounded-xl border border-zinc-800 bg-zinc-950 shadow-xl z-20">
-                    {sectionMeta.map(({ type, label, icon }) => {
-                      const items = grouped[type];
-                      if (!items.length) return null;
+                    <button
+                      type="button"
+                      onClick={resetFilters}
+                      className="h-10 rounded-full border border-white/10 bg-white/8 px-4 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/75 transition hover:bg-white/10 hover:text-white sm:text-[11px]"
+                    >
+                      Reset
+                    </button>
+                  </div>
+                </div>
 
-                      const startIndex = allSuggestions.findIndex(
-                        (s) => s.type === type && s.text === items[0].text
-                      );
+                <div className="flex flex-wrap items-center justify-center gap-2">
+                  {filterStats.map((stat) => (
+                    <span
+                      key={stat.label}
+                      className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/65"
+                    >
+                      {stat.label}: {stat.value}
+                    </span>
+                  ))}
+                </div>
 
-                      return (
-                        <div key={type} className="pb-1 pt-1.5">
-                          <div className="flex items-center gap-1.5 px-3 text-[0.65rem] uppercase text-zinc-500 font-semibold">
-                            {icon} {label}
-                          </div>
+                {advancedOpen && (
+                  <div className="w-full rounded-[18px] border border-white/8 bg-black/18 px-3 py-3 sm:px-4">
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="flex flex-wrap items-center justify-center gap-2">
+                        <PillButton
+                          active={selectedHRs.length === 0}
+                          onClick={() => setSelectedHRs([])}
+                        >
+                          All Homerooms
+                        </PillButton>
 
-                          {items.map((item, idx) => {
-                            const index = startIndex + idx;
-                            const active = index === activeIndex;
-                            return (
-                              <button
-                                key={`${type}:${item.text}`}
-                                onMouseDown={(e) => {
-                                  e.preventDefault();
-                                  handleSelectSuggestion(item.text);
-                                }}
-                                className={`w-full flex justify-between px-3 py-1.5 text-sm ${
-                                  active
-                                    ? "bg-cyan-600/20 text-cyan-50 border-l-2 border-cyan-400"
-                                    : "hover:bg-zinc-800/60 text-zinc-100"
-                                }`}
-                              >
-                                <span className="truncate">
-                                  {renderHighlighted(item.text)}
-                                </span>
-                                <span className="ml-2 text-[0.6rem] uppercase text-zinc-500">
-                                  {label.slice(0, -1)}
-                                </span>
-                              </button>
-                            );
-                          })}
+                        {homerooms.map((hr) => (
+                          <PillButton
+                            key={hr}
+                            active={selectedHRs.includes(hr)}
+                            onClick={() => toggleHR(hr)}
+                          >
+                            {hr}
+                          </PillButton>
+                        ))}
+                      </div>
+
+                      <div className="flex flex-wrap items-center justify-center gap-2">
+                        <PillButton
+                          active={selectedGuilds.length === 0}
+                          onClick={() => setSelectedGuilds([])}
+                        >
+                          All Guilds
+                        </PillButton>
+
+                        {guilds.map((guild) => {
+                          const key = guild.toLowerCase();
+                          const styles = GUILD_STYLES[key];
+
+                          return (
+                            <button
+                              key={guild}
+                              type="button"
+                              onClick={() => toggleGuild(guild)}
+                              className={[
+                                "rounded-full border px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] transition sm:text-[11px]",
+                                styles
+                                  ? selectedGuilds.includes(guild)
+                                    ? `${styles.active} ${styles.ring}`
+                                    : `${styles.idle} ${styles.ring}`
+                                  : selectedGuilds.includes(guild)
+                                  ? "border-white/20 bg-white/16 text-white"
+                                  : "border-white/10 bg-white/6 text-white/75 hover:bg-white/10 hover:text-white",
+                              ].join(" ")}
+                            >
+                              {guild}
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
+                        <select
+                          value={attrFilterKey}
+                          onChange={(e) => setAttrFilterKey(e.target.value)}
+                          className="h-10 min-w-[180px] rounded-full border border-white/10 bg-white/8 px-4 text-sm text-white outline-none"
+                        >
+                          <option value="">Any Attribute</option>
+                          <option value="str">Strength</option>
+                          <option value="dex">Dexterity</option>
+                          <option value="con">Constitution</option>
+                          <option value="int">Intelligence</option>
+                          <option value="wis">Wisdom</option>
+                          <option value="cha">Charisma</option>
+                        </select>
+
+                        <input
+                          type="number"
+                          min={0}
+                          value={attrFilterMin}
+                          onChange={(e) =>
+                            setAttrFilterMin(Number(e.target.value) || 0)
+                          }
+                          className="h-10 w-[120px] rounded-full border border-white/10 bg-white/8 px-4 text-center text-sm text-white outline-none"
+                          placeholder="Min"
+                        />
+
+                        <div className="text-center text-[11px] font-semibold uppercase tracking-[0.16em] text-white/45">
+                          Minimum Attribute Score
                         </div>
-                      );
-                    })}
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>
             </div>
-
-            <div className="flex flex-col items-center gap-2 sm:flex-row sm:items-center sm:justify-center sm:gap-3 lg:justify-end">
-              <div className="flex items-center gap-2">
-                <label className="text-sm text-zinc-300">Sort</label>
-
-                <select
-                  value={sortKey}
-                  onChange={(e) => setSortKey(e.target.value)}
-                  className="rounded-xl bg-zinc-900/70 border border-zinc-800 px-3 py-2 text-sm focus:ring-2 focus:ring-cyan-500/40"
-                >
-                  <option value="homeroom">Homeroom</option>
-                  <option value="name-az">Name (A–Z)</option>
-                  <option value="name-za">Name (Z–A)</option>
-                  <option value="hp-desc">Health (Most HP Left)</option>
-                  <option value="hp-asc">Health (Least HP Left)</option>
-                  <option value="strength">Strength</option>
-                  <option value="dexterity">Dexterity</option>
-                  <option value="constitution">Constitution</option>
-                  <option value="intelligence">Intelligence</option>
-                  <option value="wisdom">Wisdom</option>
-                  <option value="charisma">Charisma</option>
-                </select>
-
-                <button
-                  onClick={() => {
-                    setQuery("");
-                    setShowSuggestions(false);
-                    setActiveIndex(-1);
-                  }}
-                  className="rounded-xl border border-zinc-800 bg-zinc-900/70 px-3 py-2 text-sm hover:bg-zinc-800/60"
-                >
-                  Clear
-                </button>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <label className="text-sm text-zinc-300 whitespace-nowrap">
-                  Battle Filter
-                </label>
-
-                <select
-                  value={attrFilterKey}
-                  onChange={(e) => setAttrFilterKey(e.target.value)}
-                  className="rounded-xl bg-zinc-900/70 border border-zinc-800 px-2 py-2 text-sm focus:ring-2 focus:ring-cyan-500/40"
-                >
-                  <option value="">Any attribute</option>
-                  <option value="str">Strength</option>
-                  <option value="dex">Dexterity</option>
-                  <option value="con">Constitution</option>
-                  <option value="int">Intelligence</option>
-                  <option value="wis">Wisdom</option>
-                  <option value="cha">Charisma</option>
-                </select>
-
-                <span className="text-xs text-zinc-400">≥</span>
-
-                <input
-                  type="number"
-                  min={0}
-                  max={10}
-                  value={attrFilterMin}
-                  onChange={(e) => {
-                    const n = Number(e.target.value);
-                    setAttrFilterMin(isNaN(n) ? 0 : n);
-                  }}
-                  className="w-14 rounded-xl bg-zinc-900/70 border border-zinc-800 px-2 py-1.5 text-sm text-center focus:ring-2 focus:ring-cyan-500/40"
-                />
-              </div>
-            </div>
           </div>
-
-          <div className="w-full flex flex-col gap-3 md:flex-row md:items-center md:justify-center">
-            <div className="w-full md:w-auto flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:justify-center">
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-zinc-300">Density</span>
-                <div className="inline-flex rounded-xl border border-zinc-800 overflow-hidden">
-                  {(["comfortable", "compact", "ultra"] as Density[]).map(
-                    (d) => (
-                      <button
-                        key={d}
-                        onClick={() => setDensity(d)}
-                        className={`px-3 py-2 text-sm ${
-                          density === d
-                            ? "bg-zinc-800 text-zinc-100"
-                            : "bg-zinc-900/70 text-zinc-300 hover:bg-zinc-800/60"
-                        }`}
-                      >
-                        {d.charAt(0).toUpperCase() + d.slice(1)}
-                      </button>
-                    )
-                  )}
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <label className="text-sm text-zinc-300">Card width</label>
-                <input
-                  type="range"
-                  min={200}
-                  max={360}
-                  value={autoMinWidth}
-                  onChange={(e) => setAutoMinWidth(Number(e.target.value))}
-                />
-                <span className="text-xs text-zinc-400 w-10">
-                  {autoMinWidth}px
-                </span>
-              </div>
-            </div>
-
-            <div className="w-full md:w-auto flex justify-center md:ml-4">
-              <button
-                onClick={() => {
-                  setQuery("");
-                  setShowSuggestions(false);
-                  setActiveIndex(-1);
-                  setDensity("comfortable");
-                  setMode("auto");
-                  setColumns(6);
-                  setAutoMinWidth(260);
-                  setSelectedHRs([]);
-                  setSelectedGuilds([]);
-                  setSortKey("homeroom");
-                  setAttrFilterKey("");
-                  setAttrFilterMin(0);
-                }}
-                className="rounded-xl border border-zinc-800 bg-zinc-900/70 px-3 py-2 text-sm hover:bg-zinc-800/60"
-              >
-                Reset View
-              </button>
-            </div>
-          </div>
-
-          <div className="w-full">
-            <div className="flex flex-wrap gap-1.5 justify-center">
-              <button
-                onClick={() => setSelectedHRs([])}
-                className={`rounded-full border px-3 py-1 text-sm ${
-                  selectedHRs.length === 0
-                    ? "bg-cyan-600/25 border-cyan-600/50 text-cyan-200"
-                    : "bg-zinc-900/60 border-zinc-800 text-zinc-300 hover:bg-zinc-800/60"
-                }`}
-              >
-                All Homerooms
-              </button>
-
-              {homerooms.map((hr) => {
-                const active = selectedHRs.includes(hr);
-                return (
-                  <button
-                    key={hr}
-                    onClick={() => toggleHR(hr)}
-                    className={`rounded-full border px-3 py-1 text-sm ${
-                      active
-                        ? "bg-cyan-600/25 border-cyan-600/50 text-cyan-200"
-                        : "bg-zinc-900/60 border-zinc-800 text-zinc-300 hover:bg-zinc-800/60"
-                    }`}
-                  >
-                    {hr}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {guilds.length > 0 && (
-            <div className="w-full">
-              <div className="flex flex-wrap gap-1.5 justify-center">
-                <button
-                  onClick={() => setSelectedGuilds([])}
-                  className={`rounded-full border px-3 py-1 text-sm ${
-                    selectedGuilds.length === 0
-                      ? "bg-cyan-600/15 border-cyan-600/40 text-cyan-200"
-                      : "bg-zinc-900/60 border-zinc-800 text-zinc-300 hover:bg-zinc-800/60"
-                  }`}
-                >
-                  All Guilds
-                </button>
-
-                {guilds.map((g) => {
-                  const active = selectedGuilds.includes(g);
-                  return (
-                    <button
-                      key={g}
-                      onClick={() => toggleGuild(g)}
-                      className={`rounded-full border px-3 py-1 text-sm ${
-                        active
-                          ? "bg-cyan-600/15 border-cyan-600/40 text-cyan-200"
-                          : "bg-zinc-900/60 border-zinc-800 text-zinc-300 hover:bg-zinc-800/60"
-                      }`}
-                    >
-                      {g}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
         </div>
-      </section>
-
-      <div className="w-full max-w-none px-2 sm:px-4 lg:px-6 py-4">
-        <AbilitiesGrid
-          mode="auto"
-          columns={columns}
-          autoMinWidth={autoMinWidth}
-        >
-          {filteredData.map((p, i) => (
-            <AbilityCard
-              key={
-                (p as any).id ??
-                `${(p as any).first}-${(p as any).last}-${
-                  (p as any).homeroom
-                }-${i}`
-              }
-              person={p}
-              density={density}
-              onClick={() => setSelectedPerson(p)}
-            />
-          ))}
-        </AbilitiesGrid>
       </div>
 
-      <CharacterProfileModal
-        person={selectedPerson}
-        open={!!selectedPerson}
-        onClose={() => setSelectedPerson(null)}
-      />
+      <div className="px-3 pb-8 pt-4 sm:px-4 sm:pt-5">
+        <div className="mx-auto max-w-[1380px]">
+          <AbilitiesGrid>
+            {data.map((person, index) => (
+              <AbilityCard
+                key={`${person.id ?? getFullName(person)}-${index}`}
+                person={person}
+                density="compact"
+                onClick={() => onSelectPerson(person)}
+              />
+            ))}
+          </AbilitiesGrid>
+        </div>
+      </div>
     </Fragment>
   );
 }

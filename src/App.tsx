@@ -1,6 +1,6 @@
-// src/App.tsx
 import { useEffect, useMemo, useState } from "react";
 import AbilitiesDashboard from "./components/AbilitiesDashboard";
+import CharacterProfileModal from "./components/CharacterProfileModal";
 import BattlePage from "./pages/BattlePage";
 import StorePage from "./pages/StorePage";
 import { loadStudents } from "./data";
@@ -8,9 +8,6 @@ import type { Student } from "./types";
 import logoUrl from "./assets/Lakeshore Legends Logo.png";
 import "./index.css";
 import { fetchHpMap } from "./hpApi";
-
-type Density = "comfortable" | "compact" | "ultra";
-type GridMode = "auto" | "fixed";
 
 function normId(id: string | undefined | null) {
   return String(id ?? "")
@@ -22,13 +19,11 @@ function normId(id: string | undefined | null) {
 }
 
 export default function App() {
-  // ✅ Route switch (dashboard unless ?view=battle or ?view=store)
   const view = useMemo(() => {
     const params = new URLSearchParams(window.location.search);
     return params.get("view") || "";
   }, []);
 
-  // ✅ Set browser tab title ONLY on main dashboard
   useEffect(() => {
     if (!view) {
       document.title = "Game Dashboard";
@@ -41,35 +36,22 @@ export default function App() {
     window.location.href = url.toString();
   };
 
-  if (view === "battle") {
-    return <BattlePage onBack={goHome} />;
-  }
-
-  if (view === "store") {
-    return <StorePage onBack={goHome} />;
-  }
+  if (view === "battle") return <BattlePage onBack={goHome} />;
+  if (view === "store") return <StorePage onBack={goHome} />;
 
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
 
-  // UI state
   const [query, setQuery] = useState("");
-  const [density, setDensity] = useState<Density>("comfortable");
-  const [mode, setMode] = useState<GridMode>("auto");
-  const [columns, setColumns] = useState(6);
-  const [autoMinWidth, setAutoMinWidth] = useState(260);
   const [selectedHRs, setSelectedHRs] = useState<string[]>([]);
   const [selectedGuilds, setSelectedGuilds] = useState<string[]>([]);
   const [sortKey, setSortKey] = useState("homeroom");
-
-  // 🔥 Attribute filter
   const [attrFilterKey, setAttrFilterKey] = useState("");
   const [attrFilterMin, setAttrFilterMin] = useState(0);
 
-  // =====================
-  // Load students + initial HP
-  // =====================
+  const [selectedPerson, setSelectedPerson] = useState<Student | null>(null);
+
   useEffect(() => {
     let alive = true;
 
@@ -101,29 +83,20 @@ export default function App() {
     };
   }, []);
 
-  // =====================
-  // Keep HP in sync (dashboard only)
-  // - Poll every 25s
-  // - ONLY when tab is visible + focused (top window)
-  // - Refresh immediately on return/focus
-  // =====================
   useEffect(() => {
     if (loading) return;
 
     let alive = true;
 
     const shouldPoll = () => {
-      // Tab not visible -> don't poll
       if (typeof document !== "undefined" && document.hidden) return false;
-
-      // Not the focused window/tab -> don't poll
       if (
         typeof document !== "undefined" &&
-        typeof document.hasFocus === "function"
+        typeof document.hasFocus === "function" &&
+        !document.hasFocus()
       ) {
-        if (!document.hasFocus()) return false;
+        return false;
       }
-
       return true;
     };
 
@@ -136,16 +109,14 @@ export default function App() {
           prev.map((s) => {
             const hp = hpMap.get(normId(String(s.id ?? "")));
             if (!hp) return s;
-
-            // Avoid rerenders if unchanged
-            if (s.baseHP === hp.baseHP && s.currentHP === hp.currentHP)
+            if (s.baseHP === hp.baseHP && s.currentHP === hp.currentHP) {
               return s;
-
+            }
             return { ...s, baseHP: hp.baseHP, currentHP: hp.currentHP };
           })
         );
       } catch {
-        // silent failure — dashboard still usable
+        // keep dashboard usable
       }
     };
 
@@ -154,11 +125,9 @@ export default function App() {
       await tick();
     };
 
-    // Do an immediate update if we're actually active
     wrappedTick();
 
-    const INTERVAL = 25_000;
-    const t = window.setInterval(wrappedTick, INTERVAL);
+    const t = window.setInterval(wrappedTick, 25_000);
 
     const onReturn = () => {
       if (shouldPoll()) tick();
@@ -175,7 +144,6 @@ export default function App() {
     };
   }, [loading]);
 
-  // Normalize student fields
   const normalized: Student[] = useMemo(() => {
     return students.map((s) => ({
       ...s,
@@ -196,7 +164,6 @@ export default function App() {
     }));
   }, [students]);
 
-  // Homerooms (Grade 8)
   const homerooms = useMemo(() => {
     const set = new Set<string>();
     for (const s of normalized) {
@@ -207,16 +174,14 @@ export default function App() {
     );
   }, [normalized]);
 
-  // Guilds
   const guilds = useMemo(() => {
     const set = new Set<string>();
-    for (const s of normalized) if ((s as any).guild) set.add((s as any).guild);
+    for (const s of normalized) {
+      if ((s as any).guild) set.add((s as any).guild);
+    }
     return Array.from(set).sort((a, b) => a.localeCompare(b, "en"));
   }, [normalized]);
 
-  // =====================
-  // Filter + search + sort
-  // =====================
   const filtered = useMemo(() => {
     let list = normalized;
 
@@ -263,11 +228,14 @@ export default function App() {
           .join(" ")
           .toLowerCase();
         const guild = String(p.guild || "").toLowerCase();
+        const hr = String(p.homeroom || "").toLowerCase();
+
         return (
           fullA.includes(q) ||
           fullB.includes(q) ||
           skills.includes(q) ||
-          guild.includes(q)
+          guild.includes(q) ||
+          hr.includes(q)
         );
       });
     }
@@ -287,7 +255,13 @@ export default function App() {
             `${b.first} ${b.last}`.localeCompare(`${a.first} ${a.last}`)
           );
 
-      // ✅ HP sorting (max HP is always 20, so "percent" == "current")
+      case "guild":
+        return list.slice().sort((a: any, b: any) =>
+          String(a.guild ?? "").localeCompare(String(b.guild ?? ""), "en", {
+            sensitivity: "base",
+          })
+        );
+
       case "hp-desc":
         return list
           .slice()
@@ -338,62 +312,75 @@ export default function App() {
     attrFilterMin,
   ]);
 
+  const shownText = loading
+    ? "Loading…"
+    : err
+    ? "Error"
+    : `${filtered.length}/${students.length} shown`;
+
   return (
-    <div className="min-h-screen w-full bg-zinc-950 text-zinc-100">
-      {/* Header */}
-      <header className="sticky top-0 z-20 backdrop-blur bg-zinc-950/70 border-b border-zinc-800">
-        <div className="w-full px-6 py-4 flex items-center gap-4">
-          <img
-            src={logoUrl}
-            alt="Lakeshore Legends"
-            className="h-10 w-auto select-none"
-            draggable={false}
-          />
+    <div className="min-h-screen w-full bg-[radial-gradient(circle_at_top,rgba(40,60,120,0.12),transparent_40%),#0a0a0a] text-zinc-100">
+      <div className="pointer-events-none fixed inset-0 z-0 hidden lg:block">
+        <div className="absolute left-1/2 top-[160px] h-[440px] w-[1100px] -translate-x-1/2 rounded-full bg-cyan-500/[0.035] blur-3xl" />
+        <div className="absolute left-[22%] top-[260px] h-[320px] w-[320px] rounded-full bg-violet-500/[0.045] blur-3xl" />
+        <div className="absolute right-[18%] top-[340px] h-[360px] w-[360px] rounded-full bg-emerald-500/[0.04] blur-3xl" />
+      </div>
 
-          <h1 className="text-xl sm:text-2xl font-bold text-zinc-100">
-            Game Dashboard
-          </h1>
+      {!selectedPerson && (
+        <header className="sticky top-0 z-[80] border-b border-white/10 bg-[linear-gradient(180deg,rgba(10,14,24,0.92),rgba(7,10,18,0.82))] backdrop-blur-xl shadow-[0_10px_30px_rgba(0,0,0,0.35)]">
+          <div className="mx-auto flex w-full max-w-[1600px] flex-col gap-3 px-4 py-3 sm:px-6 lg:px-8">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <div className="flex min-w-0 items-center justify-center gap-3 md:justify-start">
+                <img
+                  src={logoUrl}
+                  alt="Lakeshore Legends"
+                  className="h-10 w-auto shrink-0 select-none sm:h-11"
+                  draggable={false}
+                />
+                <h1 className="text-center text-2xl font-bold leading-tight text-zinc-100 md:text-left">
+                  Game Dashboard
+                </h1>
+              </div>
 
-          <div className="flex-1" />
+              <div className="flex flex-wrap items-center justify-center gap-2 md:justify-end">
+                <button
+                  onClick={() => {
+                    const url = new URL(window.location.href);
+                    url.searchParams.set("view", "store");
+                    window.location.href = url.toString();
+                  }}
+                  className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/80 transition hover:border-white/20 hover:bg-white/10 hover:text-white"
+                >
+                  Store
+                </button>
 
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => {
-                const url = new URL(window.location.href);
-                url.searchParams.set("view", "store");
-                window.location.href = url.toString();
-              }}
-              className="rounded-xl border border-zinc-800 bg-zinc-950/60 px-4 py-2 text-sm text-zinc-200 hover:bg-zinc-900"
-            >
-              Store
-            </button>
+                <button
+                  onClick={() => {
+                    const url = new URL(window.location.href);
+                    url.searchParams.set("view", "battle");
+                    window.location.href = url.toString();
+                  }}
+                  className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/80 transition hover:border-white/20 hover:bg-white/10 hover:text-white"
+                >
+                  Battle Mode
+                </button>
 
-            <button
-              onClick={() => {
-                const url = new URL(window.location.href);
-                url.searchParams.set("view", "battle");
-                window.location.href = url.toString();
-              }}
-              className="rounded-xl border border-zinc-800 bg-zinc-950/60 px-4 py-2 text-sm text-zinc-200 hover:bg-zinc-900"
-            >
-              Battle Mode
-            </button>
-
-            <div className="text-sm text-zinc-400">
-              {loading
-                ? "Loading…"
-                : err
-                ? "Error"
-                : `${filtered.length}/${students.length} shown`}
+                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold text-white/70">
+                  {shownText}
+                </span>
+              </div>
             </div>
           </div>
-        </div>
-      </header>
+        </header>
+      )}
 
-      {/* Content */}
-      <main className="w-full max-w-none px-4 sm:px-6 lg:px-8 py-4">
+      <main
+        className={`relative z-[1] w-full px-4 pb-6 sm:px-6 lg:px-8 ${
+          selectedPerson ? "pt-4" : "pt-4"
+        }`}
+      >
         {err && (
-          <div className="mb-4 rounded-xl border border-red-900/50 bg-red-950/40 px-4 py-3 text-red-200">
+          <div className="mx-auto mb-4 max-w-[1600px] rounded-xl border border-red-900/50 bg-red-950/40 px-4 py-3 text-red-200">
             {err}
           </div>
         )}
@@ -405,31 +392,30 @@ export default function App() {
         ) : (
           <AbilitiesDashboard
             data={filtered}
-            density={density}
-            mode={mode}
-            columns={columns}
-            autoMinWidth={autoMinWidth}
+            query={query}
+            setQuery={setQuery}
+            sortKey={sortKey}
+            setSortKey={setSortKey}
+            homerooms={homerooms}
             selectedHRs={selectedHRs}
             setSelectedHRs={setSelectedHRs}
-            homerooms={homerooms}
             guilds={guilds}
             selectedGuilds={selectedGuilds}
             setSelectedGuilds={setSelectedGuilds}
-            setSortKey={setSortKey}
-            sortKey={sortKey}
-            setQuery={setQuery}
-            query={query}
-            setDensity={setDensity}
-            setMode={setMode}
-            setColumns={setColumns}
-            setAutoMinWidth={setAutoMinWidth}
             attrFilterKey={attrFilterKey}
             setAttrFilterKey={setAttrFilterKey}
             attrFilterMin={attrFilterMin}
             setAttrFilterMin={setAttrFilterMin}
+            onSelectPerson={setSelectedPerson}
           />
         )}
       </main>
+
+      <CharacterProfileModal
+        person={selectedPerson}
+        open={!!selectedPerson}
+        onClose={() => setSelectedPerson(null)}
+      />
 
       <footer className="h-6" />
     </div>
