@@ -96,7 +96,6 @@ export default function BattlePage({ onBack }: Props) {
   } | null>(null);
   const [bossCooldownUntil, setBossCooldownUntil] = useState<number>(0);
 
-  // confirmed + in-flight boss attack locks, exact per boss/round/guild
   const [bossAttackLocks, setBossAttackLocks] = useState<Record<string, true>>(
     {}
   );
@@ -193,7 +192,7 @@ export default function BattlePage({ onBack }: Props) {
 
   const { top: guildTotals, err: guildTotalsErr } = useGuildTotals(
     pageActive,
-    activeSessionId
+    bossInstanceId
   );
 
   const activeRound = useMemo(() => {
@@ -227,7 +226,6 @@ export default function BattlePage({ onBack }: Props) {
   const studentHealMode = !isTeacher && groupAction === "HEAL";
   const studentControlsDisabled = studentAttackMode;
 
-  // clear local locks whenever battle context changes
   useEffect(() => {
     setBossAttackLocks({});
   }, [bossInstanceId, activeRound, activeSessionId]);
@@ -486,7 +484,6 @@ export default function BattlePage({ onBack }: Props) {
         return;
       }
 
-      // lock immediately for this exact guild in this exact round
       setBossAttackLocks((prev) => ({
         ...prev,
         [localKey]: true,
@@ -502,7 +499,7 @@ export default function BattlePage({ onBack }: Props) {
       );
 
       applyOptimisticBoss(boss.bossInstanceId, optimisticHP, boss.maxHP);
-      setBoss({ ...boss, currentHP: optimisticHP });
+      setBoss((prev) => (prev ? { ...prev, currentHP: optimisticHP } : prev));
 
       try {
         const result = await submitBossDelta({
@@ -521,10 +518,7 @@ export default function BattlePage({ onBack }: Props) {
 
         if ((result as any)?.deduped) {
           clearBossPending(boss.bossInstanceId);
-          setBoss({
-            ...boss,
-            currentHP: previousHP,
-          });
+          setBoss((prev) => (prev ? { ...prev, currentHP: previousHP } : prev));
           setBossSubmitErr(
             (result as any)?.reason || "This guild already attacked this round."
           );
@@ -537,13 +531,17 @@ export default function BattlePage({ onBack }: Props) {
           return;
         }
 
-        setBoss({
-          ...boss,
-          currentHP:
-            typeof (result as any)?.currentHP === "number"
-              ? (result as any).currentHP
-              : optimisticHP,
-        });
+        setBoss((prev) =>
+          prev
+            ? {
+                ...prev,
+                currentHP:
+                  typeof (result as any)?.currentHP === "number"
+                    ? (result as any).currentHP
+                    : optimisticHP,
+              }
+            : prev
+        );
 
         setBossBanner({ type: "ok", msg: "Boss hit submitted ✅" });
         setBossCooldownUntil(Date.now() + BOSS_COOLDOWN_MS);
@@ -551,12 +549,8 @@ export default function BattlePage({ onBack }: Props) {
         setBossDamage("");
       } catch {
         clearBossPending(boss.bossInstanceId);
-        setBoss({
-          ...boss,
-          currentHP: previousHP,
-        });
+        setBoss((prev) => (prev ? { ...prev, currentHP: previousHP } : prev));
 
-        // request really failed, so remove the local lock
         setBossAttackLocks((prev) => {
           const next = { ...prev };
           delete next[localKey];
