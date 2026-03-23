@@ -38,6 +38,9 @@ type GuildTheme = {
   modalGlow: string;
   selectedCardClass: string;
   selectedCardGlow: string;
+  accentText: string;
+  accentBadge: string;
+  accentPanel: string;
 };
 
 function skillsToArray(skills: any): string[] {
@@ -180,14 +183,18 @@ function getGuildTheme(guild?: string): GuildTheme {
         softGlow: "shadow-[0_0_22px_rgba(245,158,11,0.10)]",
         bannerText: "text-amber-100",
         portraitGlow:
-          "bg-[radial-gradient(circle_at_center,rgba(245,158,11,0.14),transparent_72%)]",
+          "bg-[radial-gradient(circle_at_center,rgba(245,158,11,0.16),transparent_72%)]",
         accentLine: "from-amber-500/30 via-amber-300/30 to-transparent",
         sigilText: "text-amber-300/6",
         modalGlow:
           "shadow-[0_0_0_1px_rgba(245,158,11,0.06),0_0_26px_rgba(245,158,11,0.08),0_30px_100px_rgba(0,0,0,0.65)]",
         selectedCardClass:
           "border-amber-400/70 bg-amber-950/20 ring-1 ring-amber-400/35",
-        selectedCardGlow: "shadow-[0_14px_30px_rgba(245,158,11,0.18)]",
+        selectedCardGlow: "shadow-[0_14px_34px_rgba(245,158,11,0.22)]",
+        accentText: "text-amber-200",
+        accentBadge: "border-amber-500/30 bg-amber-500/10 text-amber-200",
+        accentPanel:
+          "before:bg-[linear-gradient(90deg,rgba(245,158,11,0.55),rgba(245,158,11,0.02))]",
       };
     case "Shadows":
       return {
@@ -195,14 +202,18 @@ function getGuildTheme(guild?: string): GuildTheme {
         softGlow: "shadow-[0_0_22px_rgba(168,85,247,0.10)]",
         bannerText: "text-violet-100",
         portraitGlow:
-          "bg-[radial-gradient(circle_at_center,rgba(168,85,247,0.14),transparent_72%)]",
+          "bg-[radial-gradient(circle_at_center,rgba(168,85,247,0.16),transparent_72%)]",
         accentLine: "from-violet-500/30 via-violet-300/30 to-transparent",
         sigilText: "text-violet-300/6",
         modalGlow:
           "shadow-[0_0_0_1px_rgba(168,85,247,0.08),0_0_26px_rgba(168,85,247,0.08),0_30px_100px_rgba(0,0,0,0.65)]",
         selectedCardClass:
           "border-violet-400/70 bg-violet-950/20 ring-1 ring-violet-400/35",
-        selectedCardGlow: "shadow-[0_14px_30px_rgba(168,85,247,0.18)]",
+        selectedCardGlow: "shadow-[0_14px_34px_rgba(168,85,247,0.22)]",
+        accentText: "text-violet-200",
+        accentBadge: "border-violet-500/30 bg-violet-500/10 text-violet-200",
+        accentPanel:
+          "before:bg-[linear-gradient(90deg,rgba(168,85,247,0.55),rgba(168,85,247,0.02))]",
       };
     case "Guardians":
       return {
@@ -210,14 +221,18 @@ function getGuildTheme(guild?: string): GuildTheme {
         softGlow: "shadow-[0_0_22px_rgba(56,189,248,0.10)]",
         bannerText: "text-sky-100",
         portraitGlow:
-          "bg-[radial-gradient(circle_at_center,rgba(56,189,248,0.14),transparent_72%)]",
+          "bg-[radial-gradient(circle_at_center,rgba(56,189,248,0.16),transparent_72%)]",
         accentLine: "from-sky-500/30 via-sky-300/30 to-transparent",
         sigilText: "text-sky-300/6",
         modalGlow:
           "shadow-[0_0_0_1px_rgba(56,189,248,0.08),0_0_26px_rgba(56,189,248,0.08),0_30px_100px_rgba(0,0,0,0.65)]",
         selectedCardClass:
           "border-sky-400/70 bg-sky-950/20 ring-1 ring-sky-400/35",
-        selectedCardGlow: "shadow-[0_14px_30px_rgba(56,189,248,0.18)]",
+        selectedCardGlow: "shadow-[0_14px_34px_rgba(56,189,248,0.22)]",
+        accentText: "text-sky-200",
+        accentBadge: "border-sky-500/30 bg-sky-500/10 text-sky-200",
+        accentPanel:
+          "before:bg-[linear-gradient(90deg,rgba(56,189,248,0.55),rgba(56,189,248,0.02))]",
       };
     case "Blades":
       return {
@@ -225,14 +240,18 @@ function getGuildTheme(guild?: string): GuildTheme {
         softGlow: "shadow-[0_0_22px_rgba(244,63,94,0.10)]",
         bannerText: "text-rose-100",
         portraitGlow:
-          "bg-[radial-gradient(circle_at_center,rgba(244,63,94,0.14),transparent_72%)]",
+          "bg-[radial-gradient(circle_at_center,rgba(244,63,94,0.16),transparent_72%)]",
         accentLine: "from-rose-500/30 via-rose-300/30 to-transparent",
         sigilText: "text-rose-300/6",
         modalGlow:
           "shadow-[0_0_0_1px_rgba(244,63,94,0.08),0_0_26px_rgba(244,63,94,0.08),0_30px_100px_rgba(0,0,0,0.65)]",
         selectedCardClass:
           "border-rose-400/70 bg-rose-950/20 ring-1 ring-rose-400/35",
-        selectedCardGlow: "shadow-[0_14px_30px_rgba(244,63,94,0.20)]",
+        selectedCardGlow: "shadow-[0_14px_34px_rgba(244,63,94,0.26)]",
+        accentText: "text-rose-200",
+        accentBadge: "border-rose-500/30 bg-rose-500/10 text-rose-200",
+        accentPanel:
+          "before:bg-[linear-gradient(90deg,rgba(244,63,94,0.58),rgba(244,63,94,0.02))]",
       };
     case "Scouts":
       return {
@@ -240,14 +259,18 @@ function getGuildTheme(guild?: string): GuildTheme {
         softGlow: "shadow-[0_0_22px_rgba(16,185,129,0.10)]",
         bannerText: "text-emerald-100",
         portraitGlow:
-          "bg-[radial-gradient(circle_at_center,rgba(16,185,129,0.14),transparent_72%)]",
+          "bg-[radial-gradient(circle_at_center,rgba(16,185,129,0.16),transparent_72%)]",
         accentLine: "from-emerald-500/30 via-emerald-300/30 to-transparent",
         sigilText: "text-emerald-300/6",
         modalGlow:
           "shadow-[0_0_0_1px_rgba(16,185,129,0.08),0_0_26px_rgba(16,185,129,0.08),0_30px_100px_rgba(0,0,0,0.65)]",
         selectedCardClass:
           "border-emerald-400/70 bg-emerald-950/20 ring-1 ring-emerald-400/35",
-        selectedCardGlow: "shadow-[0_14px_30px_rgba(16,185,129,0.18)]",
+        selectedCardGlow: "shadow-[0_14px_34px_rgba(16,185,129,0.22)]",
+        accentText: "text-emerald-200",
+        accentBadge: "border-emerald-500/30 bg-emerald-500/10 text-emerald-200",
+        accentPanel:
+          "before:bg-[linear-gradient(90deg,rgba(16,185,129,0.58),rgba(16,185,129,0.02))]",
       };
     case "Diplomats":
       return {
@@ -255,14 +278,18 @@ function getGuildTheme(guild?: string): GuildTheme {
         softGlow: "shadow-[0_0_22px_rgba(34,211,238,0.10)]",
         bannerText: "text-cyan-100",
         portraitGlow:
-          "bg-[radial-gradient(circle_at_center,rgba(34,211,238,0.14),transparent_72%)]",
+          "bg-[radial-gradient(circle_at_center,rgba(34,211,238,0.16),transparent_72%)]",
         accentLine: "from-cyan-500/30 via-cyan-300/30 to-transparent",
         sigilText: "text-cyan-300/6",
         modalGlow:
           "shadow-[0_0_0_1px_rgba(34,211,238,0.08),0_0_26px_rgba(34,211,238,0.08),0_30px_100px_rgba(0,0,0,0.65)]",
         selectedCardClass:
           "border-cyan-400/70 bg-cyan-950/20 ring-1 ring-cyan-400/35",
-        selectedCardGlow: "shadow-[0_14px_30px_rgba(34,211,238,0.18)]",
+        selectedCardGlow: "shadow-[0_14px_34px_rgba(34,211,238,0.22)]",
+        accentText: "text-cyan-200",
+        accentBadge: "border-cyan-500/30 bg-cyan-500/10 text-cyan-200",
+        accentPanel:
+          "before:bg-[linear-gradient(90deg,rgba(34,211,238,0.58),rgba(34,211,238,0.02))]",
       };
     default:
       return {
@@ -278,6 +305,10 @@ function getGuildTheme(guild?: string): GuildTheme {
         selectedCardClass:
           "border-zinc-400/70 bg-zinc-900/95 ring-1 ring-zinc-400/25",
         selectedCardGlow: "shadow-[0_14px_30px_rgba(0,0,0,0.34)]",
+        accentText: "text-zinc-200",
+        accentBadge: "border-zinc-500/30 bg-zinc-500/10 text-zinc-200",
+        accentPanel:
+          "before:bg-[linear-gradient(90deg,rgba(255,255,255,0.20),rgba(255,255,255,0.02))]",
       };
   }
 }
@@ -303,6 +334,19 @@ function getHealthState(current: number, max: number) {
     label: "Healthy",
     classes: "border-emerald-700/40 bg-emerald-950/30 text-emerald-200",
   };
+}
+
+function getCardTypeBadgeClass(type: string, guildTheme: GuildTheme) {
+  switch (type) {
+    case "relic":
+      return guildTheme.accentBadge;
+    case "potion":
+      return "border-sky-500/30 bg-sky-500/10 text-sky-200";
+    case "item":
+      return "border-zinc-500/30 bg-zinc-500/10 text-zinc-200";
+    default:
+      return "border-zinc-600/30 bg-zinc-800/50 text-zinc-300";
+  }
 }
 
 function SectionHeading({
@@ -478,13 +522,14 @@ function InventoryCardTile({
     <button
       type="button"
       onClick={() => onSelect(card)}
-      className={`group w-full overflow-hidden rounded-[20px] border text-left transition duration-200 ${
+      className={`group w-full overflow-hidden rounded-[20px] border text-left transition-all duration-250 ${
         isSelected
-          ? `${guildTheme.selectedCardClass} ${guildTheme.selectedCardGlow}`
-          : "border-zinc-800 bg-zinc-950/70 hover:-translate-y-[2px] hover:border-zinc-700 hover:bg-zinc-900/90"
+          ? `${guildTheme.selectedCardClass} ${guildTheme.selectedCardGlow} -translate-y-[2px]`
+          : "border-zinc-800 bg-zinc-950/70 hover:-translate-y-[2px] hover:border-zinc-700 hover:bg-zinc-900/90 hover:shadow-[0_10px_26px_rgba(0,0,0,0.22)]"
       }`}
     >
-      <div className="flex aspect-[5/6.7] w-full items-center justify-center overflow-hidden bg-zinc-950 p-2">
+      <div className="relative flex aspect-[5/6.7] w-full items-center justify-center overflow-hidden bg-zinc-950 p-2">
+        <div className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.08),transparent_50%)]" />
         {!imgError ? (
           <img
             src={card.imageUrl}
@@ -578,60 +623,113 @@ function EmptyDetailPanel({
   );
 }
 
-function SelectedCardPanel({
+function AnimatedSelectedCardPanel({
   card,
   inventory,
   grouped,
+  guildTheme,
 }: {
   card: ResolvedInventoryCard | null;
   inventory: ResolvedInventoryCard[];
   grouped: ReturnType<typeof groupInventory>;
+  guildTheme: GuildTheme;
 }) {
-  if (!card) {
+  const [displayCard, setDisplayCard] = useState<ResolvedInventoryCard | null>(
+    card
+  );
+  const [phase, setPhase] = useState<"in" | "out">("in");
+
+  useEffect(() => {
+    if (!card && !displayCard) return;
+
+    if (card?.id === displayCard?.id) return;
+
+    setPhase("out");
+    const t = window.setTimeout(() => {
+      setDisplayCard(card);
+      setPhase("in");
+    }, 140);
+
+    return () => window.clearTimeout(t);
+  }, [card, displayCard]);
+
+  if (!displayCard) {
     return <EmptyDetailPanel inventory={inventory} grouped={grouped} />;
   }
 
   return (
-    <div className="rounded-[22px] border border-zinc-800 bg-zinc-950/55 p-4">
+    <div
+      className={`relative overflow-hidden rounded-[22px] border border-zinc-800 bg-zinc-950/55 p-4 transition-all duration-200 ${
+        phase === "out"
+          ? "translate-y-1 opacity-0"
+          : "translate-y-0 opacity-100"
+      }`}
+    >
+      <div
+        className={`pointer-events-none absolute inset-x-0 top-0 h-[2px] opacity-90 ${guildTheme.accentPanel}`}
+      />
       <div className="space-y-4">
-        <div>
-          <div className="text-[10px] uppercase tracking-[0.18em] text-zinc-500">
-            Card Details
+        <div className="flex items-start gap-3">
+          <div className="h-20 w-16 shrink-0 overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900">
+            <img
+              src={displayCard.imageUrl}
+              alt={displayCard.name}
+              className="h-full w-full object-contain"
+            />
           </div>
-          <div className="mt-2 text-xl font-semibold leading-tight text-zinc-100">
-            {card.name}
-          </div>
-          <div className="mt-1 text-[10px] uppercase tracking-[0.18em] text-zinc-500">
-            {card.type}
+
+          <div className="min-w-0">
+            <div className="text-[10px] uppercase tracking-[0.18em] text-zinc-500">
+              Card Details
+            </div>
+            <div className="mt-1 text-xl font-semibold leading-tight text-zinc-100">
+              {displayCard.name}
+            </div>
+
+            <div className="mt-2 flex flex-wrap gap-2">
+              <span
+                className={`rounded-full border px-2.5 py-1 text-[10px] uppercase tracking-[0.14em] ${getCardTypeBadgeClass(
+                  displayCard.type,
+                  guildTheme
+                )}`}
+              >
+                {displayCard.type}
+              </span>
+
+              {displayCard.quantity && displayCard.quantity > 1 ? (
+                <span className="rounded-full border border-zinc-700 bg-zinc-900 px-2.5 py-1 text-[10px] text-zinc-300">
+                  Quantity: {displayCard.quantity}
+                </span>
+              ) : null}
+            </div>
           </div>
         </div>
 
-        <div className="rounded-[18px] border border-zinc-800 bg-zinc-900/40 p-3 text-sm leading-6 text-zinc-300">
-          {card.effect}
+        <div className="rounded-[18px] border border-zinc-800 bg-zinc-900/40 p-3">
+          <div className="mb-1 text-[10px] uppercase tracking-[0.18em] text-zinc-500">
+            Effect
+          </div>
+          <div className="text-sm leading-6 text-zinc-300">
+            {displayCard.effect}
+          </div>
         </div>
 
         <div className="flex flex-wrap gap-2">
-          {card.useText ? (
+          {displayCard.useText ? (
             <span className="rounded-full border border-zinc-700 bg-zinc-900 px-2.5 py-1 text-[10px] text-zinc-300">
-              {card.useText}
+              {displayCard.useText}
             </span>
           ) : null}
 
-          {card.isEquipped ? (
+          {displayCard.isEquipped ? (
             <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-1 text-[10px] text-emerald-200">
               Equipped
             </span>
           ) : null}
 
-          {card.isConsumed ? (
+          {displayCard.isConsumed ? (
             <span className="rounded-full border border-zinc-700 bg-zinc-800 px-2.5 py-1 text-[10px] text-zinc-300">
               Used
-            </span>
-          ) : null}
-
-          {card.quantity && card.quantity > 1 ? (
-            <span className="rounded-full border border-zinc-700 bg-zinc-900 px-2.5 py-1 text-[10px] text-zinc-300">
-              Quantity: {card.quantity}
             </span>
           ) : null}
         </div>
@@ -749,10 +847,11 @@ function InventorySection({
 
           <div className="min-[1320px]:hidden">
             <div ref={inlineDetailRef}>
-              <SelectedCardPanel
+              <AnimatedSelectedCardPanel
                 card={selectedCard}
                 inventory={inventory}
                 grouped={grouped}
+                guildTheme={guildTheme}
               />
             </div>
           </div>
@@ -777,10 +876,11 @@ function InventorySection({
             </div>
 
             <div className="hidden min-w-0 min-[1320px]:block">
-              <SelectedCardPanel
+              <AnimatedSelectedCardPanel
                 card={selectedCard}
                 inventory={inventory}
                 grouped={grouped}
+                guildTheme={guildTheme}
               />
             </div>
           </div>
@@ -790,17 +890,51 @@ function InventorySection({
   );
 }
 
-function AttributeSection({ person }: { person: any }) {
+function AttributeSection({
+  person,
+  guildTheme,
+}: {
+  person: any;
+  guildTheme: GuildTheme;
+}) {
+  const stats = [
+    ["Strength", person.str ?? 0],
+    ["Dexterity", person.dex ?? 0],
+    ["Constitution", person.con ?? 0],
+    ["Intelligence", person.int ?? 0],
+    ["Wisdom", person.wis ?? 0],
+    ["Charisma", person.cha ?? 0],
+  ] as const;
+
+  const maxStat = Math.max(...stats.map(([, value]) => Number(value) || 0));
+
   return (
     <Surface className="p-3">
       <SectionHeading icon="⚔️" title="Attributes" className="mb-2" />
       <div className="grid grid-cols-1 gap-x-4 gap-y-1.5 sm:grid-cols-2">
-        <StatBar label="Strength" value={person.str} />
-        <StatBar label="Dexterity" value={person.dex} />
-        <StatBar label="Constitution" value={person.con} />
-        <StatBar label="Intelligence" value={person.int} />
-        <StatBar label="Wisdom" value={person.wis} />
-        <StatBar label="Charisma" value={person.cha} />
+        {stats.map(([label, value]) => {
+          const isTop = Number(value) === maxStat && maxStat > 0;
+          return (
+            <div
+              key={label}
+              className={`rounded-xl transition-colors ${
+                isTop ? "bg-white/[0.02]" : ""
+              }`}
+            >
+              <div className="mb-1 flex items-center justify-between px-1">
+                <span className="text-sm text-zinc-300">{label}</span>
+                {isTop ? (
+                  <span
+                    className={`text-[10px] uppercase tracking-[0.14em] ${guildTheme.accentText}`}
+                  >
+                    peak
+                  </span>
+                ) : null}
+              </div>
+              <StatBar label={label} value={value} />
+            </div>
+          );
+        })}
       </div>
     </Surface>
   );
@@ -824,7 +958,7 @@ function SkillsSection({ skillList }: { skillList: string[] }) {
           {skillList.map((skill) => (
             <span
               key={skill}
-              className="rounded-full border border-zinc-700 bg-zinc-900 px-3 py-1.5 text-[11px] text-zinc-200"
+              className="rounded-full border border-zinc-700 bg-zinc-900 px-3 py-1.5 text-[11px] text-zinc-200 transition hover:-translate-y-[1px] hover:border-zinc-500 hover:text-white"
             >
               {skill}
             </span>
@@ -840,6 +974,18 @@ export default function CharacterProfileModal({
   open,
   onClose,
 }: Props) {
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    if (!open) {
+      setVisible(false);
+      return;
+    }
+
+    const frame = requestAnimationFrame(() => setVisible(true));
+    return () => cancelAnimationFrame(frame);
+  }, [open]);
+
   useEffect(() => {
     if (!open) return;
 
@@ -897,7 +1043,9 @@ export default function CharacterProfileModal({
 
       <div className="absolute inset-0 flex items-center justify-center p-2 sm:p-3 lg:p-5">
         <div
-          className={`relative h-[94vh] w-full max-w-[1520px] overflow-y-auto overflow-x-hidden rounded-[34px] border border-zinc-800 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.03),transparent_24%),linear-gradient(180deg,#0d0d11_0%,#08080a_100%)] shadow-2xl shadow-black/70 ${guildTheme.modalGlow}`}
+          className={`relative h-[94vh] w-full max-w-[1520px] overflow-y-auto overflow-x-hidden rounded-[34px] border border-zinc-800 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.03),transparent_24%),linear-gradient(180deg,#0d0d11_0%,#08080a_100%)] shadow-2xl shadow-black/70 transition-all duration-300 ${
+            visible ? "translate-y-0 opacity-100" : "translate-y-2 opacity-0"
+          } ${guildTheme.modalGlow}`}
         >
           <button
             onClick={onClose}
@@ -924,6 +1072,7 @@ export default function CharacterProfileModal({
                     <div
                       className={`absolute inset-0 ${guildTheme.portraitGlow}`}
                     />
+                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.08),transparent_45%)]" />
                     <div className="relative flex h-full w-full items-center justify-center">
                       <Avatar
                         name={fullName}
@@ -936,7 +1085,7 @@ export default function CharacterProfileModal({
                 </div>
 
                 <div className="mt-4 text-center">
-                  <div className="text-[1.75rem] font-semibold leading-tight tracking-[-0.03em] text-zinc-50">
+                  <div className="text-[1.9rem] font-semibold leading-tight tracking-[-0.04em] text-zinc-50">
                     {fullName}
                   </div>
 
@@ -987,11 +1136,11 @@ export default function CharacterProfileModal({
                     <div className="overflow-hidden rounded-full bg-zinc-950/80 p-[2px] shadow-[inset_0_0_8px_rgba(0,0,0,0.55)]">
                       <div className="h-3.5 overflow-hidden rounded-full bg-zinc-900/60">
                         <div
-                          className="h-full rounded-full transition-[width] duration-300"
+                          className="h-full rounded-full transition-[width] duration-500"
                           style={{
                             width: `${Math.round(hpPct * 100)}%`,
                             backgroundColor: hpFill,
-                            boxShadow: isDead ? "none" : `0 0 10px ${hpFill}55`,
+                            boxShadow: isDead ? "none" : `0 0 12px ${hpFill}66`,
                           }}
                         />
                       </div>
@@ -1010,7 +1159,7 @@ export default function CharacterProfileModal({
             <main className="min-w-0">
               <div className="space-y-3">
                 <div className="grid gap-3 xl:grid-cols-[minmax(0,1.45fr)_minmax(260px,0.55fr)]">
-                  <AttributeSection person={person} />
+                  <AttributeSection person={person} guildTheme={guildTheme} />
                   <SkillsSection skillList={skillList} />
                 </div>
 
