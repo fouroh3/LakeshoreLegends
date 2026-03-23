@@ -18,35 +18,41 @@ const GUILD_STYLES: Record<
     ring: string;
   }
 > = {
-  red: {
+  blades: {
     active:
-      "border-red-400/40 bg-red-500/18 text-red-100 shadow-[0_0_24px_rgba(239,68,68,0.18)]",
-    idle: "border-red-500/20 bg-red-500/8 text-red-100/80 hover:bg-red-500/14",
-    ring: "shadow-[inset_0_0_0_1px_rgba(239,68,68,0.14)]",
+      "border-rose-400/40 bg-rose-500/16 text-rose-100 shadow-[0_0_20px_rgba(244,63,94,0.16)]",
+    idle: "border-rose-500/20 bg-rose-500/8 text-rose-100/80 hover:bg-rose-500/14",
+    ring: "shadow-[inset_0_0_0_1px_rgba(244,63,94,0.12)]",
   },
-  blue: {
+  diplomats: {
     active:
-      "border-sky-400/40 bg-sky-500/18 text-sky-100 shadow-[0_0_24px_rgba(56,189,248,0.18)]",
+      "border-cyan-400/40 bg-cyan-500/16 text-cyan-100 shadow-[0_0_20px_rgba(34,211,238,0.16)]",
+    idle: "border-cyan-500/20 bg-cyan-500/8 text-cyan-100/80 hover:bg-cyan-500/14",
+    ring: "shadow-[inset_0_0_0_1px_rgba(34,211,238,0.12)]",
+  },
+  guardians: {
+    active:
+      "border-sky-400/40 bg-sky-500/16 text-sky-100 shadow-[0_0_20px_rgba(56,189,248,0.16)]",
     idle: "border-sky-500/20 bg-sky-500/8 text-sky-100/80 hover:bg-sky-500/14",
-    ring: "shadow-[inset_0_0_0_1px_rgba(56,189,248,0.14)]",
+    ring: "shadow-[inset_0_0_0_1px_rgba(56,189,248,0.12)]",
   },
-  green: {
+  scholars: {
     active:
-      "border-emerald-400/40 bg-emerald-500/18 text-emerald-100 shadow-[0_0_24px_rgba(16,185,129,0.18)]",
-    idle: "border-emerald-500/20 bg-emerald-500/8 text-emerald-100/80 hover:bg-emerald-500/14",
-    ring: "shadow-[inset_0_0_0_1px_rgba(16,185,129,0.14)]",
-  },
-  yellow: {
-    active:
-      "border-amber-400/40 bg-amber-500/18 text-amber-100 shadow-[0_0_24px_rgba(245,158,11,0.18)]",
+      "border-amber-400/40 bg-amber-500/16 text-amber-100 shadow-[0_0_20px_rgba(245,158,11,0.16)]",
     idle: "border-amber-500/20 bg-amber-500/8 text-amber-100/80 hover:bg-amber-500/14",
-    ring: "shadow-[inset_0_0_0_1px_rgba(245,158,11,0.14)]",
+    ring: "shadow-[inset_0_0_0_1px_rgba(245,158,11,0.12)]",
   },
-  purple: {
+  scouts: {
     active:
-      "border-violet-400/40 bg-violet-500/18 text-violet-100 shadow-[0_0_24px_rgba(139,92,246,0.18)]",
+      "border-emerald-400/40 bg-emerald-500/16 text-emerald-100 shadow-[0_0_20px_rgba(16,185,129,0.16)]",
+    idle: "border-emerald-500/20 bg-emerald-500/8 text-emerald-100/80 hover:bg-emerald-500/14",
+    ring: "shadow-[inset_0_0_0_1px_rgba(16,185,129,0.12)]",
+  },
+  shadows: {
+    active:
+      "border-violet-400/40 bg-violet-500/16 text-violet-100 shadow-[0_0_20px_rgba(168,85,247,0.16)]",
     idle: "border-violet-500/20 bg-violet-500/8 text-violet-100/80 hover:bg-violet-500/14",
-    ring: "shadow-[inset_0_0_0_1px_rgba(139,92,246,0.14)]",
+    ring: "shadow-[inset_0_0_0_1px_rgba(168,85,247,0.12)]",
   },
 };
 
@@ -88,6 +94,7 @@ function PillButton({
 }) {
   return (
     <button
+      type="button"
       onClick={onClick}
       className={[
         "rounded-full border px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] transition sm:text-[11px]",
@@ -230,18 +237,23 @@ export default function AbilitiesDashboard({ data }: Props) {
 
   return (
     <Fragment>
-      <div className="px-3 pt-3 sm:px-4 lg:sticky lg:top-3 lg:z-50">
+      <div className="px-3 pt-3 sm:px-4 lg:sticky lg:top-2 lg:z-40">
         <div className="mx-auto max-w-[1380px]">
-          <div className="group rounded-[18px] border border-white/10 bg-[linear-gradient(180deg,rgba(10,14,24,0.88),rgba(7,10,18,0.78))] shadow-[0_12px_34px_rgba(0,0,0,0.28)] backdrop-blur-xl transition-all duration-300 lg:hover:shadow-[0_18px_44px_rgba(0,0,0,0.38)]">
-            <div className="px-3 py-2.5 sm:px-4 sm:py-3">
-              <div className="flex flex-col items-center gap-2.5">
+          <div className="rounded-[20px] border border-white/10 bg-[linear-gradient(180deg,rgba(10,14,24,0.9),rgba(7,10,18,0.82))] shadow-[0_12px_34px_rgba(0,0,0,0.3)] backdrop-blur-xl">
+            <div className="px-3 py-3 sm:px-4 sm:py-3.5">
+              <div className="flex flex-col items-center gap-3">
                 <div className="flex w-full flex-col items-center justify-center gap-2 lg:flex-row">
-                  <div className="w-full max-w-[360px] transition-all duration-300 lg:max-w-[280px] lg:group-hover:max-w-[420px]">
+                  <div className="w-full max-w-[420px]">
                     <input
                       value={query}
                       onChange={(e) => setQuery(e.target.value)}
                       placeholder="Search player, homeroom, or guild..."
-                      className="h-9 w-full rounded-full border border-white/10 bg-white/8 px-4 text-sm text-white outline-none transition placeholder:text-white/35 focus:border-cyan-300/35 focus:bg-white/10 sm:h-10"
+                      autoComplete="on"
+                      autoCorrect="off"
+                      autoCapitalize="none"
+                      spellCheck={false}
+                      name="dashboard-search"
+                      className="h-10 w-full rounded-full border border-white/10 bg-white/8 px-4 text-sm text-white outline-none transition placeholder:text-white/35 focus:border-cyan-300/35 focus:bg-white/10"
                     />
                   </div>
 
@@ -249,7 +261,7 @@ export default function AbilitiesDashboard({ data }: Props) {
                     <select
                       value={sortKey}
                       onChange={(e) => setSortKey(e.target.value as SortKey)}
-                      className="h-9 rounded-full border border-white/10 bg-white/8 px-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-white outline-none transition hover:bg-white/10 sm:px-4 sm:text-[11px]"
+                      className="h-10 rounded-full border border-white/10 bg-white/8 px-4 text-[10px] font-semibold uppercase tracking-[0.16em] text-white outline-none transition hover:bg-white/10 sm:text-[11px]"
                     >
                       <option value="homeroom">Sort: Homeroom</option>
                       <option value="name-az">Sort: Name A–Z</option>
@@ -258,8 +270,9 @@ export default function AbilitiesDashboard({ data }: Props) {
                     </select>
 
                     <button
+                      type="button"
                       onClick={() => setAdvancedOpen((prev) => !prev)}
-                      className={`h-9 rounded-full border px-3 text-[10px] font-semibold uppercase tracking-[0.16em] transition sm:px-4 sm:text-[11px] ${
+                      className={`h-10 rounded-full border px-4 text-[10px] font-semibold uppercase tracking-[0.16em] transition sm:text-[11px] ${
                         advancedOpen
                           ? "border-cyan-300/35 bg-cyan-400/16 text-cyan-100"
                           : "border-white/10 bg-white/8 text-white/75 hover:bg-white/10 hover:text-white"
@@ -269,158 +282,14 @@ export default function AbilitiesDashboard({ data }: Props) {
                     </button>
 
                     <button
+                      type="button"
                       onClick={resetFilters}
-                      className="h-9 rounded-full border border-white/10 bg-white/8 px-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/75 transition hover:bg-white/10 hover:text-white sm:px-4 sm:text-[11px]"
+                      className="h-10 rounded-full border border-white/10 bg-white/8 px-4 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/75 transition hover:bg-white/10 hover:text-white sm:text-[11px]"
                     >
                       Reset
                     </button>
                   </div>
                 </div>
-
-                <div className="hidden w-full overflow-hidden transition-all duration-300 lg:block lg:max-h-[42px] lg:group-hover:max-h-[220px]">
-                  <div className="flex flex-col items-center gap-2 pt-0.5">
-                    <div className="flex flex-wrap items-center justify-center gap-2">
-                      <PillButton
-                        active={selectedHRs.length === 0}
-                        onClick={() => setSelectedHRs([])}
-                      >
-                        All Homerooms
-                      </PillButton>
-
-                      {homerooms.map((hr) => (
-                        <PillButton
-                          key={hr}
-                          active={selectedHRs.includes(hr)}
-                          onClick={() => toggleHR(hr)}
-                        >
-                          {hr}
-                        </PillButton>
-                      ))}
-                    </div>
-
-                    <div className="flex flex-wrap items-center justify-center gap-2">
-                      <PillButton
-                        active={selectedGuilds.length === 0}
-                        onClick={() => setSelectedGuilds([])}
-                      >
-                        All Guilds
-                      </PillButton>
-
-                      {guilds.map((guild) => {
-                        const key = guild.toLowerCase();
-                        const styles = GUILD_STYLES[key];
-
-                        return (
-                          <button
-                            key={guild}
-                            onClick={() => toggleGuild(guild)}
-                            className={[
-                              "rounded-full border px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] transition sm:text-[11px]",
-                              styles
-                                ? selectedGuilds.includes(guild)
-                                  ? `${styles.active} ${styles.ring}`
-                                  : `${styles.idle} ${styles.ring}`
-                                : selectedGuilds.includes(guild)
-                                ? "border-white/20 bg-white/16 text-white"
-                                : "border-white/10 bg-white/6 text-white/75 hover:bg-white/10 hover:text-white",
-                            ].join(" ")}
-                          >
-                            {guild}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex w-full flex-col items-center gap-2 lg:hidden">
-                  <div className="flex flex-wrap items-center justify-center gap-2">
-                    <PillButton
-                      active={selectedHRs.length === 0}
-                      onClick={() => setSelectedHRs([])}
-                    >
-                      All Homerooms
-                    </PillButton>
-
-                    {homerooms.map((hr) => (
-                      <PillButton
-                        key={hr}
-                        active={selectedHRs.includes(hr)}
-                        onClick={() => toggleHR(hr)}
-                      >
-                        {hr}
-                      </PillButton>
-                    ))}
-                  </div>
-
-                  <div className="flex flex-wrap items-center justify-center gap-2">
-                    <PillButton
-                      active={selectedGuilds.length === 0}
-                      onClick={() => setSelectedGuilds([])}
-                    >
-                      All Guilds
-                    </PillButton>
-
-                    {guilds.map((guild) => {
-                      const key = guild.toLowerCase();
-                      const styles = GUILD_STYLES[key];
-
-                      return (
-                        <button
-                          key={guild}
-                          onClick={() => toggleGuild(guild)}
-                          className={[
-                            "rounded-full border px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] transition sm:text-[11px]",
-                            styles
-                              ? selectedGuilds.includes(guild)
-                                ? `${styles.active} ${styles.ring}`
-                                : `${styles.idle} ${styles.ring}`
-                              : selectedGuilds.includes(guild)
-                              ? "border-white/20 bg-white/16 text-white"
-                              : "border-white/10 bg-white/6 text-white/75 hover:bg-white/10 hover:text-white",
-                          ].join(" ")}
-                        >
-                          {guild}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {advancedOpen && (
-                  <div className="w-full max-w-[760px] rounded-[16px] border border-white/8 bg-black/18 px-3 py-3 sm:px-4">
-                    <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
-                      <select
-                        value={attrFilterKey}
-                        onChange={(e) => setAttrFilterKey(e.target.value)}
-                        className="h-10 min-w-[160px] rounded-full border border-white/10 bg-white/8 px-4 text-sm text-white outline-none"
-                      >
-                        <option value="">Any Attribute</option>
-                        <option value="str">STR</option>
-                        <option value="dex">DEX</option>
-                        <option value="con">CON</option>
-                        <option value="int">INT</option>
-                        <option value="wis">WIS</option>
-                        <option value="cha">CHA</option>
-                      </select>
-
-                      <input
-                        type="number"
-                        min={0}
-                        value={attrFilterMin}
-                        onChange={(e) =>
-                          setAttrFilterMin(Number(e.target.value) || 0)
-                        }
-                        className="h-10 w-[110px] rounded-full border border-white/10 bg-white/8 px-4 text-center text-sm text-white outline-none"
-                        placeholder="Min"
-                      />
-
-                      <div className="text-center text-[11px] font-semibold uppercase tracking-[0.16em] text-white/45">
-                        Attribute minimum filter
-                      </div>
-                    </div>
-                  </div>
-                )}
 
                 <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/45 sm:text-[11px]">
                   <span>{sortedData.length} shown</span>
@@ -429,13 +298,103 @@ export default function AbilitiesDashboard({ data }: Props) {
                     <span>{activeFilterCount} active filters</span>
                   )}
                 </div>
+
+                {advancedOpen && (
+                  <div className="w-full rounded-[18px] border border-white/8 bg-black/18 px-3 py-3 sm:px-4">
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="flex flex-wrap items-center justify-center gap-2">
+                        <PillButton
+                          active={selectedHRs.length === 0}
+                          onClick={() => setSelectedHRs([])}
+                        >
+                          All Homerooms
+                        </PillButton>
+
+                        {homerooms.map((hr) => (
+                          <PillButton
+                            key={hr}
+                            active={selectedHRs.includes(hr)}
+                            onClick={() => toggleHR(hr)}
+                          >
+                            {hr}
+                          </PillButton>
+                        ))}
+                      </div>
+
+                      <div className="flex flex-wrap items-center justify-center gap-2">
+                        <PillButton
+                          active={selectedGuilds.length === 0}
+                          onClick={() => setSelectedGuilds([])}
+                        >
+                          All Guilds
+                        </PillButton>
+
+                        {guilds.map((guild) => {
+                          const key = guild.toLowerCase();
+                          const styles = GUILD_STYLES[key];
+
+                          return (
+                            <button
+                              key={guild}
+                              type="button"
+                              onClick={() => toggleGuild(guild)}
+                              className={[
+                                "rounded-full border px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] transition sm:text-[11px]",
+                                styles
+                                  ? selectedGuilds.includes(guild)
+                                    ? `${styles.active} ${styles.ring}`
+                                    : `${styles.idle} ${styles.ring}`
+                                  : selectedGuilds.includes(guild)
+                                  ? "border-white/20 bg-white/16 text-white"
+                                  : "border-white/10 bg-white/6 text-white/75 hover:bg-white/10 hover:text-white",
+                              ].join(" ")}
+                            >
+                              {guild}
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
+                        <select
+                          value={attrFilterKey}
+                          onChange={(e) => setAttrFilterKey(e.target.value)}
+                          className="h-10 min-w-[160px] rounded-full border border-white/10 bg-white/8 px-4 text-sm text-white outline-none"
+                        >
+                          <option value="">Any Attribute</option>
+                          <option value="str">Strength</option>
+                          <option value="dex">Dexterity</option>
+                          <option value="con">Constitution</option>
+                          <option value="int">Intelligence</option>
+                          <option value="wis">Wisdom</option>
+                          <option value="cha">Charisma</option>
+                        </select>
+
+                        <input
+                          type="number"
+                          min={0}
+                          value={attrFilterMin}
+                          onChange={(e) =>
+                            setAttrFilterMin(Number(e.target.value) || 0)
+                          }
+                          className="h-10 w-[110px] rounded-full border border-white/10 bg-white/8 px-4 text-center text-sm text-white outline-none"
+                          placeholder="Min"
+                        />
+
+                        <div className="text-center text-[11px] font-semibold uppercase tracking-[0.16em] text-white/45">
+                          Attribute minimum filter
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="px-3 pb-8 pt-4 sm:px-4 sm:pt-5 lg:pt-5">
+      <div className="px-3 pb-8 pt-4 sm:px-4 sm:pt-5">
         <div className="mx-auto max-w-[1380px]">
           <AbilitiesGrid>
             {sortedData.map((person, index) => (

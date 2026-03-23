@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import Avatar from "./Avatar";
+import { hpStatus } from "../utils/hpStatus";
 import { GuildBadge } from "./GuildBadge";
 import { hpBarColorFromPct } from "../utils/hpColor";
 import {
@@ -342,29 +343,6 @@ function getGuildTheme(guild?: string): GuildTheme {
         shimmerClass: "from-transparent via-white/10 to-transparent",
       };
   }
-}
-
-function getHealthState(current: number, max: number) {
-  const pct = current / Math.max(1, max);
-
-  if (current <= 0) {
-    return {
-      label: "Defeated",
-      classes: "border-zinc-700 bg-zinc-900 text-zinc-300",
-    };
-  }
-
-  if (pct <= 0.5) {
-    return {
-      label: "Wounded",
-      classes: "border-amber-700/40 bg-amber-950/30 text-amber-200",
-    };
-  }
-
-  return {
-    label: "Healthy",
-    classes: "border-emerald-700/40 bg-emerald-950/30 text-emerald-200",
-  };
 }
 
 function getCardTypeBadgeClass(type: string, guildTheme: GuildTheme) {
@@ -1042,7 +1020,7 @@ function HeroBanner({
 }: {
   fullName: string;
   person: any;
-  healthState: { label: string; classes: string };
+  healthState: { label: string; pillClass: string };
   guildTheme: GuildTheme;
 }) {
   return (
@@ -1095,7 +1073,7 @@ function HeroBanner({
               {person.homeroom || "—"}
             </span>
             <span
-              className={`rounded-full border px-3 py-1 text-[11px] font-medium ${healthState.classes}`}
+              className={`rounded-full px-3 py-1 text-[11px] font-medium ${healthState.pillClass}`}
             >
               {healthState.label}
             </span>
@@ -1313,7 +1291,7 @@ export default function CharacterProfileModal({
   const hpFill = isDead ? "rgba(113,113,122,1)" : hpBarColorFromPct(hpPct);
 
   const guildTheme = getGuildTheme(person.guild);
-  const healthState = getHealthState(hpCur, hpBase);
+  const healthState = hpStatus(hpCur, hpBase);
 
   return (
     <div className="fixed inset-0 z-[100]">

@@ -21,6 +21,7 @@ const densityConfig: Record<
     avatarSize: number;
     nameSize: string;
     metaSize: string;
+    headerGap: string;
   }
 > = {
   comfortable: {
@@ -30,6 +31,7 @@ const densityConfig: Record<
     avatarSize: 58,
     nameSize: "text-[17px]",
     metaSize: "text-xs",
+    headerGap: "gap-3",
   },
   compact: {
     padding: "p-3",
@@ -38,6 +40,7 @@ const densityConfig: Record<
     avatarSize: 54,
     nameSize: "text-[16px]",
     metaSize: "text-[11px]",
+    headerGap: "gap-3",
   },
   ultra: {
     padding: "p-2.5",
@@ -46,40 +49,11 @@ const densityConfig: Record<
     avatarSize: 50,
     nameSize: "text-[15px]",
     metaSize: "text-[10px]",
+    headerGap: "gap-2.5",
   },
 };
 
-function hpStatus(current: number, base: number) {
-  const safeBase = Math.max(1, base || 1);
-  const pct = Math.max(0, Math.min(1, current / safeBase));
-
-  if (current <= 0) {
-    return {
-      label: "Dead",
-      pillClass: "bg-zinc-800 text-zinc-200 border border-zinc-700",
-    };
-  }
-
-  if (pct < 0.4) {
-    return {
-      label: "Critical",
-      pillClass: "bg-red-950/50 text-red-200 border border-red-900/50",
-    };
-  }
-
-  if (pct < 0.7) {
-    return {
-      label: "Wounded",
-      pillClass: "bg-amber-950/40 text-amber-200 border border-amber-900/50",
-    };
-  }
-
-  return {
-    label: "Healthy",
-    pillClass:
-      "bg-emerald-950/40 text-emerald-200 border border-emerald-900/50",
-  };
-}
+import { hpStatus } from "../utils/hpStatus";
 
 function getGuildTintClasses(guild?: string) {
   switch (String(guild || "").trim()) {
@@ -197,7 +171,7 @@ export default function AbilityCard({
       type="button"
       onClick={onClick}
       className={[
-        `group relative w-full min-w-0 text-left flex flex-col ${cfg.gap} ${cfg.padding} rounded-[24px] overflow-hidden`,
+        `group relative flex w-full min-w-0 flex-col ${cfg.gap} ${cfg.padding} overflow-hidden rounded-[24px] text-left`,
         "border border-zinc-800/70 bg-[linear-gradient(180deg,rgba(24,24,27,0.92),rgba(10,10,12,0.96))]",
         guildTint.glow,
         guildTint.ring,
@@ -210,20 +184,23 @@ export default function AbilityCard({
       />
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.05),transparent_36%)] opacity-80" />
 
-      <div className="relative flex items-start justify-between gap-3">
-        <div className="flex min-w-0 items-start gap-2.5">
-          <Avatar
-            name={fullName}
-            src={portraitUrl}
-            badge={badgeIcon}
-            size={cfg.avatarSize}
-          />
+      <div
+        className={`relative flex items-start justify-between ${cfg.headerGap}`}
+      >
+        <div className="flex min-w-0 flex-1 items-start gap-3">
+          <div className="relative shrink-0 mr-1">
+            <Avatar name={fullName} src={portraitUrl} size={cfg.avatarSize} />
 
-          <div className="min-w-0 pt-0.5">
+            <div className="absolute right-0 top-0 z-10 flex h-6 w-6 -translate-y-1 translate-x-1 items-center justify-center rounded-full border border-white/10 bg-[rgba(18,18,24,0.92)] shadow-[0_2px_8px_rgba(0,0,0,0.22)]">
+              <span className="text-[10px] leading-none">{badgeIcon}</span>
+            </div>
+          </div>
+
+          <div className="min-w-0 flex-1 pr-1 pt-0.5">
             <div
               className={[
                 cfg.nameSize,
-                "font-semibold tracking-tight leading-tight text-zinc-100",
+                "font-semibold leading-[1.08] tracking-tight text-zinc-100",
                 "drop-shadow-[0_0_6px_rgba(255,255,255,0.08)]",
               ].join(" ")}
             >
@@ -231,7 +208,7 @@ export default function AbilityCard({
             </div>
 
             <div
-              className={`mt-1 ${cfg.metaSize} text-zinc-500 font-medium tracking-[0.02em]`}
+              className={`mt-1 ${cfg.metaSize} font-medium tracking-[0.02em] text-zinc-500`}
             >
               {homeroom || "—"}
             </div>
@@ -259,12 +236,12 @@ export default function AbilityCard({
 
               <div className="flex items-center gap-2">
                 <span
-                  className={`px-2 py-0.5 rounded-full text-[10px] leading-[12px] ${status.pillClass}`}
+                  className={`rounded-full px-2 py-0.5 text-[10px] leading-[12px] ${status.pillClass}`}
                   title={status.label}
                 >
                   {status.label}
                 </span>
-                <span className="text-[10px] font-semibold text-zinc-200 tabular-nums">
+                <span className="tabular-nums text-[10px] font-semibold text-zinc-200">
                   {hpCur}/{hpBase}
                 </span>
               </div>
