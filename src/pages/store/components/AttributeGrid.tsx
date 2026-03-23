@@ -46,6 +46,7 @@ export default function AttributeGrid({
             Choose one core stat to preview a +1 upgrade.
           </div>
         </div>
+
         <div className="rounded-full border border-white/[0.05] bg-white/[0.035] px-3 py-1.5 text-xs text-white/60">
           Cost: {xpPerPoint} XP
         </div>
@@ -57,14 +58,21 @@ export default function AttributeGrid({
           const next = current + 1;
           const isSelected = pendingTarget === key;
 
+          const cap = Math.max(5, next);
+          const currentPct = Math.max(8, (current / cap) * 100);
+          const nextPct = Math.max(10, (next / cap) * 100);
+
           return (
             <button
               key={key}
+              type="button"
               className={[
-                "group relative overflow-hidden rounded-[24px] border px-3 py-4 text-left transition-all duration-300",
+                "group relative overflow-hidden rounded-[26px] border px-4 py-5 text-left transition-all duration-300",
+                "shadow-[inset_0_1px_0_rgba(255,255,255,0.025)]",
                 isSelected
-                  ? `${guildTheme.border} ${guildTheme.softPanel} ${guildTheme.cardGlow} -translate-y-[2px] shadow-[0_12px_26px_rgba(0,0,0,0.26)]`
-                  : "border-white/[0.05] bg-[linear-gradient(180deg,rgba(18,22,31,0.62),rgba(8,10,16,0.78))] hover:-translate-y-[3px] hover:border-white/[0.07] hover:bg-[linear-gradient(180deg,rgba(22,27,38,0.72),rgba(10,13,19,0.84))] hover:shadow-[0_14px_28px_rgba(0,0,0,0.30),0_0_18px_rgba(34,211,238,0.04)]",
+                  ? `${guildTheme.border} ${guildTheme.softPanel} ${guildTheme.cardGlow} scale-[1.02] shadow-[0_16px_32px_rgba(0,0,0,0.32)]`
+                  : "border-white/[0.05] bg-[linear-gradient(180deg,rgba(18,22,31,0.62),rgba(8,10,16,0.78))] hover:-translate-y-[3px] hover:border-white/[0.08] hover:bg-[linear-gradient(180deg,rgba(22,27,38,0.72),rgba(10,13,19,0.84))]",
+                !canSelectAttribute ? "cursor-not-allowed opacity-75" : "",
               ].join(" ")}
               disabled={!canSelectAttribute}
               onClick={() => setPendingTarget(isSelected ? null : key)}
@@ -77,79 +85,72 @@ export default function AttributeGrid({
               }
             >
               <div
-                className={`pointer-events-none absolute inset-x-0 top-0 h-20 bg-gradient-to-b ${tint}`}
+                className={`pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b ${tint} opacity-80`}
               />
               <div
                 className={`pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r ${guildTheme.accent}`}
               />
 
-              <div className="relative flex items-center justify-between gap-2">
-                <span
-                  className={`inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/[0.05] bg-white/[0.04] text-base shadow-[0_4px_12px_rgba(0,0,0,0.18)] ${
-                    isSelected ? guildTheme.text : ""
-                  }`}
-                >
-                  {icon}
-                </span>
+              <div className="relative flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-full border border-white/[0.06] bg-white/[0.04] text-lg">
+                    {icon}
+                  </div>
+                  <div className="text-base font-semibold text-white">
+                    {title}
+                  </div>
+                </div>
 
-                <span
-                  className={`rounded-full border px-2.5 py-1 text-[10px] uppercase tracking-[0.16em] ${
+                <div
+                  className={`rounded-full border px-3 py-1 text-xs ${
                     isSelected
-                      ? guildTheme.border +
-                        " " +
-                        guildTheme.text +
-                        " bg-white/[0.03]"
-                      : "border-white/[0.05] bg-white/[0.03] text-white/48"
+                      ? `${guildTheme.border} ${guildTheme.text} bg-white/[0.04]`
+                      : "border-white/[0.05] bg-white/[0.03] text-white/50"
                   }`}
                 >
                   +1
+                </div>
+              </div>
+
+              <div className="mt-6 flex items-end justify-center gap-3">
+                <span className="text-5xl font-bold text-white/80">
+                  {current}
                 </span>
-              </div>
 
-              <div className="relative mt-3 text-[14px] font-semibold leading-tight text-white sm:text-[15px]">
-                {title}
-              </div>
-
-              <div className="relative mt-3 min-h-[52px] flex items-center justify-center">
-                {!isSelected ? (
-                  <div className="text-3xl font-bold tabular-nums leading-none text-zinc-100 sm:text-4xl">
-                    {current}
-                  </div>
-                ) : (
-                  <div className="flex items-baseline justify-center gap-2 tabular-nums sm:gap-3">
-                    <span className="text-xl font-semibold text-white/50 sm:text-2xl">
-                      {current}
-                    </span>
-                    <span className={`text-xl sm:text-2xl ${guildTheme.text}`}>
-                      →
-                    </span>
-                    <span
-                      className={`text-3xl font-bold leading-none sm:text-4xl ${guildTheme.text}`}
-                    >
+                {isSelected && (
+                  <>
+                    <span className={`text-4xl ${guildTheme.text}`}>→</span>
+                    <span className={`text-5xl font-bold ${guildTheme.text}`}>
                       {next}
                     </span>
-                  </div>
+                  </>
                 )}
               </div>
 
-              <div className="relative mt-2 h-1.5 rounded-full bg-black/40 ring-1 ring-white/[0.04]">
-                <div
-                  className={`h-full rounded-full ${
-                    isSelected
-                      ? "bg-gradient-to-r from-cyan-300 via-emerald-300 to-lime-300"
-                      : "bg-gradient-to-r from-white/40 to-white/18"
-                  }`}
-                  style={{
-                    width: `${Math.min(
-                      100,
-                      Math.max(14, (current / 10) * 100)
-                    )}%`,
-                  }}
-                />
+              <div className="mt-5">
+                <div className="relative h-2.5 rounded-full bg-black/40 ring-1 ring-white/[0.05]">
+                  <div
+                    className="absolute left-0 top-0 h-full rounded-full bg-white/20"
+                    style={{ width: `${currentPct}%` }}
+                  />
+                  {isSelected && (
+                    <div
+                      className="absolute left-0 top-0 h-full rounded-full bg-cyan-400 transition-[width] duration-500"
+                      style={{ width: `${nextPct}%` }}
+                    />
+                  )}
+                </div>
               </div>
 
-              <div className="relative mt-3 text-[11px] text-white/48">
-                {isSelected ? "Selected for confirmation" : "Tap to preview"}
+              <div className="mt-4 flex items-center justify-between text-xs">
+                <span className="text-white/46">
+                  {isSelected ? "Upgrade preview active" : "Tap to preview"}
+                </span>
+                <span
+                  className={isSelected ? guildTheme.text : "text-white/40"}
+                >
+                  {isSelected ? `${current} → ${next}` : `${current} current`}
+                </span>
               </div>
             </button>
           );
