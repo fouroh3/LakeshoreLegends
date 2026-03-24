@@ -14,59 +14,77 @@ import { usePolling } from "./usePolling";
 export function useHpState(pageActive: boolean) {
   const [hpRows, setHpRows] = useState<HpStateRow[]>([]);
   const pendingRef = useRef<Map<string, PendingHp>>(new Map());
+  const abortRef = useRef<AbortController | null>(null);
 
   const refreshOnce = useCallback(async () => {
-    const res = await fetch(`${HP_API_URL}?action=hp&_=${Date.now()}`, {
-      method: "GET",
-    });
-    const data = await res.json();
-    if (!data || !data.ok || !Array.isArray(data.hp)) return;
+    abortRef.current?.abort();
+    const ctrl = new AbortController();
+    abortRef.current = ctrl;
 
-    const parsed: HpStateRow[] = data.hp
-      .map((r: any) => {
-        const id = normId(r?.studentId);
-        if (!id) return null;
+    try {
+      const res = await fetch(`${HP_API_URL}?action=hp&_=${Date.now()}`, {
+        method: "GET",
+        signal: ctrl.signal,
+      });
+      const data = await res.json();
+      if (!data || !data.ok || !Array.isArray(data.hp)) return;
 
-        const baseHP = Math.min(
-          MAX_HP,
-          Math.max(1, Math.round(toNumber(r?.baseHP, MAX_HP)))
-        );
-        const currentHP = Math.max(
-          0,
-          Math.min(baseHP, Math.round(toNumber(r?.currentHP, baseHP)))
-        );
-        return { studentId: id, baseHP, currentHP } as HpStateRow;
-      })
-      .filter(Boolean);
+      const parsed: HpStateRow[] = data.hp
+        .map((r: any) => {
+          const id = normId(r?.studentId);
+          if (!id) return null;
 
-    const now = Date.now();
-    const pending = pendingRef.current;
+          const baseHP = Math.min(
+            MAX_HP,
+            Math.max(1, Math.round(toNumber(r?.baseHP, MAX_HP)))
+          );
+          const currentHP = Math.max(
+            0,
+            Math.min(baseHP, Math.round(toNumber(r?.currentHP, baseHP)))
+          );
 
-    const finalRows: HpStateRow[] = parsed.map((row) => {
-      const id = normId(row.studentId);
-      const p = pending.get(id);
-      if (!p) return row;
+          return { studentId: id, baseHP, currentHP } as HpStateRow;
+        })
+        .filter(Boolean);
 
-      if (now - p.ts > PENDING_TTL_MS) {
-        pending.delete(id);
-        return row;
-      }
-      if (row.currentHP === p.expected) {
-        pending.delete(id);
-        return row;
-      }
-      return { studentId: id, baseHP: p.base, currentHP: p.expected };
-    });
+      const now = Date.now();
+      const pending = pendingRef.current;
 
-    setHpRows(finalRows);
+      const finalRows: HpStateRow[] = parsed.map((row) => {
+        const id = normId(row.studentId);
+        const p = pending.get(id);
+        if (!p) return row;
+
+        if (now - p.ts > PENDING_TTL_MS) {
+          pending.delete(id);
+          return row;
+        }
+
+        if (row.currentHP === p.expected) {
+          pending.delete(id);
+          return row;
+        }
+
+        return { studentId: id, baseHP: p.base, currentHP: p.expected };
+      });
+
+      setHpRows(finalRows);
+    } catch (e: any) {
+      if (e?.name === "AbortError") return;
+      throw e;
+    }
   }, []);
 
   usePolling(pageActive, HP_POLL_MS, refreshOnce, HP_JITTER_MS);
 
   const hpById = useMemo(() => {
     const m = new Map<string, HpStateRow>();
-    for (const r of hpRows)
-      m.set(normId(r.studentId), { ...r, studentId: normId(r.studentId) });
+    for (const r of hpRows) {
+      m.set(normId(r.studentId), {
+        ...r,
+        studentId: normId(r.studentId),
+      });
+    }
     return m;
   }, [hpRows]);
 
@@ -87,6 +105,7 @@ export function useHpState(pageActive: boolean) {
   const applyOptimisticHp = useCallback(
     (studentIdRaw: string, nextHp: HpStateRow) => {
       const id = normId(studentIdRaw);
+
       pendingRef.current.set(id, {
         expected: nextHp.currentHP,
         base: nextHp.baseHP,

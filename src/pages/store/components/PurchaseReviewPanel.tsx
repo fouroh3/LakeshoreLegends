@@ -44,9 +44,9 @@ export default function PurchaseReviewPanel({
     <div className={`${innerCard} px-4 py-4 sm:px-5`}>
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <div className={label}>Step 2</div>
+          <div className={label}>Upgrade Review</div>
           <div className="mt-1 text-xl font-semibold tracking-tight text-white">
-            Review purchase
+            Confirm purchase
           </div>
         </div>
         {pendingMeta && (

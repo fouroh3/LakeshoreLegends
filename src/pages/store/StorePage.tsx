@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { Student } from "../../types";
 import { loadStudents } from "../../data";
+import { fetchHpMap } from "../../hpApi";
 import {
   getStoreState,
   getXpSummary,
@@ -27,6 +28,11 @@ import {
 
 type Props = {
   onBack?: () => void;
+};
+
+type HpEntry = {
+  baseHP: number;
+  currentHP: number;
 };
 
 async function spendXpWithRetry(
@@ -56,6 +62,9 @@ export default function StorePage({ onBack }: Props) {
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
+
+  const [hpMap, setHpMap] = useState<Map<string, HpEntry>>(new Map());
+  const [hpErr, setHpErr] = useState<string | null>(null);
 
   const [store, setStore] = useState<StoreState | null>(null);
   const [storeErr, setStoreErr] = useState<string | null>(null);
@@ -97,6 +106,42 @@ export default function StorePage({ onBack }: Props) {
 
     return () => {
       alive = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let alive = true;
+
+    const tick = async () => {
+      try {
+        setHpErr(null);
+        const next = await fetchHpMap();
+        if (!alive) return;
+        setHpMap(next);
+      } catch (e) {
+        if (!alive) return;
+        setHpErr(e instanceof Error ? e.message : "Failed to load HP state");
+      }
+    };
+
+    void tick();
+
+    const id = window.setInterval(() => {
+      void tick();
+    }, 5000);
+
+    const onVis = () => {
+      if (document.visibilityState === "visible") {
+        void tick();
+      }
+    };
+
+    document.addEventListener("visibilitychange", onVis);
+
+    return () => {
+      alive = false;
+      window.clearInterval(id);
+      document.removeEventListener("visibilitychange", onVis);
     };
   }, []);
 
@@ -210,6 +255,11 @@ export default function StorePage({ onBack }: Props) {
     [selectedGuild]
   );
 
+  const liveHpState = useMemo(() => {
+    if (!selectedStudentId) return null;
+    return hpMap.get(normIdForConfirm(selectedStudentId)) ?? null;
+  }, [hpMap, selectedStudentId]);
+
   useEffect(() => {
     setPin("");
     setConfirmId("");
@@ -270,8 +320,14 @@ export default function StorePage({ onBack }: Props) {
   const canConfirmPurchase = canSelectAttribute && !!pendingTarget;
 
   function displayAttr(t: AttrKey) {
-    if (serverAttrs?.final?.[t] != null) return Number(serverAttrs.final[t]);
-    if (selected) return rosterBaseAttr(selected, t);
+    if (serverAttrs?.final?.[t] != null) {
+      return Number(serverAttrs.final[t]);
+    }
+
+    if (selected) {
+      return rosterBaseAttr(selected, t);
+    }
+
     return 0;
   }
 
@@ -362,6 +418,7 @@ export default function StorePage({ onBack }: Props) {
   }
 
   const noHomerooms = !loading && homerooms.length === 0;
+  const combinedErr = err ?? hpErr;
 
   return (
     <div className="min-h-screen w-full overflow-x-hidden bg-[#05070d] text-zinc-100">
@@ -431,7 +488,9 @@ export default function StorePage({ onBack }: Props) {
               summarySpendable={summary?.spendablePoints ?? null}
               storeLocked={storeLocked}
               loading={loading}
-              err={err}
+              err={combinedErr}
+              liveHp={liveHpState?.currentHP ?? null}
+              liveMaxHp={liveHpState?.baseHP ?? null}
               guildTheme={guildTheme}
             />
 

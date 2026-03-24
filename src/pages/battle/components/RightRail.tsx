@@ -1,3 +1,4 @@
+// src/pages/battle/components/RightRail.tsx
 import { useEffect, useMemo, useState } from "react";
 import type { Student } from "../../../types";
 import type { BossState } from "../../../bossApi";
@@ -7,14 +8,15 @@ import { getBossMeta } from "../battleBossMeta";
 type Banner = { type: "ok" | "err"; msg: string } | null;
 
 type GuildTotalsRow = {
+  bossInstanceId: string;
+  homeroom: string;
   guild: string;
   damage: number;
-  heal: number;
-  net: number;
+  hits: number;
+  lastHitAt: string;
 };
 
 type Props = {
-  // Boss
   hasBossConfigured: boolean;
   bossName: string;
   bossKey: string;
@@ -31,17 +33,14 @@ type Props = {
   bossBanner: Banner;
   bossCooldownUntil: number;
 
-  // lock context
   activeRound: number;
   activeGuild: string;
 
-  // Modes / permissions
   studentHealMode: boolean;
   studentAttackMode: boolean;
   guildAttacksOpen: boolean;
   isTeacher: boolean;
 
-  // Student controls
   selectedCount: number;
   studentControlsDisabled: boolean;
   delta: number;
@@ -54,11 +53,9 @@ type Props = {
   onSubmit: () => void;
   banner: Banner;
 
-  // Group action toggle
   groupAction: "ATTACK" | "HEAL";
   setGroupAction: (v: "ATTACK" | "HEAL") => void;
 
-  // Guild totals
   guildTotals: GuildTotalsRow[];
   guildTotalsErr: string | null;
 };
@@ -219,6 +216,13 @@ export default function RightRail({
 
   const isLowBossHp = bossPct > 0 && bossPct <= 0.3;
 
+  const selectedStudentName =
+    selectedStudents.length === 1
+      ? `${selectedStudents[0].last ?? ""}, ${selectedStudents[0].first ?? ""}`
+          .replace(/^,\s*|,\s*$/g, "")
+          .trim() || "Selected student"
+      : "";
+
   return (
     <div className="min-h-0 overflow-auto pr-1">
       <div className="sticky top-0 z-20">
@@ -375,7 +379,7 @@ export default function RightRail({
               onChange={(e) => setBossDamage(e.target.value)}
               inputMode="numeric"
               placeholder="e.g. 250"
-              disabled={!hasBossConfigured || bossSubmitting}
+              disabled={Boolean(!hasBossConfigured || bossSubmitting)}
             />
 
             <div className={label}>Note (optional)</div>
@@ -384,7 +388,7 @@ export default function RightRail({
               value={bossNote}
               onChange={(e) => setBossNote(e.target.value)}
               placeholder="e.g. Shadows combo"
-              disabled={!hasBossConfigured || bossSubmitting}
+              disabled={Boolean(!hasBossConfigured || bossSubmitting)}
             />
 
             <div className="mt-1 flex flex-wrap items-center gap-2">
@@ -418,9 +422,9 @@ export default function RightRail({
               onClick={() =>
                 onSubmitBossAttack({ round: activeRound, guild: activeGuild })
               }
-              disabled={
+              disabled={Boolean(
                 bossSubmitting || cooldownMs > 0 || !!attackDisabledReason
-              }
+              )}
               title={attackDisabledReason || undefined}
             >
               {cooldownMs > 0
@@ -493,7 +497,7 @@ export default function RightRail({
                         : "",
                     ].join(" ")}
                     onClick={() => setDelta(o.v)}
-                    disabled={studentControlsDisabled}
+                    disabled={Boolean(studentControlsDisabled)}
                     title={isHeal ? "Heal" : "Damage"}
                   >
                     {o.t}
@@ -510,7 +514,7 @@ export default function RightRail({
               value={note}
               onChange={(e) => setNote(e.target.value)}
               placeholder="e.g. potion, trap, crit"
-              disabled={studentControlsDisabled}
+              disabled={Boolean(studentControlsDisabled)}
             />
           </div>
 
@@ -530,13 +534,25 @@ export default function RightRail({
             </div>
           )}
 
+          {selectedStudents.length === 1 && !selectedSkills.length && (
+            <div className="mt-3 text-xs text-zinc-500">
+              No skills listed for {selectedStudentName || "this student"}.
+            </div>
+          )}
+
+          {selectedStudents.length > 1 && (
+            <div className="mt-3 text-xs text-zinc-500">
+              Full skills hidden in multi-target mode.
+            </div>
+          )}
+
           <button
             type="button"
             className={`${btn} ${btnPrimary} mt-3`}
             onClick={onSubmit}
-            disabled={
+            disabled={Boolean(
               submitting || studentControlsDisabled || selectedCount === 0
-            }
+            )}
           >
             {submitting ? "Submitting…" : "Submit to Selected"}
           </button>
@@ -561,16 +577,21 @@ export default function RightRail({
         <div className="mt-2 space-y-1">
           {guildTotals.map((r) => (
             <div
-              key={r.guild}
+              key={`${r.bossInstanceId}:${r.guild}`}
               className="flex items-center justify-between rounded-xl border border-zinc-900/60 bg-zinc-950/20 px-2 py-1"
             >
-              <div className="truncate text-sm text-zinc-100">{r.guild}</div>
-              <div className="text-xs tabular-nums text-zinc-300">
-                <span className="text-zinc-500">DMG </span>
-                {r.damage}
-                <span className="text-zinc-700"> · </span>
-                <span className="text-zinc-500">HEAL </span>
-                {r.heal}
+              <div className="min-w-0">
+                <div className="truncate text-sm text-zinc-100">{r.guild}</div>
+                <div className="text-[10px] text-zinc-500">
+                  {r.hits} hit{r.hits === 1 ? "" : "s"}
+                </div>
+              </div>
+
+              <div className="text-xs tabular-nums text-zinc-300 text-right">
+                <div>
+                  <span className="text-zinc-500">DMG </span>
+                  {r.damage}
+                </div>
               </div>
             </div>
           ))}

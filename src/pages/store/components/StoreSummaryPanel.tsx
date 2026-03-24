@@ -53,7 +53,7 @@ export default function StoreSummaryPanel({
               XP Allocation
             </div>
             <div className="mt-1 text-xl font-semibold tracking-tight text-white">
-              XP + Purchases
+              Spend XP
             </div>
             <div className="mt-1 text-sm text-white/56">
               Preview first. Confirm second.
@@ -72,7 +72,7 @@ export default function StoreSummaryPanel({
           </div>
         </div>
 
-        <div className="mt-4 grid grid-cols-2 gap-3">
+        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div
             className={`${innerCard} ${guildTheme.border} ${guildTheme.softPanel} px-4 py-4 text-center`}
           >
@@ -91,7 +91,7 @@ export default function StoreSummaryPanel({
           </div>
         </div>
 
-        <div className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-2">
+        <div className="mt-4 grid grid-cols-1 gap-3 xl:grid-cols-2">
           <div className={`${softPanel} px-4 py-4`}>
             <div className={label}>Store PIN</div>
             <input
@@ -106,13 +106,13 @@ export default function StoreSummaryPanel({
             <div className="mt-2 text-[11px] text-white/52">
               {storeLocked
                 ? "Store closed: XP can be viewed, but purchases are locked."
-                : "Enter the teacher PIN to arm the purchase controls."}
+                : "Enter the teacher PIN to unlock purchases."}
             </div>
           </div>
 
           <div className={`${softPanel} px-4 py-4`}>
             <div className="flex items-center justify-between gap-3">
-              <div className={label}>Confirm StudentID</div>
+              <div className={label}>Confirm Legend ID</div>
               <button
                 type="button"
                 className={`text-[11px] transition ${guildTheme.text} hover:text-white`}
@@ -133,7 +133,7 @@ export default function StoreSummaryPanel({
 
             <div className="mt-2 text-[11px]">
               {confirmOk ? (
-                <span className={guildTheme.text}>✓ StudentID confirmed</span>
+                <span className={guildTheme.text}>✓ Legend ID confirmed</span>
               ) : (
                 <span className="text-white/52">
                   Must match exactly before purchasing.
@@ -147,9 +147,9 @@ export default function StoreSummaryPanel({
       <div className={`${innerCard} px-4 py-4`}>
         <div className="flex items-center justify-between gap-3">
           <div>
-            <div className={label}>Purchase State</div>
+            <div className={label}>Purchase Status</div>
             <div className="mt-1 text-lg font-semibold text-white">
-              Purchase Status
+              System Check
             </div>
           </div>
           <span className={getStatusPill(storeLocked)}>
@@ -172,10 +172,10 @@ export default function StoreSummaryPanel({
               bad: "PIN required",
             },
             {
-              title: "Student confirmed",
+              title: "Legend confirmed",
               ok: confirmOk,
-              good: "StudentID matches",
-              bad: "Confirm StudentID",
+              good: "Legend ID matches",
+              bad: "Confirm Legend ID",
             },
             {
               title: "Enough XP",
@@ -208,11 +208,11 @@ export default function StoreSummaryPanel({
             : !pin.trim()
             ? "Enter the Store PIN to unlock attribute selection."
             : !confirmOk
-            ? "Confirm the selected legend’s StudentID to continue."
+            ? "Confirm the selected legend ID to continue."
             : !hasEnoughPoints
             ? `Not enough XP. You need ${xpPerPoint} XP for 1 point.`
             : pendingTarget
-            ? "Attribute selected. Review the preview panel below."
+            ? "Attribute selected. Review the upgrade preview below."
             : "Choose a stat card below to preview the upgrade."}
         </div>
       </div>

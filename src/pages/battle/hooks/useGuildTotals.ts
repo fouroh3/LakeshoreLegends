@@ -1,7 +1,18 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { BATTLE_GUILD_TOTALS_CSV } from "../battleConstants";
+import { usePolling } from "./usePolling";
 
-// Minimal CSV parser (handles quotes, commas)
+function stripQuotes(s: string) {
+  const t = String(s ?? "").trim();
+  if (
+    (t.startsWith('"') && t.endsWith('"')) ||
+    (t.startsWith("'") && t.endsWith("'"))
+  ) {
+    return t.slice(1, -1).trim();
+  }
+  return t;
+}
+
 function parseCSV(text: string): string[][] {
   const rows: string[][] = [];
   let row: string[] = [];
@@ -40,22 +51,21 @@ function parseCSV(text: string): string[][] {
     cur += ch;
   }
 
-  // last cell
   row.push(cur);
   rows.push(row);
 
-  // trim empties at end
   return rows
-    .map((r) => r.map((c) => c.trim()))
+    .map((r) => r.map((c) => stripQuotes(c)))
     .filter((r) => r.some((c) => c.length > 0));
 }
 
 type GuildTotalsRow = {
-  sessionId: string;
+  bossInstanceId: string;
+  homeroom: string;
   guild: string;
   damage: number;
-  heal: number;
-  net: number;
+  hits: number;
+  lastHitAt: string;
 };
 
 function toNum(x: string) {
@@ -63,83 +73,107 @@ function toNum(x: string) {
   return Number.isFinite(n) ? n : 0;
 }
 
+function normKey(x: string) {
+  return String(x ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_-]+/g, "");
+}
+
+function normValue(x: string) {
+  return stripQuotes(String(x ?? ""))
+    .replace(/\u00a0/g, " ")
+    .trim();
+}
+
 function idx(headers: string[], ...names: string[]) {
-  const lower = headers.map((h) => h.toLowerCase().trim());
+  const lower = headers.map((h) => normKey(h));
   for (const n of names) {
-    const j = lower.indexOf(n.toLowerCase());
+    const j = lower.indexOf(normKey(n));
     if (j >= 0) return j;
   }
   return -1;
 }
 
-export function useGuildTotals(pageActive: boolean, sessionId: string) {
+export function useGuildTotals(pageActive: boolean, bossInstanceId: string) {
   const [rows, setRows] = useState<GuildTotalsRow[]>([]);
   const [err, setErr] = useState<string | null>(null);
 
-  useEffect(() => {
+  const cleanBossInstanceId = useMemo(
+    () => normValue(bossInstanceId),
+    [bossInstanceId]
+  );
+
+  const tick = useCallback(async () => {
     if (!pageActive) return;
-    if (!sessionId) {
+
+    if (!cleanBossInstanceId) {
+      setRows([]);
+      setErr(null);
+      return;
+    }
+
+    setErr(null);
+
+    const res = await fetch(`${BATTLE_GUILD_TOTALS_CSV}&_=${Date.now()}`, {
+      cache: "no-store",
+    });
+
+    if (!res.ok) {
+      throw new Error(`Guild totals fetch failed: ${res.status}`);
+    }
+
+    const text = await res.text();
+    const grid = parseCSV(text);
+
+    if (grid.length < 2) {
       setRows([]);
       return;
     }
 
-    let cancelled = false;
-    const ctrl = new AbortController();
+    const headers = grid[0];
 
-    async function tick() {
-      try {
-        setErr(null);
-        const res = await fetch(BATTLE_GUILD_TOTALS_CSV, {
-          cache: "no-store",
-          signal: ctrl.signal,
-        });
-        const text = await res.text();
-        const grid = parseCSV(text);
-        if (grid.length < 2) {
-          if (!cancelled) setRows([]);
-          return;
-        }
+    const iBossInstance = idx(headers, "bossinstanceid", "boss_instance_id");
+    const iHomeroom = idx(headers, "homeroom");
+    const iGuild = idx(headers, "guild");
+    const iDamage = idx(headers, "totaldamage", "damage");
+    const iHits = idx(headers, "hits");
+    const iLastHit = idx(headers, "lasthitat", "last_hit_at");
 
-        const headers = grid[0];
-        const iSession = idx(headers, "sessionid", "session_id", "session");
-        const iGuild = idx(headers, "guild");
-        const iDamage = idx(headers, "damage", "damage_total", "dmg");
-        const iHeal = idx(headers, "heal", "heals", "heal_total");
-        const iNet = idx(headers, "net", "net_total");
-
-        const out: GuildTotalsRow[] = [];
-
-        for (let r = 1; r < grid.length; r++) {
-          const line = grid[r];
-          const s = (line[iSession] ?? "").trim();
-          if (!s || s !== sessionId) continue;
-
-          const g = (line[iGuild] ?? "").trim() || "—";
-          const damage = iDamage >= 0 ? toNum(line[iDamage] ?? "") : 0;
-          const heal = iHeal >= 0 ? toNum(line[iHeal] ?? "") : 0;
-          const net =
-            iNet >= 0 ? toNum(line[iNet] ?? "") : Math.max(0, damage) - heal;
-
-          out.push({ sessionId: s, guild: g, damage, heal, net });
-        }
-
-        out.sort((a, b) => b.damage - a.damage);
-
-        if (!cancelled) setRows(out);
-      } catch (e: any) {
-        if (!cancelled) setErr(e?.message || "Failed to load guild totals.");
-      }
+    if (iBossInstance < 0 || iGuild < 0 || iDamage < 0) {
+      throw new Error("Battle_GuildTotals headers do not match expected schema.");
     }
 
-    tick();
-    const id = window.setInterval(tick, 3000); // match your other polling cadence
-    return () => {
-      cancelled = true;
-      ctrl.abort();
-      window.clearInterval(id);
-    };
-  }, [pageActive, sessionId]);
+    const out: GuildTotalsRow[] = [];
+
+    for (let r = 1; r < grid.length; r++) {
+      const line = grid[r];
+
+      const rowBossInstanceId = normValue(line[iBossInstance] ?? "");
+      if (!rowBossInstanceId) continue;
+      if (rowBossInstanceId !== cleanBossInstanceId) continue;
+
+      out.push({
+        bossInstanceId: rowBossInstanceId,
+        homeroom: iHomeroom >= 0 ? normValue(line[iHomeroom] ?? "") : "",
+        guild: normValue(line[iGuild] ?? "") || "—",
+        damage: iDamage >= 0 ? toNum(line[iDamage] ?? "") : 0,
+        hits: iHits >= 0 ? toNum(line[iHits] ?? "") : 0,
+        lastHitAt: iLastHit >= 0 ? normValue(line[iLastHit] ?? "") : "",
+      });
+    }
+
+    out.sort((a, b) => b.damage - a.damage);
+    setRows(out);
+  }, [pageActive, cleanBossInstanceId]);
+
+  useEffect(() => {
+    void tick();
+  }, [tick]);
+
+  usePolling(pageActive && !!cleanBossInstanceId, 3000, tick);
 
   const top = useMemo(() => rows.slice(0, 6), [rows]);
+
   return { rows, top, err };
 }
