@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import AbilitiesDashboard from "./components/AbilitiesDashboard";
+import AppTopBar from "./components/AppTopBar";
 import CharacterProfileModal from "./components/CharacterProfileModal";
 import BattlePage from "./pages/BattlePage";
+import CardLibraryPage from "./pages/CardLibraryPage";
 import StorePage from "./pages/store/StorePage";
 import { loadStudents } from "./data";
 import type { Student } from "./types";
-import logoUrl from "./assets/Lakeshore Legends Logo.png";
 import "./index.css";
 import { fetchHpMap } from "./hpApi";
 
@@ -18,26 +19,48 @@ function normId(id: string | undefined | null) {
     .toUpperCase();
 }
 
+type ViewMode = "" | "store" | "battle" | "cards";
+
 export default function App() {
-  const view = useMemo(() => {
+  const view = useMemo<ViewMode>(() => {
     const params = new URLSearchParams(window.location.search);
-    return params.get("view") || "";
+    const raw = params.get("view") || "";
+    if (raw === "store" || raw === "battle" || raw === "cards") return raw;
+    return "";
   }, []);
 
   useEffect(() => {
-    if (!view) {
-      document.title = "Game Dashboard";
+    if (view === "battle") {
+      document.title = "Battle Mode";
+      return;
     }
+    if (view === "store") {
+      document.title = "Store";
+      return;
+    }
+    if (view === "cards") {
+      document.title = "Card Library";
+      return;
+    }
+
+    document.title = "Game Dashboard";
   }, [view]);
 
-  const goHome = () => {
+  const goToView = (nextView: ViewMode) => {
     const url = new URL(window.location.href);
-    url.searchParams.delete("view");
+
+    if (!nextView) {
+      url.searchParams.delete("view");
+    } else {
+      url.searchParams.set("view", nextView);
+    }
+
     window.location.href = url.toString();
   };
 
-  if (view === "battle") return <BattlePage onBack={goHome} />;
-  if (view === "store") return <StorePage onBack={goHome} />;
+  if (view === "battle") return <BattlePage onBack={() => goToView("")} />;
+  if (view === "store") return <StorePage onBack={() => goToView("")} />;
+  if (view === "cards") return <CardLibraryPage onBack={() => goToView("")} />;
 
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
@@ -312,12 +335,6 @@ export default function App() {
     attrFilterMin,
   ]);
 
-  const shownText = loading
-    ? "Loading…"
-    : err
-    ? "Error"
-    : `${filtered.length}/${students.length} shown`;
-
   return (
     <div className="min-h-screen w-full bg-[radial-gradient(circle_at_top,rgba(40,60,120,0.12),transparent_40%),#0a0a0a] text-zinc-100">
       <div className="pointer-events-none fixed inset-0 z-0 hidden lg:block">
@@ -327,58 +344,20 @@ export default function App() {
       </div>
 
       {!selectedPerson && (
-        <header className="sticky top-0 z-[80] border-b border-white/10 bg-[linear-gradient(180deg,rgba(10,14,24,0.92),rgba(7,10,18,0.82))] backdrop-blur-xl shadow-[0_10px_30px_rgba(0,0,0,0.35)]">
-          <div className="mx-auto flex w-full max-w-[1600px] flex-col gap-3 px-4 py-3 sm:px-6 lg:px-8">
-            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-              <div className="flex min-w-0 items-center justify-center gap-3 md:justify-start">
-                <img
-                  src={logoUrl}
-                  alt="Lakeshore Legends"
-                  className="h-10 w-auto shrink-0 select-none sm:h-11"
-                  draggable={false}
-                />
-                <h1 className="text-center text-2xl font-bold leading-tight text-zinc-100 md:text-left">
-                  Game Dashboard
-                </h1>
-              </div>
-
-              <div className="flex flex-wrap items-center justify-center gap-2 md:justify-end">
-                <button
-                  onClick={() => {
-                    const url = new URL(window.location.href);
-                    url.searchParams.set("view", "store");
-                    window.location.href = url.toString();
-                  }}
-                  className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/80 transition hover:border-white/20 hover:bg-white/10 hover:text-white"
-                >
-                  Store
-                </button>
-
-                <button
-                  onClick={() => {
-                    const url = new URL(window.location.href);
-                    url.searchParams.set("view", "battle");
-                    window.location.href = url.toString();
-                  }}
-                  className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/80 transition hover:border-white/20 hover:bg-white/10 hover:text-white"
-                >
-                  Battle Mode
-                </button>
-
-                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold text-white/70">
-                  {shownText}
-                </span>
-              </div>
-            </div>
-          </div>
-        </header>
+        <AppTopBar
+          title="Game Dashboard"
+          activeView="dashboard"
+          onNavigate={(next) => {
+            if (next === "dashboard") {
+              goToView("");
+              return;
+            }
+            goToView(next);
+          }}
+        />
       )}
 
-      <main
-        className={`relative z-[1] w-full px-4 pb-6 sm:px-6 lg:px-8 ${
-          selectedPerson ? "pt-4" : "pt-4"
-        }`}
-      >
+      <main className="relative z-[1] w-full px-4 pb-6 pt-4 sm:px-6 lg:px-8">
         {err && (
           <div className="mx-auto mb-4 max-w-[1600px] rounded-xl border border-red-900/50 bg-red-950/40 px-4 py-3 text-red-200">
             {err}
