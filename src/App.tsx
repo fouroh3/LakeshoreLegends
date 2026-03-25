@@ -335,12 +335,6 @@ export default function App() {
     attrFilterMin,
   ]);
 
-  const shownText = loading
-    ? "Loading…"
-    : err
-    ? "Error"
-    : `${filtered.length}/${students.length} shown`;
-
   return (
     <div className="min-h-screen w-full bg-[radial-gradient(circle_at_top,rgba(40,60,120,0.12),transparent_40%),#0a0a0a] text-zinc-100">
       <div className="pointer-events-none fixed inset-0 z-0 hidden lg:block">
