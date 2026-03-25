@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import AppTopBar from "../../components/AppTopBar";
 import type { Student } from "../../types";
 import { loadStudents } from "../../data";
 import { fetchHpMap } from "../../hpApi";
@@ -16,7 +17,7 @@ import LegendSelectionPanel from "./components/LegendSelectionPanel";
 import StoreSummaryPanel from "./components/StoreSummaryPanel";
 import AttributeGrid from "./components/AttributeGrid";
 import PurchaseReviewPanel from "./components/PurchaseReviewPanel";
-import { btn, getGuildTheme, getStatusPill, shellCardBase } from "./storeTheme";
+import { getGuildTheme, shellCardBase } from "./storeTheme";
 import {
   cleanText,
   fullName,
@@ -429,38 +430,20 @@ export default function StorePage({ onBack }: Props) {
         <div className="absolute right-[12%] top-[320px] h-[300px] w-[300px] rounded-full bg-sky-500/[0.03] blur-3xl" />
       </div>
 
-      <header className="sticky top-0 z-30 border-b border-white/[0.05] bg-[linear-gradient(180deg,rgba(8,12,20,0.90),rgba(7,10,18,0.80))] backdrop-blur-xl shadow-[0_10px_30px_rgba(0,0,0,0.36)]">
-        <div className="mx-auto flex w-full max-w-[1680px] items-center justify-between gap-3 px-4 py-4 sm:px-6 lg:px-8">
-          <div className="flex min-w-0 items-center gap-3 sm:gap-4">
-            <button
-              className={btn}
-              onClick={
-                onBack ??
-                (() => {
-                  window.location.search = "";
-                })
-              }
-            >
-              ← Back
-            </button>
+      <AppTopBar
+        title="Attribute Store"
+        activeView="store"
+        onNavigate={(next) => {
+          if (next === "dashboard") {
+            onBack?.();
+            return;
+          }
 
-            <div className="min-w-0">
-              <h1 className="truncate text-2xl font-bold tracking-tight text-white sm:text-3xl">
-                Attribute Store
-              </h1>
-              <div className="text-[11px] uppercase tracking-[0.26em] text-white/42 sm:text-xs">
-                Spend XP • Upgrade Legends
-              </div>
-            </div>
-          </div>
-
-          <div className="hidden flex-wrap items-center gap-2 md:flex">
-            <span className={getStatusPill(storeLocked)}>
-              {storeLocked ? "Store Closed" : "Store Open"}
-            </span>
-          </div>
-        </div>
-      </header>
+          const url = new URL(window.location.href);
+          url.searchParams.set("view", next);
+          window.location.href = url.toString();
+        }}
+      />
 
       <main className="relative z-[1] px-4 py-5 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-[1680px] space-y-5">

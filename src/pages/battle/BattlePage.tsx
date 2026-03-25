@@ -1,5 +1,5 @@
-// src/pages/battle/BattlePage.tsx
 import { useEffect, useMemo, useState, useCallback } from "react";
+import AppTopBar from "../../components/AppTopBar";
 import type { Student, Guild } from "../../types";
 import { loadStudents } from "../../data";
 import { submitHpDelta } from "../../hpApi";
@@ -22,7 +22,6 @@ import {
 
 import type { GroupAction } from "./battleTypes";
 
-import BattleHeader from "./components/BattleHeader";
 import BattleTopControls from "./components/BattleTopControls";
 import StudentGrid from "./components/StudentGrid";
 import RightRail from "./components/RightRail";
@@ -590,12 +589,25 @@ export default function BattlePage({ onBack }: Props) {
     boss?.bossName?.trim() || currentQuestName || currentBossKey || "Boss";
 
   return (
-    <div className="w-full h-[100dvh] overflow-hidden">
-      <div className="h-[100dvh] flex flex-col overflow-hidden">
-        <BattleHeader onBack={onBack} />
+    <div className="w-full min-h-[100dvh] overflow-hidden bg-[#05070d] text-zinc-100">
+      <AppTopBar
+        title="Battle Mode"
+        activeView="battle"
+        onNavigate={(next) => {
+          if (next === "dashboard") {
+            onBack();
+            return;
+          }
 
-        <div className="flex-1 min-h-0 overflow-auto">
-          <div className="w-full max-w-none px-3 sm:px-4 lg:px-6 py-2">
+          const url = new URL(window.location.href);
+          url.searchParams.set("view", next);
+          window.location.href = url.toString();
+        }}
+      />
+
+      <div className="min-h-[100dvh] flex flex-col">
+        <div className="flex-1 overflow-auto">
+          <div className="w-full max-w-none px-3 py-2 sm:px-4 lg:px-6">
             {err && (
               <div className="mb-2 rounded-xl border border-red-900/50 bg-red-950/40 px-3 py-2 text-sm text-red-200">
                 {err}
