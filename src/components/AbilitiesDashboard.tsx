@@ -134,6 +134,16 @@ function getFullName(student: Student) {
   return `${String(row.first ?? "")} ${String(row.last ?? "")}`.trim();
 }
 
+function getLastName(student: Student) {
+  const row = student as Record<string, unknown>;
+  return String(row.last ?? "").trim();
+}
+
+function getFirstName(student: Student) {
+  const row = student as Record<string, unknown>;
+  return String(row.first ?? "").trim();
+}
+
 function getHomeroom(student: Student) {
   return String((student as Record<string, unknown>).homeroom ?? "").trim();
 }
@@ -149,6 +159,58 @@ function getGuildKey(student: Student) {
 function getStudentId(student: Student, index: number) {
   const row = student as Record<string, unknown>;
   return String(row.id ?? `${getFullName(student)}-${index}`);
+}
+
+function compareHomeroom(a: string, b: string) {
+  const parseHomeroom = (value: string) => {
+    const text = String(value ?? "").trim();
+
+    const dashed = text.match(/^(\d+)\s*-\s*(\d+)$/);
+    if (dashed) {
+      return {
+        grade: Number(dashed[1]),
+        room: Number(dashed[2]),
+        text,
+      };
+    }
+
+    const compact = text.match(/^(\d)(\d{1,2})$/);
+    if (compact) {
+      return {
+        grade: Number(compact[1]),
+        room: Number(compact[2]),
+        text,
+      };
+    }
+
+    const num = Number(text);
+    if (Number.isFinite(num)) {
+      return {
+        grade: 0,
+        room: num,
+        text,
+      };
+    }
+
+    return {
+      grade: Number.POSITIVE_INFINITY,
+      room: Number.POSITIVE_INFINITY,
+      text,
+    };
+  };
+
+  const aParsed = parseHomeroom(a);
+  const bParsed = parseHomeroom(b);
+
+  if (aParsed.grade !== bParsed.grade) {
+    return aParsed.grade - bParsed.grade;
+  }
+
+  if (aParsed.room !== bParsed.room) {
+    return aParsed.room - bParsed.room;
+  }
+
+  return aParsed.text.localeCompare(bParsed.text);
 }
 
 function skillsToArray(student: Student): string[] {
@@ -222,12 +284,17 @@ function compareBySort(a: Student, b: Student, sortKey: string) {
   const aRow = a as Record<string, unknown>;
   const bRow = b as Record<string, unknown>;
 
-  const aName = getFullName(a).toLowerCase();
-  const bName = getFullName(b).toLowerCase();
+  const aFirst = getFirstName(a).toLowerCase();
+  const bFirst = getFirstName(b).toLowerCase();
+  const aLast = getLastName(a).toLowerCase();
+  const bLast = getLastName(b).toLowerCase();
   const aGuild = getGuild(a).toLowerCase();
   const bGuild = getGuild(b).toLowerCase();
-  const aHomeroom = getHomeroom(a).toLowerCase();
-  const bHomeroom = getHomeroom(b).toLowerCase();
+  const aHomeroom = getHomeroom(a);
+  const bHomeroom = getHomeroom(b);
+
+  const compareName = () =>
+    aLast.localeCompare(bLast) || aFirst.localeCompare(bFirst);
 
   const num = (v: unknown) => {
     const n = Number(v);
@@ -236,27 +303,25 @@ function compareBySort(a: Student, b: Student, sortKey: string) {
 
   switch (sortKey) {
     case "name-az":
-      return aName.localeCompare(bName);
+      return compareName();
     case "name-za":
-      return bName.localeCompare(aName);
+      return bLast.localeCompare(aLast) || bFirst.localeCompare(aFirst);
     case "guild":
-      return aGuild.localeCompare(bGuild) || aName.localeCompare(bName);
+      return aGuild.localeCompare(bGuild) || compareName();
     case "hp-desc":
-      return num(bRow.hp) - num(aRow.hp) || aName.localeCompare(bName);
+      return num(bRow.hp) - num(aRow.hp) || compareName();
     case "hp-asc":
-      return num(aRow.hp) - num(bRow.hp) || aName.localeCompare(bName);
+      return num(aRow.hp) - num(bRow.hp) || compareName();
     case "strength":
     case "dexterity":
     case "constitution":
     case "intelligence":
     case "wisdom":
     case "charisma":
-      return (
-        num(bRow[sortKey]) - num(aRow[sortKey]) || aName.localeCompare(bName)
-      );
+      return num(bRow[sortKey]) - num(aRow[sortKey]) || compareName();
     case "homeroom":
     default:
-      return aHomeroom.localeCompare(bHomeroom) || aName.localeCompare(bName);
+      return compareHomeroom(aHomeroom, bHomeroom) || compareName();
   }
 }
 

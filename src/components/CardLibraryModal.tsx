@@ -1,10 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import type { InventoryCard } from "../data/itemLibrary";
-import {
-  isRareCard,
-  rareCardBadgeClass,
-} from "../utils/rareCards";
+import { isRareCard, rareCardBadgeClass } from "../utils/rareCards";
 
 type Props = {
   card: InventoryCard | null;
@@ -18,16 +15,16 @@ const TYPE_STYLES: Record<string, string> = {
     "border-amber-300/25 bg-amber-500/12 text-amber-100 shadow-[0_0_18px_rgba(245,158,11,0.12)]",
   potion:
     "border-emerald-300/25 bg-emerald-500/12 text-emerald-100 shadow-[0_0_18px_rgba(16,185,129,0.12)]",
-  item:
-    "border-cyan-300/25 bg-cyan-500/12 text-cyan-100 shadow-[0_0_18px_rgba(34,211,238,0.12)]",
-  pet:
-    "border-violet-300/25 bg-violet-500/12 text-violet-100 shadow-[0_0_18px_rgba(168,85,247,0.12)]",
+  item: "border-cyan-300/25 bg-cyan-500/12 text-cyan-100 shadow-[0_0_18px_rgba(34,211,238,0.12)]",
+  pet: "border-violet-300/25 bg-violet-500/12 text-violet-100 shadow-[0_0_18px_rgba(168,85,247,0.12)]",
   other:
     "border-white/15 bg-white/10 text-white/85 shadow-[0_0_18px_rgba(255,255,255,0.06)]",
 };
 
 function typeLabel(type?: string) {
-  const value = String(type ?? "other").trim().toLowerCase();
+  const value = String(type ?? "other")
+    .trim()
+    .toLowerCase();
   if (!value) return "Other";
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
@@ -170,7 +167,9 @@ export default function CardLibraryModal({
             style={{
               transform:
                 dragging && dragOffset > 0
-                  ? `translateY(${dragOffset}px) scale(${1 - dragOffset / 1800})`
+                  ? `translateY(${dragOffset}px) scale(${
+                      1 - dragOffset / 1800
+                    })`
                   : "translateY(0) scale(1)",
               transition: dragging ? "none" : "transform 180ms ease",
             }}
@@ -211,7 +210,7 @@ export default function CardLibraryModal({
 
             <div
               ref={scrollerRef}
-              className="h-[calc(100dvh-84px)] overflow-y-auto overscroll-contain sm:max-h-[calc(92dvh-84px)] sm:h-auto"
+              className="h-[calc(100dvh-84px)] overflow-y-auto overscroll-contain sm:h-auto sm:max-h-[calc(92dvh-84px)]"
               onTouchStart={handleTouchStart}
               onTouchMove={handleTouchMove}
               onTouchEnd={handleTouchEnd}
@@ -233,13 +232,19 @@ export default function CardLibraryModal({
 
                   <div className="relative overflow-hidden rounded-[24px] border border-zinc-700/80 bg-[linear-gradient(180deg,rgba(6,8,14,0.96),rgba(3,4,8,0.98))] shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_18px_40px_rgba(0,0,0,0.28)]">
                     <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.06),transparent_42%)]" />
-                    <div className="aspect-[3/4] w-full bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.08),transparent_52%),linear-gradient(180deg,rgba(18,28,48,0.96),rgba(7,12,22,0.98))]">
+
+                    <div className="relative aspect-[3/4.2] w-full">
                       {card.imageUrl ? (
-                        <img
-                          src={card.imageUrl}
-                          alt={card.name}
-                          className="h-full w-full object-contain"
-                        />
+                        <>
+                          <div className="absolute inset-0 rounded-[18px] border border-white/10 bg-black/40 shadow-inner" />
+                          <div className="absolute inset-x-[8.5%] inset-y-[6.5%] overflow-hidden rounded-[12px] bg-black">
+                            <img
+                              src={card.imageUrl}
+                              alt={card.name}
+                              className="h-full w-full object-cover object-center"
+                            />
+                          </div>
+                        </>
                       ) : (
                         <div className="flex h-full items-center justify-center px-6 text-center text-sm text-white/35">
                           No card art available
@@ -266,12 +271,6 @@ export default function CardLibraryModal({
                       </span>
                     )}
 
-                    {card.isEquipped && (
-                      <span className="rounded-full border border-cyan-300/20 bg-cyan-500/10 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-cyan-100/85">
-                        Equipped
-                      </span>
-                    )}
-
                     {card.isConsumed && (
                       <span className="rounded-full border border-rose-300/20 bg-rose-500/10 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-rose-100/85">
                         Consumable
@@ -288,7 +287,8 @@ export default function CardLibraryModal({
 
                 <div className="space-y-4 sm:space-y-5">
                   <ModalSection title="Effect">
-                    {card.effect || "No effect text has been added for this card yet."}
+                    {card.effect ||
+                      "No effect text has been added for this card yet."}
                   </ModalSection>
 
                   {card.useText ? (
@@ -297,7 +297,9 @@ export default function CardLibraryModal({
 
                   <div className="grid gap-4 md:grid-cols-2">
                     <ModalSection title="Card Type">
-                      {rare ? `Rare ${typeLabel(card.type)}` : typeLabel(card.type)}
+                      {rare
+                        ? `Rare ${typeLabel(card.type)}`
+                        : typeLabel(card.type)}
                     </ModalSection>
 
                     <ModalSection title="Inventory Presence">
@@ -314,8 +316,8 @@ export default function CardLibraryModal({
                         </div>
                       </div>
                       <div className="mt-2 text-sm text-white/62">
-                        player{inventoryCount === 1 ? "" : "s"} currently have this
-                        card in their inventory
+                        player{inventoryCount === 1 ? "" : "s"} currently have
+                        this card in their inventory
                       </div>
                     </ModalSection>
                   </div>
