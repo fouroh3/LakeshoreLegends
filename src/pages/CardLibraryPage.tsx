@@ -7,6 +7,11 @@ import {
   itemLibraryByName,
   type InventoryCard,
 } from "../data/itemLibrary";
+import {
+  isRareCard,
+  rareCardBadgeClass,
+  rareCardGlowClass,
+} from "../utils/rareCards";
 
 type CardTypeFilter = "all" | "relic" | "potion" | "item" | "pet" | "other";
 
@@ -40,50 +45,54 @@ const TYPE_META: Record<
     label: "All Cards",
     active:
       "border-cyan-300/35 bg-cyan-400/16 text-cyan-100 shadow-[0_0_20px_rgba(34,211,238,0.14)]",
-    idle: "border-white/10 bg-white/[0.05] text-white/75 hover:border-white/18 hover:bg-white/[0.09] hover:text-white",
+    idle:
+      "border-white/10 bg-white/[0.05] text-white/75 hover:border-white/18 hover:bg-white/[0.09] hover:text-white",
     glow: "from-cyan-400/20 to-sky-400/10",
   },
   relic: {
     label: "Relics",
     active:
       "border-amber-300/35 bg-amber-500/16 text-amber-100 shadow-[0_0_20px_rgba(245,158,11,0.14)]",
-    idle: "border-amber-400/16 bg-amber-500/[0.05] text-amber-100/75 hover:bg-amber-500/[0.1]",
+    idle:
+      "border-amber-400/16 bg-amber-500/[0.05] text-amber-100/75 hover:bg-amber-500/[0.1]",
     glow: "from-amber-400/20 to-yellow-300/10",
   },
   potion: {
     label: "Potions",
     active:
       "border-emerald-300/35 bg-emerald-500/16 text-emerald-100 shadow-[0_0_20px_rgba(16,185,129,0.14)]",
-    idle: "border-emerald-400/16 bg-emerald-500/[0.05] text-emerald-100/75 hover:bg-emerald-500/[0.1]",
+    idle:
+      "border-emerald-400/16 bg-emerald-500/[0.05] text-emerald-100/75 hover:bg-emerald-500/[0.1]",
     glow: "from-emerald-400/20 to-teal-300/10",
   },
   item: {
     label: "Items",
     active:
       "border-cyan-300/35 bg-cyan-500/16 text-cyan-100 shadow-[0_0_20px_rgba(34,211,238,0.14)]",
-    idle: "border-cyan-400/16 bg-cyan-500/[0.05] text-cyan-100/75 hover:bg-cyan-500/[0.1]",
+    idle:
+      "border-cyan-400/16 bg-cyan-500/[0.05] text-cyan-100/75 hover:bg-cyan-500/[0.1]",
     glow: "from-cyan-400/20 to-sky-300/10",
   },
   pet: {
     label: "Companions",
     active:
       "border-violet-300/35 bg-violet-500/16 text-violet-100 shadow-[0_0_20px_rgba(168,85,247,0.14)]",
-    idle: "border-violet-400/16 bg-violet-500/[0.05] text-violet-100/75 hover:bg-violet-500/[0.1]",
+    idle:
+      "border-violet-400/16 bg-violet-500/[0.05] text-violet-100/75 hover:bg-violet-500/[0.1]",
     glow: "from-violet-400/20 to-fuchsia-300/10",
   },
   other: {
     label: "Other",
     active:
       "border-white/20 bg-white/12 text-white shadow-[0_0_20px_rgba(255,255,255,0.08)]",
-    idle: "border-white/10 bg-white/[0.05] text-white/75 hover:border-white/18 hover:bg-white/[0.09] hover:text-white",
+    idle:
+      "border-white/10 bg-white/[0.05] text-white/75 hover:border-white/18 hover:bg-white/[0.09] hover:text-white",
     glow: "from-white/12 to-white/4",
   },
 };
 
 function normalize(value: unknown) {
-  return String(value ?? "")
-    .trim()
-    .toLowerCase();
+  return String(value ?? "").trim().toLowerCase();
 }
 
 function titleize(value: string) {
@@ -118,16 +127,12 @@ function cardCountLabel(count: number) {
 }
 
 function resolveCards(): ResolvedLibraryCard[] {
-  const cards = Object.values(itemLibraryById ?? {}).filter(
-    Boolean
-  ) as InventoryCard[];
+  const cards = Object.values(itemLibraryById ?? {}).filter(Boolean) as InventoryCard[];
   const seen = new Set<string>();
 
   return cards
     .filter((card) => {
-      const key = String(card.id ?? card.name ?? "")
-        .trim()
-        .toLowerCase();
+      const key = String(card.id ?? card.name ?? "").trim().toLowerCase();
       if (!key || seen.has(key)) return false;
       seen.add(key);
       return true;
@@ -148,9 +153,7 @@ function resolveCards(): ResolvedLibraryCard[] {
     });
 }
 
-function inventoryEntries(
-  raw: unknown
-): Array<string | Record<string, unknown>> {
+function inventoryEntries(raw: unknown): Array<string | Record<string, unknown>> {
   if (!raw) return [];
 
   if (Array.isArray(raw)) {
@@ -215,12 +218,10 @@ export default function CardLibraryPage({ onBack }: Props) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<CardTypeFilter>("all");
   const [selectedId, setSelectedId] = useState<string>("");
-  const [activeCard, setActiveCard] = useState<ResolvedLibraryCard | null>(
-    null
+  const [activeCard, setActiveCard] = useState<ResolvedLibraryCard | null>(null);
+  const [inventoryCounts, setInventoryCounts] = useState<Record<string, number>>(
+    {}
   );
-  const [inventoryCounts, setInventoryCounts] = useState<
-    Record<string, number>
-  >({});
 
   useEffect(() => {
     let alive = true;
@@ -383,9 +384,7 @@ export default function CardLibraryPage({ onBack }: Props) {
                         ].join(" ")}
                       >
                         <div>
-                          <div className="text-sm font-semibold">
-                            {meta.label}
-                          </div>
+                          <div className="text-sm font-semibold">{meta.label}</div>
                           <div className="mt-1 text-[10px] uppercase tracking-[0.16em] text-current/70">
                             {cardCountLabel(count)}
                           </div>
@@ -435,10 +434,10 @@ export default function CardLibraryPage({ onBack }: Props) {
                 ) : (
                   <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,320px))] justify-center gap-6">
                     {filteredCards.map((card) => {
-                      const selected =
-                        String(card.id) === String(selectedCard?.id);
+                      const selected = String(card.id) === String(selectedCard?.id);
                       const type = typeKey(card);
                       const meta = TYPE_META[type];
+                      const rare = isRareCard(card);
 
                       return (
                         <button
@@ -449,16 +448,32 @@ export default function CardLibraryPage({ onBack }: Props) {
                             setActiveCard(card);
                           }}
                           className={[
-                            "group w-full overflow-hidden rounded-[26px] border text-left transition",
+                            "group relative w-full overflow-hidden rounded-[26px] border text-left transition",
                             selected
-                              ? `${meta.active} bg-[linear-gradient(180deg,rgba(255,255,255,0.07),rgba(255,255,255,0.03))]`
-                              : "border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))] hover:border-white/18 hover:bg-white/[0.06]",
+                              ? `${meta.active} ${
+                                  rare
+                                    ? "border-red-400/40 shadow-[0_0_26px_rgba(239,68,68,0.16)]"
+                                    : ""
+                                } bg-[linear-gradient(180deg,rgba(255,255,255,0.07),rgba(255,255,255,0.03))]`
+                              : `border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))] hover:border-white/18 hover:bg-white/[0.06] ${
+                                  rare
+                                    ? "ring-1 ring-red-500/20 shadow-[0_10px_26px_rgba(239,68,68,0.10)]"
+                                    : ""
+                                }`,
                           ].join(" ")}
                         >
                           <div className="relative px-6 pb-0 pt-6">
                             <div className="absolute left-5 top-5 z-10 rounded-full border border-white/12 bg-black/35 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/82 backdrop-blur-sm">
                               {titleize(type)}
                             </div>
+
+                            {rare ? (
+                              <div
+                                className={`absolute right-5 top-5 z-10 rounded-full border px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.16em] backdrop-blur-sm ${rareCardBadgeClass()}`}
+                              >
+                                Rare
+                              </div>
+                            ) : null}
 
                             <div className="flex justify-center">
                               <div className="w-full max-w-[240px]">
@@ -482,11 +497,16 @@ export default function CardLibraryPage({ onBack }: Props) {
 
                             <div className="mt-5 flex items-center justify-between gap-3">
                               <div className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/70">
-                                {inventoryCounts[String(card.id ?? "")] ?? 0}{" "}
-                                players
+                                {inventoryCounts[String(card.id ?? "")] ?? 0} players
                               </div>
 
-                              <div className="rounded-full border border-cyan-300/18 bg-cyan-500/[0.08] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-cyan-100/78">
+                              <div
+                                className={`rounded-full border px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] ${
+                                  rare
+                                    ? "border-red-400/20 bg-red-500/[0.08] text-red-100/85"
+                                    : "border-cyan-300/18 bg-cyan-500/[0.08] text-cyan-100/78"
+                                }`}
+                              >
                                 View Card
                               </div>
                             </div>
