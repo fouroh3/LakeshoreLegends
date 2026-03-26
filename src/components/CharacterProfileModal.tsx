@@ -9,6 +9,11 @@ import {
   itemLibraryByName,
   type InventoryCard,
 } from "../data/itemLibrary";
+import {
+  isRareCard,
+  rareCardBadgeClass,
+  rareCardGlowClass,
+} from "../utils/rareCards";
 
 type Props = {
   person: any | null;
@@ -598,6 +603,7 @@ function InventoryCardTile({
 }) {
   const [imgError, setImgError] = useState(false);
   const frame = getCardFrameClasses(card.type);
+  const rare = isRareCard(card);
 
   return (
     <button
@@ -607,7 +613,7 @@ function InventoryCardTile({
         isSelected
           ? `${guildTheme.selectedCardClass} ${guildTheme.selectedCardGlow} -translate-y-[2px] animate-[cardLock_260ms_ease-out]`
           : `${frame.shell} hover:-translate-y-[2px] hover:border-zinc-600 hover:shadow-[0_12px_28px_rgba(0,0,0,0.26)]`
-      }`}
+      } ${rare ? `border-red-500/45 ${rareCardGlowClass()}` : ""}`}
     >
       <ShimmerSweep
         active={isSelected}
@@ -624,13 +630,17 @@ function InventoryCardTile({
           ✦
         </div>
         {!imgError ? (
-          <img
-            src={card.imageUrl}
-            alt={card.name}
-            className="relative h-full w-full rounded-[15px] object-contain transition-transform duration-300 group-hover:scale-[1.015]"
-            loading="lazy"
-            onError={() => setImgError(true)}
-          />
+          <div className="relative h-full w-full overflow-hidden rounded-[15px] bg-black">
+            <div className="absolute inset-x-[8.5%] inset-y-[6.5%] overflow-hidden rounded-[10px]">
+              <img
+                src={card.imageUrl}
+                alt={card.name}
+                className="h-full w-full object-cover object-center transition-transform duration-300 group-hover:scale-[1.015]"
+                loading="lazy"
+                onError={() => setImgError(true)}
+              />
+            </div>
+          </div>
         ) : (
           <div className="relative flex h-full w-full items-center justify-center rounded-[15px] bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.05),transparent_55%)] p-3 text-center text-[10px] uppercase tracking-[0.16em] text-zinc-500">
             {card.type}
@@ -642,7 +652,7 @@ function InventoryCardTile({
         <div className="truncate text-[11px] font-medium text-zinc-200">
           {card.name}
         </div>
-        <div className="mt-1 flex items-center gap-2">
+        <div className="mt-1 flex flex-wrap items-center gap-2">
           <span
             className={`rounded-full border px-2 py-0.5 text-[9px] uppercase tracking-[0.12em] ${getCardTypeBadgeClass(
               card.type,
@@ -651,6 +661,13 @@ function InventoryCardTile({
           >
             {card.type}
           </span>
+          {rare ? (
+            <span
+              className={`rounded-full border px-2 py-0.5 text-[9px] uppercase tracking-[0.12em] ${rareCardBadgeClass()}`}
+            >
+              Rare
+            </span>
+          ) : null}
           {card.quantity && card.quantity > 1 ? (
             <span className="text-[10px] text-zinc-500">x{card.quantity}</span>
           ) : null}
@@ -660,202 +677,98 @@ function InventoryCardTile({
   );
 }
 
-function EmptyDetailPanel({
-  inventory,
-  grouped,
+function AnimatedSelectedCardPanel({
+  selected,
 }: {
-  inventory: ResolvedInventoryCard[];
-  grouped: ReturnType<typeof groupInventory>;
+  selected: ResolvedInventoryCard | null;
 }) {
-  return (
-    <div className="rounded-[22px] border border-zinc-800 bg-zinc-950/45 p-4">
-      <div className="space-y-4">
-        <div>
-          <div className="text-[10px] uppercase tracking-[0.18em] text-zinc-500">
-            Card Details
-          </div>
-          <div className="mt-2 text-lg font-semibold text-zinc-100">
-            Select a card
-          </div>
-          <div className="mt-2 text-sm leading-6 text-zinc-400">
-            Click any card in the inventory grid to view its details here.
-          </div>
+  if (!selected) {
+    return (
+      <div className="rounded-[22px] border border-zinc-800 bg-zinc-950/45 p-4">
+        <div className="text-[10px] uppercase tracking-[0.18em] text-zinc-500">
+          Card Details
         </div>
-
-        <div className="grid gap-2 pt-2">
-          <div className="rounded-2xl border border-zinc-800 bg-zinc-900/55 px-3 py-2.5">
-            <div className="text-[10px] uppercase tracking-[0.16em] text-zinc-500">
-              Total Items
-            </div>
-            <div className="mt-1 text-xl font-semibold text-zinc-100">
-              {inventory.length}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-2">
-            <div className="rounded-2xl border border-zinc-800 bg-zinc-900/40 px-3 py-2">
-              <div className="text-[10px] uppercase tracking-[0.16em] text-zinc-500">
-                Relics
-              </div>
-              <div className="mt-1 text-sm font-semibold text-zinc-200">
-                {grouped.relic.length}
-              </div>
-            </div>
-
-            <div className="rounded-2xl border border-zinc-800 bg-zinc-900/40 px-3 py-2">
-              <div className="text-[10px] uppercase tracking-[0.16em] text-zinc-500">
-                Potions
-              </div>
-              <div className="mt-1 text-sm font-semibold text-zinc-200">
-                {grouped.potion.length}
-              </div>
-            </div>
-
-            <div className="rounded-2xl border border-zinc-800 bg-zinc-900/40 px-3 py-2">
-              <div className="text-[10px] uppercase tracking-[0.16em] text-zinc-500">
-                Items
-              </div>
-              <div className="mt-1 text-sm font-semibold text-zinc-200">
-                {grouped.item.length}
-              </div>
-            </div>
-
-            <div className="rounded-2xl border border-zinc-800 bg-zinc-900/40 px-3 py-2">
-              <div className="text-[10px] uppercase tracking-[0.16em] text-zinc-500">
-                Other
-              </div>
-              <div className="mt-1 text-sm font-semibold text-zinc-200">
-                {grouped.other.length}
-              </div>
-            </div>
-          </div>
+        <div className="mt-2 text-lg font-semibold text-zinc-100">
+          Select a card
+        </div>
+        <div className="mt-2 text-sm leading-6 text-zinc-400">
+          Click any card in the inventory grid to view its details here.
         </div>
       </div>
-    </div>
-  );
-}
-
-function AnimatedSelectedCardPanel({
-  card,
-  inventory,
-  grouped,
-  guildTheme,
-}: {
-  card: ResolvedInventoryCard | null;
-  inventory: ResolvedInventoryCard[];
-  grouped: ReturnType<typeof groupInventory>;
-  guildTheme: GuildTheme;
-}) {
-  const [displayCard, setDisplayCard] = useState<ResolvedInventoryCard | null>(
-    card
-  );
-  const [phase, setPhase] = useState<"in" | "out">("in");
-  const [shineKey, setShineKey] = useState(0);
-
-  useEffect(() => {
-    if (!card && !displayCard) return;
-    if (card?.id === displayCard?.id) return;
-
-    setPhase("out");
-    const t = window.setTimeout(() => {
-      setDisplayCard(card);
-      setPhase("in");
-      setShineKey((k) => k + 1);
-    }, 140);
-
-    return () => window.clearTimeout(t);
-  }, [card, displayCard]);
-
-  if (!displayCard) {
-    return <EmptyDetailPanel inventory={inventory} grouped={grouped} />;
+    );
   }
+
+  const rare = isRareCard(selected);
 
   return (
     <div
-      className={`relative overflow-hidden rounded-[22px] border border-zinc-800 bg-zinc-950/55 p-4 transition-all duration-200 ${
-        phase === "out"
-          ? "translate-y-1 opacity-0"
-          : "translate-y-0 opacity-100"
+      className={`rounded-[22px] border p-4 transition-all ${
+        rare
+          ? "border-red-400/40 bg-[linear-gradient(180deg,rgba(60,10,18,0.22),rgba(10,10,12,0.94))] shadow-[0_0_26px_rgba(255,0,0,0.16)]"
+          : "border-zinc-800 bg-zinc-950/45"
       }`}
     >
-      <div
-        className={`pointer-events-none absolute inset-x-0 top-0 h-[2px] opacity-90 ${guildTheme.accentPanel}`}
-      />
-      <div
-        key={shineKey}
-        className={`pointer-events-none absolute inset-y-0 -left-1/3 w-1/3 rotate-[18deg] bg-gradient-to-r ${guildTheme.shimmerClass} animate-[shimmerSweep_1.15s_ease-out]`}
-      />
-      <div className="space-y-4">
-        <div className="flex items-start gap-3">
-          <div
-            className={`relative h-24 w-[76px] shrink-0 overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900 ${guildTheme.accentGlowSoft}`}
-          >
-            <div
-              className={`absolute inset-0 ${guildTheme.portraitGlow} opacity-30`}
-            />
-            <img
-              src={displayCard.imageUrl}
-              alt={displayCard.name}
-              className="relative h-full w-full object-contain"
-            />
-          </div>
+      {/* HEADER */}
+      <div className="text-[10px] uppercase tracking-[0.18em] text-zinc-500">
+        Card Details
+      </div>
 
-          <div className="min-w-0">
-            <div className="text-[10px] uppercase tracking-[0.18em] text-zinc-500">
-              Card Details
-            </div>
-            <div className="mt-1 text-xl font-semibold leading-tight text-zinc-100">
-              {displayCard.name}
-            </div>
-
-            <div className="mt-2 flex flex-wrap gap-2">
-              <span
-                className={`rounded-full border px-2.5 py-1 text-[10px] uppercase tracking-[0.14em] ${getCardTypeBadgeClass(
-                  displayCard.type,
-                  guildTheme
-                )}`}
-              >
-                {displayCard.type}
-              </span>
-
-              {displayCard.quantity && displayCard.quantity > 1 ? (
-                <span className="rounded-full border border-zinc-700 bg-zinc-900 px-2.5 py-1 text-[10px] text-zinc-300">
-                  Quantity: {displayCard.quantity}
-                </span>
-              ) : null}
+      {/* CARD */}
+      <div className="mt-4 flex justify-center">
+        <div className="w-full max-w-[118px]">
+          <div className="relative w-full aspect-[3/4.2]">
+            <div className="absolute inset-0 rounded-[14px] border border-white/10 bg-black/40 shadow-inner" />
+            <div className="absolute inset-x-[8.5%] inset-y-[6.5%] overflow-hidden rounded-[8px]">
+              <img
+                src={selected.imageUrl}
+                alt={selected.name}
+                className="h-full w-full object-cover"
+              />
             </div>
           </div>
-        </div>
-
-        <div className="rounded-[18px] border border-zinc-800 bg-zinc-900/40 p-3">
-          <div className="mb-1 text-[10px] uppercase tracking-[0.18em] text-zinc-500">
-            Effect
-          </div>
-          <div className="text-sm leading-6 text-zinc-300">
-            {displayCard.effect}
-          </div>
-        </div>
-
-        <div className="flex flex-wrap gap-2">
-          {displayCard.useText ? (
-            <span className="rounded-full border border-zinc-700 bg-zinc-900 px-2.5 py-1 text-[10px] text-zinc-300">
-              {displayCard.useText}
-            </span>
-          ) : null}
-
-          {displayCard.isEquipped ? (
-            <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-1 text-[10px] text-emerald-200">
-              Equipped
-            </span>
-          ) : null}
-
-          {displayCard.isConsumed ? (
-            <span className="rounded-full border border-zinc-700 bg-zinc-800 px-2.5 py-1 text-[10px] text-zinc-300">
-              Used
-            </span>
-          ) : null}
         </div>
       </div>
+
+      {/* TITLE */}
+      <div className="mt-5">
+        <div className="text-[17px] font-semibold leading-tight text-zinc-100 tracking-[-0.01em]">
+          {selected.name}
+        </div>
+
+        {/* PILLS */}
+        <div className="mt-3 flex flex-wrap gap-2">
+          <span className="rounded-full border border-white/15 bg-white/5 px-3 py-[5px] text-[10px] font-medium uppercase tracking-[0.12em] text-white/80">
+            {selected.type}
+          </span>
+
+          {rare && (
+            <span
+              className={`rounded-full border px-3 py-[5px] text-[10px] font-medium uppercase tracking-[0.12em] ${rareCardBadgeClass()}`}
+            >
+              Rare
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* EFFECT */}
+      <div className="mt-5 rounded-[18px] border border-zinc-800 bg-zinc-900/35 p-3.5">
+        <div className="text-[10px] uppercase tracking-[0.16em] text-zinc-500">
+          Effect
+        </div>
+        <div className="mt-2.5 text-[14px] leading-7 text-zinc-200">
+          {selected.effect}
+        </div>
+      </div>
+
+      {/* FOOTER */}
+      {selected.useText ? (
+        <div className="mt-4">
+          <span className="inline-flex rounded-full border border-zinc-700 bg-zinc-900/70 px-3 py-[5px] text-[10px] font-medium text-zinc-400">
+            {selected.useText}
+          </span>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -969,12 +882,7 @@ function InventorySection({
 
           <div className="min-[1320px]:hidden">
             <div ref={inlineDetailRef}>
-              <AnimatedSelectedCardPanel
-                card={selectedCard}
-                inventory={inventory}
-                grouped={grouped}
-                guildTheme={guildTheme}
-              />
+              <AnimatedSelectedCardPanel selected={selectedCard} />
             </div>
           </div>
 
@@ -998,12 +906,7 @@ function InventorySection({
             </div>
 
             <div className="hidden min-w-0 min-[1320px]:block">
-              <AnimatedSelectedCardPanel
-                card={selectedCard}
-                inventory={inventory}
-                grouped={grouped}
-                guildTheme={guildTheme}
-              />
+              <AnimatedSelectedCardPanel selected={selectedCard} />
             </div>
           </div>
         </div>

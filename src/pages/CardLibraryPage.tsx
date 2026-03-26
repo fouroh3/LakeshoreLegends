@@ -7,6 +7,7 @@ import {
   itemLibraryByName,
   type InventoryCard,
 } from "../data/itemLibrary";
+import { isRareCard, rareCardBadgeClass } from "../utils/rareCards";
 
 type CardTypeFilter = "all" | "relic" | "potion" | "item" | "pet" | "other";
 
@@ -439,6 +440,7 @@ export default function CardLibraryPage({ onBack }: Props) {
                         String(card.id) === String(selectedCard?.id);
                       const type = typeKey(card);
                       const meta = TYPE_META[type];
+                      const rare = isRareCard(card);
 
                       return (
                         <button
@@ -449,24 +451,33 @@ export default function CardLibraryPage({ onBack }: Props) {
                             setActiveCard(card);
                           }}
                           className={[
-                            "group w-full overflow-hidden rounded-[26px] border text-left transition",
+                            "group relative w-full overflow-hidden rounded-[26px] border text-left transition",
                             selected
-                              ? `${meta.active} bg-[linear-gradient(180deg,rgba(255,255,255,0.07),rgba(255,255,255,0.03))]`
-                              : "border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))] hover:border-white/18 hover:bg-white/[0.06]",
+                              ? `${meta.active} ${
+                                  rare
+                                    ? "border-red-400/40 shadow-[0_0_26px_rgba(239,68,68,0.16)]"
+                                    : ""
+                                } bg-[linear-gradient(180deg,rgba(255,255,255,0.07),rgba(255,255,255,0.03))]`
+                              : `border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))] hover:border-white/18 hover:bg-white/[0.06] ${
+                                  rare
+                                    ? "ring-1 ring-red-500/20 shadow-[0_10px_26px_rgba(239,68,68,0.10)]"
+                                    : ""
+                                }`,
                           ].join(" ")}
                         >
-                          <div className="relative px-6 pb-0 pt-6">
-                            <div className="absolute left-5 top-5 z-10 rounded-full border border-white/12 bg-black/35 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/82 backdrop-blur-sm">
-                              {titleize(type)}
-                            </div>
-
+                          <div className="px-6 pt-6">
                             <div className="flex justify-center">
                               <div className="w-full max-w-[240px]">
-                                <img
-                                  src={card.imageUrl}
-                                  alt={card.name}
-                                  className="block h-auto w-full transition duration-300 group-hover:scale-[1.03]"
-                                />
+                                <div className="relative w-full aspect-[3/4.2]">
+                                  <div className="absolute inset-0 rounded-[18px] border border-white/10 bg-black/40 shadow-inner" />
+                                  <div className="absolute inset-x-[8.5%] inset-y-[6.5%] overflow-hidden rounded-[12px] bg-black">
+                                    <img
+                                      src={card.imageUrl}
+                                      alt={card.name}
+                                      className="h-full w-full object-cover object-center transition duration-300 group-hover:scale-[1.02]"
+                                    />
+                                  </div>
+                                </div>
                               </div>
                             </div>
                           </div>
@@ -480,15 +491,23 @@ export default function CardLibraryPage({ onBack }: Props) {
                               {card.effect || "No effect text available."}
                             </div>
 
-                            <div className="mt-5 flex items-center justify-between gap-3">
+                            <div className="mt-5 flex flex-wrap items-center gap-2">
                               <div className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/70">
                                 {inventoryCounts[String(card.id ?? "")] ?? 0}{" "}
                                 players
                               </div>
 
-                              <div className="rounded-full border border-cyan-300/18 bg-cyan-500/[0.08] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-cyan-100/78">
-                                View Card
+                              <div className="rounded-full border border-white/12 bg-black/30 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/80">
+                                {titleize(type)}
                               </div>
+
+                              {rare ? (
+                                <div
+                                  className={`rounded-full border px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] ${rareCardBadgeClass()}`}
+                                >
+                                  Rare
+                                </div>
+                              ) : null}
                             </div>
                           </div>
                         </button>
