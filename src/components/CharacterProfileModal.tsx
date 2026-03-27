@@ -609,7 +609,7 @@ function InventoryCardTile({
     <button
       type="button"
       onClick={() => onSelect(card)}
-      className={`group relative w-full overflow-hidden rounded-[22px] border text-left transition-all duration-250 ${
+      className={`group relative mx-auto w-full max-w-[230px] overflow-hidden rounded-[22px] border text-left transition-all duration-250 ${
         isSelected
           ? `${guildTheme.selectedCardClass} ${guildTheme.selectedCardGlow} -translate-y-[2px] animate-[cardLock_260ms_ease-out]`
           : `${frame.shell} hover:-translate-y-[2px] hover:border-zinc-600 hover:shadow-[0_12px_28px_rgba(0,0,0,0.26)]`
@@ -619,7 +619,8 @@ function InventoryCardTile({
         active={isSelected}
         className={`bg-gradient-to-r ${guildTheme.shimmerClass}`}
       />
-      <div className="relative flex aspect-[5/6.8] w-full items-center justify-center overflow-hidden p-2.5">
+
+      <div className="relative flex aspect-[3/4.55] w-full items-center justify-center overflow-hidden p-2.5">
         <div
           className={`pointer-events-none absolute inset-0 ${frame.topGlow} opacity-90`}
         />
@@ -629,6 +630,7 @@ function InventoryCardTile({
         >
           ✦
         </div>
+
         {!imgError ? (
           <div className="relative h-full w-full overflow-hidden rounded-[15px] bg-black">
             <div className="absolute inset-x-[8.5%] inset-y-[6.5%] overflow-hidden rounded-[10px]">
@@ -708,15 +710,13 @@ function AnimatedSelectedCardPanel({
           : "border-zinc-800 bg-zinc-950/45"
       }`}
     >
-      {/* HEADER */}
       <div className="text-[10px] uppercase tracking-[0.18em] text-zinc-500">
         Card Details
       </div>
 
-      {/* CARD */}
       <div className="mt-4 flex justify-center">
         <div className="w-full max-w-[118px]">
-          <div className="relative w-full aspect-[3/4.2]">
+          <div className="relative aspect-[3/4.2] w-full">
             <div className="absolute inset-0 rounded-[14px] border border-white/10 bg-black/40 shadow-inner" />
             <div className="absolute inset-x-[8.5%] inset-y-[6.5%] overflow-hidden rounded-[8px]">
               <img
@@ -729,13 +729,11 @@ function AnimatedSelectedCardPanel({
         </div>
       </div>
 
-      {/* TITLE */}
       <div className="mt-5">
-        <div className="text-[17px] font-semibold leading-tight text-zinc-100 tracking-[-0.01em]">
+        <div className="text-[17px] font-semibold leading-tight tracking-[-0.01em] text-zinc-100">
           {selected.name}
         </div>
 
-        {/* PILLS */}
         <div className="mt-3 flex flex-wrap gap-2">
           <span className="rounded-full border border-white/15 bg-white/5 px-3 py-[5px] text-[10px] font-medium uppercase tracking-[0.12em] text-white/80">
             {selected.type}
@@ -751,7 +749,6 @@ function AnimatedSelectedCardPanel({
         </div>
       </div>
 
-      {/* EFFECT */}
       <div className="mt-5 rounded-[18px] border border-zinc-800 bg-zinc-900/35 p-3.5">
         <div className="text-[10px] uppercase tracking-[0.16em] text-zinc-500">
           Effect
@@ -761,7 +758,6 @@ function AnimatedSelectedCardPanel({
         </div>
       </div>
 
-      {/* FOOTER */}
       {selected.useText ? (
         <div className="mt-4">
           <span className="inline-flex rounded-full border border-zinc-700 bg-zinc-900/70 px-3 py-[5px] text-[10px] font-medium text-zinc-400">
@@ -888,7 +884,7 @@ function InventorySection({
 
           <div className="grid gap-3 min-[1320px]:grid-cols-[minmax(0,1fr)_250px]">
             <div className="rounded-[22px] border border-zinc-800 bg-zinc-950/35 p-3">
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 min-[1080px]:grid-cols-4 min-[1500px]:grid-cols-5">
+              <div className="grid grid-cols-2 justify-items-center gap-3 sm:grid-cols-3 min-[1080px]:grid-cols-4 min-[1500px]:grid-cols-5">
                 {visibleCards.map((card) => (
                   <InventoryCardTile
                     key={card.id}
@@ -1138,6 +1134,8 @@ export default function CharacterProfileModal({
   onClose,
 }: Props) {
   const [visible, setVisible] = useState(false);
+  const scrollYRef = useRef(0);
+  const modalScrollerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (!open) {
@@ -1156,13 +1154,42 @@ export default function CharacterProfileModal({
       if (e.key === "Escape") onClose();
     };
 
+    const scrollY = window.scrollY;
+    scrollYRef.current = scrollY;
+
+    const prevBodyOverflow = document.body.style.overflow;
+    const prevBodyPosition = document.body.style.position;
+    const prevBodyTop = document.body.style.top;
+    const prevBodyWidth = document.body.style.width;
+    const prevBodyTouchAction = document.body.style.touchAction;
+    const prevHtmlOverflow = document.documentElement.style.overflow;
+    const prevHtmlOverscroll =
+      document.documentElement.style.overscrollBehavior;
+
     window.addEventListener("keydown", onKey);
-    const prev = document.body.style.overflow;
+
+    document.documentElement.style.overflow = "hidden";
+    document.documentElement.style.overscrollBehavior = "none";
+
     document.body.style.overflow = "hidden";
+    document.body.style.position = "fixed";
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.width = "100%";
+    document.body.style.touchAction = "none";
 
     return () => {
       window.removeEventListener("keydown", onKey);
-      document.body.style.overflow = prev;
+
+      document.documentElement.style.overflow = prevHtmlOverflow;
+      document.documentElement.style.overscrollBehavior = prevHtmlOverscroll;
+
+      document.body.style.overflow = prevBodyOverflow;
+      document.body.style.position = prevBodyPosition;
+      document.body.style.top = prevBodyTop;
+      document.body.style.width = prevBodyWidth;
+      document.body.style.touchAction = prevBodyTouchAction;
+
+      window.scrollTo(0, scrollYRef.current);
     };
   }, [open, onClose]);
 
@@ -1197,7 +1224,7 @@ export default function CharacterProfileModal({
   const healthState = hpStatus(hpCur, hpBase);
 
   return (
-    <div className="fixed inset-0 z-[100]">
+    <div className="fixed inset-0 z-[1000] bg-black/78 backdrop-blur-md">
       <style>{`
         @keyframes shimmerSweep {
           0% { transform: translateX(-130%) rotate(18deg); opacity: 0; }
@@ -1214,138 +1241,148 @@ export default function CharacterProfileModal({
 
       <button
         aria-label="Close profile"
-        className={`absolute inset-0 bg-black/78 backdrop-blur-md transition-opacity duration-300 ${
+        className={`absolute inset-0 transition-opacity duration-300 ${
           visible ? "opacity-100" : "opacity-0"
         }`}
         onClick={onClose}
       />
 
-      <div className="absolute inset-0 flex items-center justify-center px-2 pb-2 pt-[76px] sm:px-3 sm:pb-3 sm:pt-[82px] lg:px-5 lg:pb-5 lg:pt-[100px]">
+      <div className="absolute inset-0 overflow-hidden">
         <div
-          className={`relative h-[94vh] w-full max-w-[1520px] overflow-y-auto overflow-x-hidden rounded-[34px] border border-zinc-800 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.03),transparent_24%),linear-gradient(180deg,#0d0d11_0%,#08080a_100%)] shadow-2xl shadow-black/70 transition-all duration-300 ${
-            visible
-              ? "translate-y-0 scale-100 opacity-100"
-              : "translate-y-3 scale-[0.985] opacity-0"
-          } ${guildTheme.modalGlow}`}
+          ref={modalScrollerRef}
+          className="h-[100dvh] overflow-y-auto overscroll-contain"
         >
-          <button
-            onClick={onClose}
-            className="absolute right-4 top-4 z-30 flex h-12 w-12 items-center justify-center rounded-full border border-zinc-800 bg-zinc-900/92 text-zinc-400 transition hover:bg-zinc-800 hover:text-white min-[1080px]:right-5 min-[1080px]:top-5"
-            aria-label="Close"
-            title="Close"
-          >
-            ✕
-          </button>
+          <div className="min-h-[100dvh] px-0 py-0 sm:px-3 sm:py-3 lg:px-5 lg:py-5">
+            <div
+              className={`relative mx-auto min-h-[100dvh] w-full max-w-[1520px] overflow-hidden border border-zinc-800 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.03),transparent_24%),linear-gradient(180deg,#0d0d11_0%,#08080a_100%)] transition-all duration-300 sm:min-h-0 sm:rounded-[34px] sm:min-[640px]:shadow-2xl sm:min-[640px]:shadow-black/70 ${
+                visible
+                  ? "translate-y-0 scale-100 opacity-100"
+                  : "translate-y-3 scale-[0.985] opacity-0"
+              } ${guildTheme.modalGlow}`}
+            >
+              <button
+                onClick={onClose}
+                className="absolute right-4 top-4 z-30 flex h-12 w-12 items-center justify-center rounded-full border border-zinc-800 bg-zinc-900/92 text-zinc-400 transition hover:bg-zinc-800 hover:text-white min-[1080px]:right-5 min-[1080px]:top-5"
+                aria-label="Close"
+                title="Close"
+              >
+                ✕
+              </button>
 
-          <div className="grid w-full gap-4 p-4 pt-16 min-[1080px]:min-h-full min-[1080px]:grid-cols-[300px_minmax(0,1fr)] min-[1080px]:pt-4">
-            <aside className="min-w-0">
-              <div className="space-y-4 min-[1080px]:flex min-[1080px]:h-full min-[1080px]:flex-col">
-                <div
-                  className={`transition-all duration-500 delay-75 ${
-                    visible
-                      ? "translate-y-0 opacity-100"
-                      : "translate-y-2 opacity-0"
-                  }`}
-                >
-                  <HeroBanner
-                    fullName={fullName}
-                    person={person}
-                    healthState={healthState}
-                    guildTheme={guildTheme}
-                  />
-                </div>
-
-                <div
-                  className={`transition-all duration-500 delay-150 ${
-                    visible
-                      ? "translate-y-0 opacity-100"
-                      : "translate-y-2 opacity-0"
-                  }`}
-                >
-                  <div className="rounded-[24px] border border-zinc-800/80 bg-[linear-gradient(180deg,rgba(17,17,21,0.96),rgba(8,8,10,0.96))] p-4 min-[1080px]:flex-1">
-                    <div className="space-y-3">
-                      <div className="rounded-[20px] border border-zinc-800 bg-zinc-950/35 p-3.5 text-left">
-                        <SectionHeading
-                          icon="❤️"
-                          title="Health"
-                          right={
-                            <span className="text-xs font-semibold text-zinc-100">
-                              {hpCur}/{hpBase}
-                            </span>
-                          }
-                          className="mb-2"
-                        />
-
-                        <div className="mb-2">
-                          <span
-                            className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-medium ${healthState.pillClass}`}
-                          >
-                            {healthState.label}
-                          </span>
-                        </div>
-
-                        <div className="overflow-hidden rounded-full bg-zinc-950/80 p-[2px] shadow-[inset_0_0_8px_rgba(0,0,0,0.55)]">
-                          <div className="h-3.5 overflow-hidden rounded-full bg-zinc-900/60">
-                            <div
-                              className="h-full rounded-full transition-[width] duration-500"
-                              style={{
-                                width: `${Math.round(hpPct * 100)}%`,
-                                backgroundColor: hpFill,
-                                backgroundImage: isDead
-                                  ? "none"
-                                  : `linear-gradient(90deg, ${hpFill}, ${hpFill}cc)`,
-                                boxShadow: isDead
-                                  ? "none"
-                                  : `0 0 12px ${hpFill}66`,
-                              }}
-                            />
-                          </div>
-                        </div>
-                      </div>
-
-                      <CompanionPanel
-                        companion={companion}
+              <div className="grid w-full gap-4 p-4 pt-16 min-[1080px]:grid-cols-[300px_minmax(0,1fr)] min-[1080px]:pt-4">
+                <aside className="min-w-0">
+                  <div className="space-y-4 min-[1080px]:flex min-[1080px]:h-full min-[1080px]:flex-col">
+                    <div
+                      className={`transition-all duration-500 delay-75 ${
+                        visible
+                          ? "translate-y-0 opacity-100"
+                          : "translate-y-2 opacity-0"
+                      }`}
+                    >
+                      <HeroBanner
+                        fullName={fullName}
+                        person={person}
+                        healthState={healthState}
                         guildTheme={guildTheme}
                       />
                     </div>
 
-                    <div className="pt-4 text-center text-[10px] uppercase tracking-[0.22em] text-zinc-600 min-[1080px]:mt-auto">
-                      Character Profile
+                    <div
+                      className={`transition-all duration-500 delay-150 ${
+                        visible
+                          ? "translate-y-0 opacity-100"
+                          : "translate-y-2 opacity-0"
+                      }`}
+                    >
+                      <div className="rounded-[24px] border border-zinc-800/80 bg-[linear-gradient(180deg,rgba(17,17,21,0.96),rgba(8,8,10,0.96))] p-4 min-[1080px]:flex-1">
+                        <div className="space-y-3">
+                          <div className="rounded-[20px] border border-zinc-800 bg-zinc-950/35 p-3.5 text-left">
+                            <SectionHeading
+                              icon="❤️"
+                              title="Health"
+                              right={
+                                <span className="text-xs font-semibold text-zinc-100">
+                                  {hpCur}/{hpBase}
+                                </span>
+                              }
+                              className="mb-2"
+                            />
+
+                            <div className="mb-2">
+                              <span
+                                className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-medium ${healthState.pillClass}`}
+                              >
+                                {healthState.label}
+                              </span>
+                            </div>
+
+                            <div className="overflow-hidden rounded-full bg-zinc-950/80 p-[2px] shadow-[inset_0_0_8px_rgba(0,0,0,0.55)]">
+                              <div className="h-3.5 overflow-hidden rounded-full bg-zinc-900/60">
+                                <div
+                                  className="h-full rounded-full transition-[width] duration-500"
+                                  style={{
+                                    width: `${Math.round(hpPct * 100)}%`,
+                                    backgroundColor: hpFill,
+                                    backgroundImage: isDead
+                                      ? "none"
+                                      : `linear-gradient(90deg, ${hpFill}, ${hpFill}cc)`,
+                                    boxShadow: isDead
+                                      ? "none"
+                                      : `0 0 12px ${hpFill}66`,
+                                  }}
+                                />
+                              </div>
+                            </div>
+                          </div>
+
+                          <CompanionPanel
+                            companion={companion}
+                            guildTheme={guildTheme}
+                          />
+                        </div>
+
+                        <div className="pt-4 text-center text-[10px] uppercase tracking-[0.22em] text-zinc-600 min-[1080px]:mt-auto">
+                          Character Profile
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </div>
-            </aside>
+                </aside>
 
-            <main className="min-w-0">
-              <div className="space-y-3">
-                <div
-                  className={`transition-all duration-500 delay-200 ${
-                    visible
-                      ? "translate-y-0 opacity-100"
-                      : "translate-y-2 opacity-0"
-                  }`}
-                >
-                  <div className="grid gap-3 xl:grid-cols-[minmax(0,1.45fr)_minmax(280px,0.55fr)]">
-                    <AttributeSection person={person} guildTheme={guildTheme} />
-                    <SkillsSection skillList={skillList} />
+                <main className="min-w-0">
+                  <div className="space-y-3">
+                    <div
+                      className={`transition-all duration-500 delay-200 ${
+                        visible
+                          ? "translate-y-0 opacity-100"
+                          : "translate-y-2 opacity-0"
+                      }`}
+                    >
+                      <div className="grid gap-3 xl:grid-cols-[minmax(0,1.45fr)_minmax(280px,0.55fr)]">
+                        <AttributeSection
+                          person={person}
+                          guildTheme={guildTheme}
+                        />
+                        <SkillsSection skillList={skillList} />
+                      </div>
+                    </div>
+
+                    <div
+                      className={`transition-all duration-500 delay-300 ${
+                        visible
+                          ? "translate-y-0 opacity-100"
+                          : "translate-y-2 opacity-0"
+                      }`}
+                    >
+                      <InventorySection
+                        inventory={inventory}
+                        guildTheme={guildTheme}
+                      />
+                    </div>
                   </div>
-                </div>
-
-                <div
-                  className={`transition-all duration-500 delay-300 ${
-                    visible
-                      ? "translate-y-0 opacity-100"
-                      : "translate-y-2 opacity-0"
-                  }`}
-                >
-                  <InventorySection
-                    inventory={inventory}
-                    guildTheme={guildTheme}
-                  />
-                </div>
+                </main>
               </div>
-            </main>
+            </div>
           </div>
         </div>
       </div>
