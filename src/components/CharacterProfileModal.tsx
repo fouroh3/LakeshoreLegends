@@ -609,7 +609,7 @@ function InventoryCardTile({
     <button
       type="button"
       onClick={() => onSelect(card)}
-      className={`group relative mx-auto w-full max-w-[230px] overflow-hidden rounded-[22px] border text-left transition-all duration-250 ${
+      className={`group relative w-full overflow-hidden rounded-[22px] border text-left transition-all duration-250 ${
         isSelected
           ? `${guildTheme.selectedCardClass} ${guildTheme.selectedCardGlow} -translate-y-[2px] animate-[cardLock_260ms_ease-out]`
           : `${frame.shell} hover:-translate-y-[2px] hover:border-zinc-600 hover:shadow-[0_12px_28px_rgba(0,0,0,0.26)]`
@@ -620,7 +620,7 @@ function InventoryCardTile({
         className={`bg-gradient-to-r ${guildTheme.shimmerClass}`}
       />
 
-      <div className="relative flex aspect-[3/4.55] w-full items-center justify-center overflow-hidden p-2.5">
+      <div className="relative flex aspect-[3/4] w-full items-center justify-center overflow-hidden p-2.5">
         <div
           className={`pointer-events-none absolute inset-0 ${frame.topGlow} opacity-90`}
         />
@@ -633,15 +633,13 @@ function InventoryCardTile({
 
         {!imgError ? (
           <div className="relative h-full w-full overflow-hidden rounded-[15px] bg-black">
-            <div className="absolute inset-x-[8.5%] inset-y-[6.5%] overflow-hidden rounded-[10px]">
-              <img
-                src={card.imageUrl}
-                alt={card.name}
-                className="h-full w-full object-cover object-center transition-transform duration-300 group-hover:scale-[1.015]"
-                loading="lazy"
-                onError={() => setImgError(true)}
-              />
-            </div>
+            <img
+              src={card.imageUrl}
+              alt={card.name}
+              className="h-full w-full object-contain object-center drop-shadow-[0_8px_18px_rgba(0,0,0,0.6)]"
+              loading="lazy"
+              onError={() => setImgError(true)}
+            />
           </div>
         ) : (
           <div className="relative flex h-full w-full items-center justify-center rounded-[15px] bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.05),transparent_55%)] p-3 text-center text-[10px] uppercase tracking-[0.16em] text-zinc-500">
@@ -663,6 +661,7 @@ function InventoryCardTile({
           >
             {card.type}
           </span>
+
           {rare ? (
             <span
               className={`rounded-full border px-2 py-0.5 text-[9px] uppercase tracking-[0.12em] ${rareCardBadgeClass()}`}
@@ -670,6 +669,7 @@ function InventoryCardTile({
               Rare
             </span>
           ) : null}
+
           {card.quantity && card.quantity > 1 ? (
             <span className="text-[10px] text-zinc-500">x{card.quantity}</span>
           ) : null}
@@ -716,13 +716,13 @@ function AnimatedSelectedCardPanel({
 
       <div className="mt-4 flex justify-center">
         <div className="w-full max-w-[118px]">
-          <div className="relative aspect-[3/4.2] w-full">
+          <div className="relative aspect-[3/4] w-full">
             <div className="absolute inset-0 rounded-[14px] border border-white/10 bg-black/40 shadow-inner" />
-            <div className="absolute inset-x-[8.5%] inset-y-[6.5%] overflow-hidden rounded-[8px]">
+            <div className="absolute inset-0 overflow-hidden rounded-[8px]">
               <img
                 src={selected.imageUrl}
                 alt={selected.name}
-                className="h-full w-full object-cover"
+                className="h-full w-full object-contain object-center"
               />
             </div>
           </div>
@@ -884,7 +884,7 @@ function InventorySection({
 
           <div className="grid gap-3 min-[1320px]:grid-cols-[minmax(0,1fr)_250px]">
             <div className="rounded-[22px] border border-zinc-800 bg-zinc-950/35 p-3">
-              <div className="grid grid-cols-2 justify-items-center gap-3 sm:grid-cols-3 min-[1080px]:grid-cols-4 min-[1500px]:grid-cols-5">
+              <div className="grid grid-cols-2 justify-items-center gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
                 {visibleCards.map((card) => (
                   <InventoryCardTile
                     key={card.id}
@@ -1262,16 +1262,16 @@ export default function CharacterProfileModal({
             >
               <button
                 onClick={onClose}
-                className="absolute right-4 top-4 z-30 flex h-12 w-12 items-center justify-center rounded-full border border-zinc-800 bg-zinc-900/92 text-zinc-400 transition hover:bg-zinc-800 hover:text-white min-[1080px]:right-5 min-[1080px]:top-5"
+                className="absolute right-4 top-4 z-30 flex h-12 w-12 items-center justify-center rounded-full border border-zinc-800 bg-zinc-900/92 text-zinc-400 transition hover:bg-zinc-800 hover:text-white lg:right-5 lg:top-5"
                 aria-label="Close"
                 title="Close"
               >
                 ✕
               </button>
 
-              <div className="grid w-full gap-4 p-4 pt-16 min-[1080px]:grid-cols-[300px_minmax(0,1fr)] min-[1080px]:pt-4">
+              <div className="grid w-full gap-4 p-4 pt-16 lg:grid-cols-[300px_minmax(0,1fr)] lg:pt-4">
                 <aside className="min-w-0">
-                  <div className="space-y-4 min-[1080px]:flex min-[1080px]:h-full min-[1080px]:flex-col">
+                  <div className="space-y-4 lg:flex lg:h-full lg:flex-col">
                     <div
                       className={`transition-all duration-500 delay-75 ${
                         visible
@@ -1294,7 +1294,7 @@ export default function CharacterProfileModal({
                           : "translate-y-2 opacity-0"
                       }`}
                     >
-                      <div className="rounded-[24px] border border-zinc-800/80 bg-[linear-gradient(180deg,rgba(17,17,21,0.96),rgba(8,8,10,0.96))] p-4 min-[1080px]:flex-1">
+                      <div className="rounded-[24px] border border-zinc-800/80 bg-[linear-gradient(180deg,rgba(17,17,21,0.96),rgba(8,8,10,0.96))] p-4 lg:flex-1">
                         <div className="space-y-3">
                           <div className="rounded-[20px] border border-zinc-800 bg-zinc-950/35 p-3.5 text-left">
                             <SectionHeading
@@ -1341,7 +1341,7 @@ export default function CharacterProfileModal({
                           />
                         </div>
 
-                        <div className="pt-4 text-center text-[10px] uppercase tracking-[0.22em] text-zinc-600 min-[1080px]:mt-auto">
+                        <div className="pt-4 text-center text-[10px] uppercase tracking-[0.22em] text-zinc-600 lg:mt-auto">
                           Character Profile
                         </div>
                       </div>
