@@ -1,3 +1,5 @@
+// src/components/CharacterProfileModal.tsx
+
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import Avatar from "./Avatar";
