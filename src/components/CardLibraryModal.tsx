@@ -1,5 +1,3 @@
-// src/components/CardLibraryModal.tsx
-
 import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import type { InventoryCard } from "../data/itemLibrary";
@@ -150,6 +148,11 @@ export default function CardLibraryModal({
     setDragOffset(0);
   };
 
+  const showChainHook =
+    card.loreChain === "lake" ||
+    card.loreChain === "prism" ||
+    card.loreChain === "alchemist";
+
   return (
     <div
       className="fixed inset-0 z-[1200] bg-black/80 backdrop-blur-md"
@@ -161,7 +164,7 @@ export default function CardLibraryModal({
       >
         <div className="relative min-h-[100dvh] w-full sm:flex sm:min-h-full sm:items-center sm:justify-center">
           <div
-            className={`relative mx-auto w-full max-w-5xl min-h-[100dvh] overflow-hidden rounded-none border bg-[linear-gradient(180deg,rgba(10,14,24,0.985),rgba(6,9,16,0.985))] shadow-[0_30px_100px_rgba(0,0,0,0.62)] sm:my-6 sm:min-h-0 sm:rounded-[30px] ${
+            className={`relative mx-auto min-h-[100dvh] w-full max-w-5xl overflow-hidden rounded-none border bg-[linear-gradient(180deg,rgba(10,14,24,0.985),rgba(6,9,16,0.985))] shadow-[0_30px_100px_rgba(0,0,0,0.62)] sm:my-6 sm:min-h-0 sm:rounded-[30px] ${
               rare
                 ? "border-red-500/30 before:pointer-events-none before:absolute before:inset-0 before:bg-[radial-gradient(circle_at_top,rgba(239,68,68,0.14),transparent_26%),radial-gradient(circle_at_12%_0%,rgba(245,158,11,0.10),transparent_22%)]"
                 : "border-zinc-700/80 before:pointer-events-none before:absolute before:inset-0 before:bg-[radial-gradient(circle_at_top,rgba(34,211,238,0.07),transparent_30%),radial-gradient(circle_at_12%_0%,rgba(245,158,11,0.08),transparent_22%)]"
@@ -169,9 +172,7 @@ export default function CardLibraryModal({
             style={{
               transform:
                 dragging && dragOffset > 0
-                  ? `translateY(${dragOffset}px) scale(${
-                      1 - dragOffset / 1800
-                    })`
+                  ? `translateY(${dragOffset}px) scale(${1 - dragOffset / 1800})`
                   : "translateY(0) scale(1)",
               transition: dragging ? "none" : "transform 180ms ease",
             }}
@@ -199,6 +200,20 @@ export default function CardLibraryModal({
                 <h2 className="mt-1 truncate text-xl font-semibold text-white sm:text-2xl">
                   {card.name}
                 </h2>
+                {card.whisper ? (
+                  <p
+                    className={`mt-2 text-[13px] italic tracking-[0.01em] ${
+                      rare ? "text-red-100/78" : "text-cyan-100/72"
+                    }`}
+                    style={{
+                      textShadow: rare
+                        ? "0 0 10px rgba(239,68,68,0.10)"
+                        : "0 0 10px rgba(34,211,238,0.08)",
+                    }}
+                  >
+                    {card.whisper}
+                  </p>
+                ) : null}
               </div>
 
               <button
@@ -217,9 +232,9 @@ export default function CardLibraryModal({
               onTouchMove={handleTouchMove}
               onTouchEnd={handleTouchEnd}
             >
-              <div className="grid gap-4 p-4 pb-[max(20px,env(safe-area-inset-bottom))] sm:gap-5 sm:p-6 lg:grid-cols-[360px_minmax(0,1fr)]">
+              <div className="grid gap-4 p-4 pb-[max(20px,env(safe-area-inset-bottom))] sm:gap-5 sm:p-6 lg:grid-cols-[minmax(260px,320px)_minmax(0,1fr)] xl:grid-cols-[minmax(280px,340px)_minmax(0,1fr)]">
                 <div
-                  className={`relative overflow-hidden rounded-[26px] border p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] ${
+                  className={`relative overflow-hidden rounded-[26px] border p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] sm:p-5 lg:self-start ${
                     rare
                       ? "border-red-500/20 bg-[radial-gradient(circle_at_top,rgba(239,68,68,0.16),transparent_52%),radial-gradient(circle_at_bottom,rgba(245,158,11,0.08),transparent_40%),linear-gradient(180deg,rgba(26,16,20,0.96),rgba(10,8,14,0.98))]"
                       : "border-zinc-800/80 bg-[radial-gradient(circle_at_top,rgba(34,211,238,0.12),transparent_55%),radial-gradient(circle_at_bottom,rgba(245,158,11,0.08),transparent_40%),linear-gradient(180deg,rgba(18,23,34,0.96),rgba(8,10,16,0.98))]"
@@ -235,7 +250,7 @@ export default function CardLibraryModal({
                   <div className="relative overflow-hidden rounded-[24px] border border-zinc-700/80 bg-[linear-gradient(180deg,rgba(6,8,14,0.96),rgba(3,4,8,0.98))] shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_18px_40px_rgba(0,0,0,0.28)]">
                     <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.06),transparent_42%)]" />
 
-                    <div className="relative aspect-[3/4.2] w-full">
+                    <div className="relative mx-auto aspect-[3/4.2] w-full max-w-[260px] sm:max-w-[280px] lg:max-w-[300px]">
                       {card.imageUrl ? (
                         <>
                           <div className="absolute inset-0 rounded-[18px] border border-white/10 bg-black/40 shadow-inner" />
@@ -243,7 +258,7 @@ export default function CardLibraryModal({
                             <img
                               src={card.imageUrl}
                               alt={card.name}
-                              className="h-full w-full object-cover object-center"
+                              className="h-full w-full object-contain object-center"
                             />
                           </div>
                         </>
@@ -265,33 +280,59 @@ export default function CardLibraryModal({
                       {typeLabel(card.type)}
                     </span>
 
-                    {rare && (
+                    {rare ? (
                       <span
                         className={`rounded-full border px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] ${rareCardBadgeClass()}`}
                       >
                         Rare
                       </span>
-                    )}
+                    ) : null}
 
-                    {card.isConsumed && (
+                    {card.isConsumed ? (
                       <span className="rounded-full border border-rose-300/20 bg-rose-500/10 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-rose-100/85">
                         Consumable
                       </span>
-                    )}
+                    ) : null}
 
-                    {typeof card.quantity === "number" && (
+                    {typeof card.quantity === "number" ? (
                       <span className="rounded-full border border-white/12 bg-white/[0.05] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/75">
                         Qty {card.quantity}
                       </span>
-                    )}
+                    ) : null}
                   </div>
                 </div>
 
                 <div className="space-y-4 sm:space-y-5">
                   <ModalSection title="Effect">
-                    {card.effect ||
-                      "No effect text has been added for this card yet."}
+                    <div className="text-white/92">
+                      {card.effect ||
+                        "No effect text has been added for this card yet."}
+                    </div>
                   </ModalSection>
+
+                  {card.lore ? (
+                    <section className="rounded-[22px] border border-zinc-800/80 bg-[linear-gradient(180deg,rgba(18,20,28,0.92),rgba(8,10,16,0.96))] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)] sm:p-5">
+                      <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.22em] text-white/45">
+                        Lore
+                      </div>
+
+                      <div className="text-[15px] leading-7 text-white/74">
+                        {card.lore}
+                      </div>
+
+                      {showChainHook ? (
+                        <div
+                          className={`mt-4 border-t pt-3 text-[11px] uppercase tracking-[0.18em] ${
+                            rare
+                              ? "border-red-500/15 text-red-200/42"
+                              : "border-cyan-500/12 text-cyan-200/38"
+                          }`}
+                        >
+                          Part of something larger.
+                        </div>
+                      ) : null}
+                    </section>
+                  ) : null}
 
                   {card.useText ? (
                     <ModalSection title="Use">{card.useText}</ModalSection>
@@ -323,6 +364,17 @@ export default function CardLibraryModal({
                       </div>
                     </ModalSection>
                   </div>
+
+                  {card.source ? (
+                    <section className="rounded-[22px] border border-zinc-800/80 bg-[linear-gradient(180deg,rgba(16,18,24,0.90),rgba(7,9,14,0.95))] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)] sm:p-5">
+                      <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.22em] text-white/45">
+                        Discovered In
+                      </div>
+                      <div className="text-sm leading-6 text-white/84">
+                        {card.source}
+                      </div>
+                    </section>
+                  ) : null}
                 </div>
               </div>
             </div>
