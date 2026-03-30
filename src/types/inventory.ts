@@ -1,3 +1,4 @@
+// src/types/inventory.ts
 export type InventoryCardType = "relic" | "potion" | "item" | "other";
 
 export type InventoryCard = {
