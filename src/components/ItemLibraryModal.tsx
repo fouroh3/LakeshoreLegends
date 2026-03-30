@@ -1,3 +1,5 @@
+// src/components/ItemLibraryModal.tsx
+
 import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import type { InventoryCard, InventoryCardType } from "../types/inventory";
