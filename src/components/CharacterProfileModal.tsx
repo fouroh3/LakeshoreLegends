@@ -611,9 +611,9 @@ function InventoryCardTile({
     <button
       type="button"
       onClick={() => onSelect(card)}
-      className={`group relative w-full overflow-hidden rounded-[22px] border text-left transition-all duration-250 ${
+      className={`group relative flex h-full min-h-[300px] w-full flex-col overflow-hidden rounded-[22px] border text-left transition-all duration-250 ${
         isSelected
-          ? `${guildTheme.selectedCardClass} ${guildTheme.selectedCardGlow} -translate-y-[2px] animate-[cardLock_260ms_ease-out]`
+          ? `${guildTheme.selectedCardClass} ${guildTheme.selectedCardGlow} -translate-y-[2px]`
           : `${frame.shell} hover:-translate-y-[2px] hover:border-zinc-600 hover:shadow-[0_12px_28px_rgba(0,0,0,0.26)]`
       } ${rare ? `border-red-500/45 ${rareCardGlowClass()}` : ""}`}
     >
@@ -622,41 +622,39 @@ function InventoryCardTile({
         className={`bg-gradient-to-r ${guildTheme.shimmerClass}`}
       />
 
-      <div className="relative flex aspect-[3/4] w-full items-center justify-center overflow-hidden p-2.5">
+      <div className="relative flex h-[190px] w-full items-center justify-center overflow-hidden p-2.5">
         <div
-          className={`pointer-events-none absolute inset-0 ${frame.topGlow} opacity-90`}
+          className={`pointer-events-none absolute inset-0 ${frame.topGlow}`}
         />
         <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.03),transparent_22%,transparent_78%,rgba(255,255,255,0.02))]" />
-        <div
-          className={`pointer-events-none absolute right-2 top-2 text-[11px] ${frame.corner}`}
-        >
-          ✦
-        </div>
 
         {!imgError ? (
-          <div className="relative h-full w-full overflow-hidden rounded-[15px] bg-black">
+          <div className="relative h-full w-full overflow-hidden rounded-[14px] bg-black">
             <img
               src={card.imageUrl}
               alt={card.name}
-              className="h-full w-full object-contain object-center drop-shadow-[0_8px_18px_rgba(0,0,0,0.6)]"
+              className="h-full w-full object-contain object-center"
               loading="lazy"
               onError={() => setImgError(true)}
             />
           </div>
         ) : (
-          <div className="relative flex h-full w-full items-center justify-center rounded-[15px] bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.05),transparent_55%)] p-3 text-center text-[10px] uppercase tracking-[0.16em] text-zinc-500">
+          <div className="flex h-full w-full items-center justify-center text-xs text-zinc-500">
             {card.type}
           </div>
         )}
       </div>
 
-      <div className="border-t border-white/5 px-3 pb-3 pt-2">
-        <div className="truncate text-[11px] font-medium text-zinc-200">
-          {card.name}
+      <div className="flex flex-1 flex-col border-t border-white/5 px-3 pb-3 pt-2">
+        <div className="min-h-[38px]">
+          <div className="line-clamp-2 text-[12px] font-medium leading-5 text-zinc-200">
+            {card.name}
+          </div>
         </div>
-        <div className="mt-1 flex flex-wrap items-center gap-2">
+
+        <div className="mt-2 flex min-h-[42px] flex-wrap items-start gap-2">
           <span
-            className={`rounded-full border px-2 py-0.5 text-[9px] uppercase tracking-[0.12em] ${getCardTypeBadgeClass(
+            className={`inline-flex h-[20px] items-center rounded-full border px-2 text-[9px] uppercase tracking-[0.12em] ${getCardTypeBadgeClass(
               card.type,
               guildTheme
             )}`}
@@ -666,14 +664,16 @@ function InventoryCardTile({
 
           {rare ? (
             <span
-              className={`rounded-full border px-2 py-0.5 text-[9px] uppercase tracking-[0.12em] ${rareCardBadgeClass()}`}
+              className={`inline-flex h-[20px] items-center rounded-full border px-2 text-[9px] uppercase tracking-[0.12em] ${rareCardBadgeClass()}`}
             >
               Rare
             </span>
           ) : null}
 
           {card.quantity && card.quantity > 1 ? (
-            <span className="text-[10px] text-zinc-500">x{card.quantity}</span>
+            <span className="inline-flex h-[20px] items-center text-[10px] text-zinc-500">
+              x{card.quantity}
+            </span>
           ) : null}
         </div>
       </div>
@@ -703,6 +703,10 @@ function AnimatedSelectedCardPanel({
   }
 
   const rare = isRareCard(selected);
+  const showChainHook =
+    selected.loreChain === "lake" ||
+    selected.loreChain === "prism" ||
+    selected.loreChain === "alchemist";
 
   return (
     <div
@@ -713,8 +717,22 @@ function AnimatedSelectedCardPanel({
       }`}
     >
       <div className="text-[10px] uppercase tracking-[0.18em] text-zinc-500">
-        Card Details
+        Arcane Archive
       </div>
+
+      <div className="mt-1 text-[17px] font-semibold text-zinc-100">
+        {selected.name}
+      </div>
+
+      {selected.whisper ? (
+        <div
+          className={`mt-1 text-[12px] italic ${
+            rare ? "text-red-200/75" : "text-cyan-200/70"
+          }`}
+        >
+          {selected.whisper}
+        </div>
+      ) : null}
 
       <div className="mt-4 flex justify-center">
         <div className="w-full max-w-[118px]">
@@ -731,24 +749,18 @@ function AnimatedSelectedCardPanel({
         </div>
       </div>
 
-      <div className="mt-5">
-        <div className="text-[17px] font-semibold leading-tight tracking-[-0.01em] text-zinc-100">
-          {selected.name}
-        </div>
+      <div className="mt-4 flex flex-wrap gap-2">
+        <span className="rounded-full border border-white/15 bg-white/5 px-3 py-[5px] text-[10px] uppercase tracking-[0.12em] text-white/80">
+          {selected.type}
+        </span>
 
-        <div className="mt-3 flex flex-wrap gap-2">
-          <span className="rounded-full border border-white/15 bg-white/5 px-3 py-[5px] text-[10px] font-medium uppercase tracking-[0.12em] text-white/80">
-            {selected.type}
+        {rare ? (
+          <span
+            className={`rounded-full border px-3 py-[5px] text-[10px] uppercase tracking-[0.12em] ${rareCardBadgeClass()}`}
+          >
+            Rare
           </span>
-
-          {rare && (
-            <span
-              className={`rounded-full border px-3 py-[5px] text-[10px] font-medium uppercase tracking-[0.12em] ${rareCardBadgeClass()}`}
-            >
-              Rare
-            </span>
-          )}
-        </div>
+        ) : null}
       </div>
 
       <div className="mt-5 rounded-[18px] border border-zinc-800 bg-zinc-900/35 p-3.5">
@@ -760,11 +772,48 @@ function AnimatedSelectedCardPanel({
         </div>
       </div>
 
+      {selected.lore ? (
+        <div className="mt-4 rounded-[18px] border border-zinc-800 bg-zinc-900/35 p-3.5">
+          <div className="text-[10px] uppercase tracking-[0.16em] text-zinc-500">
+            Lore
+          </div>
+          <div className="mt-2.5 text-[14px] leading-7 text-zinc-300">
+            {selected.lore}
+          </div>
+
+          {showChainHook ? (
+            <div
+              className={`mt-3 border-t pt-2 text-[10px] uppercase tracking-[0.18em] ${
+                rare
+                  ? "border-red-500/15 text-red-200/40"
+                  : "border-cyan-500/10 text-cyan-200/35"
+              }`}
+            >
+              Part of something larger.
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+
       {selected.useText ? (
-        <div className="mt-4">
-          <span className="inline-flex rounded-full border border-zinc-700 bg-zinc-900/70 px-3 py-[5px] text-[10px] font-medium text-zinc-400">
+        <div className="mt-4 rounded-[18px] border border-zinc-800 bg-zinc-900/35 p-3.5">
+          <div className="text-[10px] uppercase tracking-[0.16em] text-zinc-500">
+            Use
+          </div>
+          <div className="mt-2 text-[13px] text-zinc-300">
             {selected.useText}
-          </span>
+          </div>
+        </div>
+      ) : null}
+
+      {selected.source ? (
+        <div className="mt-4 rounded-[18px] border border-zinc-800 bg-zinc-900/35 p-3.5">
+          <div className="text-[10px] uppercase tracking-[0.16em] text-zinc-500">
+            Discovered In
+          </div>
+          <div className="mt-2 text-[13px] text-zinc-300">
+            {selected.source}
+          </div>
         </div>
       ) : null}
     </div>
@@ -886,7 +935,7 @@ function InventorySection({
 
           <div className="grid gap-3 min-[1320px]:grid-cols-[minmax(0,1fr)_250px]">
             <div className="rounded-[22px] border border-zinc-800 bg-zinc-950/35 p-3">
-              <div className="grid grid-cols-2 justify-items-center gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+              <div className="grid grid-cols-2 items-stretch gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
                 {visibleCards.map((card) => (
                   <InventoryCardTile
                     key={card.id}
@@ -1207,6 +1256,26 @@ export default function CharacterProfileModal({
 
   const companion = useMemo(() => getCompanionInfo(person), [person]);
 
+  const completedChains = useMemo(() => {
+    const counts: Record<"lake" | "prism" | "alchemist", number> = {
+      lake: 0,
+      prism: 0,
+      alchemist: 0,
+    };
+
+    for (const card of inventory) {
+      if (card.loreChain) {
+        counts[card.loreChain] += 1;
+      }
+    }
+
+    return {
+      lake: counts.lake >= 3,
+      prism: counts.prism >= 3,
+      alchemist: counts.alchemist >= 3,
+    };
+  }, [inventory]);
+
   if (!open || !person) return null;
 
   const fullName =
@@ -1336,6 +1405,100 @@ export default function CharacterProfileModal({
                               </div>
                             </div>
                           </div>
+
+                          {(completedChains.lake ||
+                            completedChains.prism ||
+                            completedChains.alchemist) ? (
+                            <div className="relative overflow-hidden rounded-[20px] border border-cyan-400/10 bg-[linear-gradient(180deg,rgba(6,10,18,0.96),rgba(4,6,10,0.98))] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.03),0_0_28px_rgba(34,211,238,0.08)]">
+                              <div className="pointer-events-none absolute inset-0">
+                                <div className="absolute left-1/2 top-[-30px] h-28 w-28 -translate-x-1/2 rounded-full bg-cyan-300/8 blur-2xl" />
+                              </div>
+
+                              <div className="relative flex flex-col items-center text-center">
+                                <div className="relative flex h-12 w-12 items-center justify-center">
+                                  <div className="pointer-events-none absolute left-1/2 top-1/2 h-12 w-12 -translate-x-1/2 -translate-y-1/2 rounded-full border border-cyan-300/12" />
+                                  <div className="pointer-events-none absolute left-1/2 top-1/2 h-[28px] w-[28px] -translate-x-1/2 -translate-y-1/2 rotate-45 border border-cyan-300/10" />
+                                  <div className="absolute left-1/2 top-1/2 h-8 w-8 -translate-x-1/2 -translate-y-1/2 rounded-full bg-cyan-300/[0.05] blur-md" />
+
+                                  <div className="relative flex h-9 w-9 items-center justify-center rounded-full border border-cyan-300/20 bg-cyan-300/[0.05] text-cyan-200/70 shadow-[0_0_18px_rgba(34,211,238,0.10)]">
+                                    ✦
+                                  </div>
+                                </div>
+
+                                <div className="mt-2 text-[10px] uppercase tracking-[0.26em] text-cyan-200/40">
+                                  Arcane Resonances
+                                </div>
+
+                                <div className="mt-1 text-sm font-medium text-cyan-50/90">
+                                  The artifacts are beginning to respond.
+                                </div>
+                              </div>
+
+                              <div className="mt-3 h-px bg-[linear-gradient(90deg,transparent,rgba(103,232,249,0.22),transparent)]" />
+
+                              <div className="mt-3 space-y-2.5">
+                                {completedChains.lake ? (
+                                  <div className="relative rounded-[14px] border border-sky-400/10 bg-[linear-gradient(180deg,rgba(6,16,28,0.85),rgba(4,6,12,0.92))] px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.02),0_0_12px_rgba(56,189,248,0.08)]">
+                                    <div className="pointer-events-none absolute inset-0 rounded-[14px] bg-[radial-gradient(circle_at_30%_20%,rgba(56,189,248,0.12),transparent_60%)] opacity-40" />
+
+                                    <div className="relative flex items-center gap-2">
+                                      <div className="flex h-6 w-6 items-center justify-center rounded-full border border-sky-300/15 bg-sky-300/[0.04] text-[11px] text-sky-200/65">
+                                        ◈
+                                      </div>
+
+                                      <div className="text-sm font-medium text-sky-100/85">
+                                        Lake of Shadows Resonance
+                                      </div>
+                                    </div>
+
+                                    <div className="relative mt-1 pl-8 text-xs leading-5 text-sky-100/40">
+                                      The recovered artifacts carry the same drowned echo.
+                                    </div>
+                                  </div>
+                                ) : null}
+
+                                {completedChains.prism ? (
+                                  <div className="relative rounded-[14px] border border-violet-400/10 bg-[linear-gradient(180deg,rgba(18,10,30,0.85),rgba(6,6,14,0.92))] px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.02),0_0_12px_rgba(167,139,250,0.08)]">
+                                    <div className="pointer-events-none absolute inset-0 rounded-[14px] bg-[radial-gradient(circle_at_30%_20%,rgba(167,139,250,0.12),transparent_60%)] opacity-40" />
+
+                                    <div className="relative flex items-center gap-2">
+                                      <div className="flex h-6 w-6 items-center justify-center rounded-full border border-violet-300/15 bg-violet-300/[0.04] text-[11px] text-violet-200/65">
+                                        ✧
+                                      </div>
+
+                                      <div className="text-sm font-medium text-violet-100/85">
+                                        Prism Tower Resonance
+                                      </div>
+                                    </div>
+
+                                    <div className="relative mt-1 pl-8 text-xs leading-5 text-violet-100/40">
+                                      Seer-marked relics are beginning to answer one another.
+                                    </div>
+                                  </div>
+                                ) : null}
+
+                                {completedChains.alchemist ? (
+                                  <div className="relative rounded-[14px] border border-amber-400/10 bg-[linear-gradient(180deg,rgba(28,18,6,0.85),rgba(10,8,6,0.92))] px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.02),0_0_12px_rgba(251,191,36,0.08)]">
+                                    <div className="pointer-events-none absolute inset-0 rounded-[14px] bg-[radial-gradient(circle_at_30%_20%,rgba(251,191,36,0.12),transparent_60%)] opacity-40" />
+
+                                    <div className="relative flex items-center gap-2">
+                                      <div className="flex h-6 w-6 items-center justify-center rounded-full border border-amber-300/15 bg-amber-300/[0.04] text-[11px] text-amber-200/65">
+                                        ⬡
+                                      </div>
+
+                                      <div className="text-sm font-medium text-amber-100/85">
+                                        Alchemist&apos;s Lair Resonance
+                                      </div>
+                                    </div>
+
+                                    <div className="relative mt-1 pl-8 text-xs leading-5 text-amber-100/40">
+                                      Stable and unstable creations are reacting as one system.
+                                    </div>
+                                  </div>
+                                ) : null}
+                              </div>
+                            </div>
+                          ) : null}
 
                           <CompanionPanel
                             companion={companion}
