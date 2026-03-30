@@ -84,7 +84,12 @@ function LibraryTile({
           <div className="truncate text-sm font-semibold text-zinc-100">
             {card.name}
           </div>
-          <div className="mt-1 flex flex-wrap items-center gap-1.5">
+          {card.whisper ? (
+            <div className="mt-1 truncate text-[11px] italic text-cyan-200/55">
+              {card.whisper}
+            </div>
+          ) : null}
+          <div className="mt-2 flex flex-wrap items-center gap-1.5">
             <span className="text-[9px] uppercase tracking-[0.18em] text-zinc-500">
               {card.type}
             </span>
@@ -129,6 +134,10 @@ function LibraryDetail({
   owned?: boolean;
 }) {
   const rarity = getItemRarityClasses(card?.rarity);
+  const showChainHook =
+    card?.loreChain === "lake" ||
+    card?.loreChain === "prism" ||
+    card?.loreChain === "alchemist";
 
   return (
     <Panel className="h-full p-4">
@@ -175,6 +184,12 @@ function LibraryDetail({
               <div className="mt-1 text-xl font-semibold text-zinc-100">
                 {card.name}
               </div>
+
+              {card.whisper ? (
+                <div className="mt-1 text-sm italic text-cyan-200/60">
+                  {card.whisper}
+                </div>
+              ) : null}
             </div>
 
             {owned && card.quantity ? (
@@ -206,12 +221,31 @@ function LibraryDetail({
               </div>
             </div>
 
+            {card.lore ? (
+              <div className="rounded-[18px] border border-zinc-800 bg-zinc-900/35 p-3.5">
+                <div className="text-[10px] uppercase tracking-[0.18em] text-zinc-500">
+                  Lore
+                </div>
+                <div className="mt-1 text-sm leading-relaxed text-zinc-400">
+                  {card.lore}
+                </div>
+
+                {showChainHook ? (
+                  <div className="mt-3 border-t border-cyan-500/10 pt-2 text-[10px] uppercase tracking-[0.18em] text-cyan-200/35">
+                    Part of something larger.
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+
             {card.useText ? (
               <div>
                 <div className="text-[10px] uppercase tracking-[0.18em] text-zinc-500">
                   Usage
                 </div>
-                <div className="mt-1 text-sm text-zinc-300">{card.useText}</div>
+                <div className="mt-1 text-sm text-zinc-300">
+                  {card.useText}
+                </div>
               </div>
             ) : null}
 
@@ -224,17 +258,6 @@ function LibraryDetail({
               </div>
             ) : null}
 
-            {card.lore ? (
-              <div>
-                <div className="text-[10px] uppercase tracking-[0.18em] text-zinc-500">
-                  Lore
-                </div>
-                <div className="mt-1 text-sm italic leading-relaxed text-zinc-400">
-                  {card.lore}
-                </div>
-              </div>
-            ) : null}
-
             <div className="flex flex-wrap gap-2">
               {card.isEquipped ? (
                 <span className="rounded-full border border-emerald-800 bg-emerald-950/40 px-2 py-1 text-[10px] text-emerald-200">
@@ -243,7 +266,7 @@ function LibraryDetail({
               ) : null}
               {card.isConsumed ? (
                 <span className="rounded-full border border-zinc-700 bg-zinc-800 px-2 py-1 text-[10px] text-zinc-300">
-                  Used
+                  Consumable
                 </span>
               ) : null}
             </div>
@@ -301,6 +324,12 @@ export default function ItemLibraryModal({
           .toLowerCase()
           .includes(q) ||
         String(card.source || "")
+          .toLowerCase()
+          .includes(q) ||
+        String(card.lore || "")
+          .toLowerCase()
+          .includes(q) ||
+        String(card.whisper || "")
           .toLowerCase()
           .includes(q);
 
@@ -388,7 +417,7 @@ export default function ItemLibraryModal({
                   <input
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
-                    placeholder="Search name, effect, source..."
+                    placeholder="Search name, effect, whisper, lore..."
                     className="h-11 rounded-2xl border border-zinc-800 bg-zinc-950/70 px-4 text-sm text-zinc-100 outline-none placeholder:text-zinc-500 focus:border-cyan-700/40"
                   />
 
