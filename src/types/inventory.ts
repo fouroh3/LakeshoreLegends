@@ -1,3 +1,5 @@
+// src/types/inventory.ts
+
 export type InventoryCardType = "relic" | "potion" | "item" | "other";
 
 export type InventoryCard = {
@@ -11,8 +13,10 @@ export type InventoryCard = {
   isEquipped?: boolean;
   imageUrl?: string;
   rarity?: "common" | "uncommon" | "rare" | "epic" | "legendary";
+  whisper?: string;
   lore?: string;
   source?: string;
+  loreChain?: "lake" | "prism" | "alchemist";
 };
 
 export function groupInventory(cards: InventoryCard[]) {

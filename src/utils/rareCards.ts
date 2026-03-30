@@ -1,37 +1,29 @@
-import type { InventoryCard } from "../data/itemLibrary";
+import type { InventoryCard } from "../types/inventory";
 
-const RARE_CARD_NAMES = new Set([
-  "phoenix feather",
-  "echoing horn",
-  "stamina helm",
-  "alchemist's brew",
-  "giant's brew",
-  "shadow veil",
-  "cloak of resilience",
-  "pendant of luck",
-  "crystal orb",
-  "brawler's gauntlets",
-  "glimmering amulet",
-  "mystic compass",
+const VISUAL_RARE_CARD_IDS = new Set([
+  "brawlers_gauntlets",
+  "cloak_of_resilience",
+  "crystal_orb",
+  "glimmering_amulet",
+  "mystic_compass",
+  "pendant_of_luck",
+  "stamina_helm",
+  "alchemists_brew",
+  "giants_brew",
+  "shadow_veil",
+  "echoing_horn",
+  "phoenix_feather",
 ]);
 
-function normalizeName(value: unknown) {
-  return String(value ?? "")
-    .toLowerCase()
-    .replace(/[’]/g, "'")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-export function isRareCard(card: Partial<InventoryCard> | null | undefined) {
-  if (!card) return false;
-  return RARE_CARD_NAMES.has(normalizeName(card.name));
+export function isRareCard(card?: Pick<InventoryCard, "id"> | null): boolean {
+  if (!card?.id) return false;
+  return VISUAL_RARE_CARD_IDS.has(String(card.id).trim().toLowerCase());
 }
 
 export function rareCardBadgeClass() {
-  return "border-red-400/30 bg-red-500/12 text-red-200 shadow-[0_0_18px_rgba(239,68,68,0.16)]";
+  return "border-red-400/30 bg-red-500/10 text-red-100";
 }
 
 export function rareCardGlowClass() {
-  return "shadow-[0_0_0_1px_rgba(239,68,68,0.14),0_14px_34px_rgba(239,68,68,0.18)]";
+  return "shadow-[0_0_24px_rgba(239,68,68,0.16)]";
 }

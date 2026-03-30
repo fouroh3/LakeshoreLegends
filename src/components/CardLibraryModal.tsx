@@ -1,6 +1,8 @@
+// src/components/CardLibraryModal.tsx
+
 import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
-import type { InventoryCard } from "../data/itemLibrary";
+import type { InventoryCard } from "../types/inventory";
 import { isRareCard, rareCardBadgeClass } from "../utils/rareCards";
 
 type Props = {
@@ -16,7 +18,6 @@ const TYPE_STYLES: Record<string, string> = {
   potion:
     "border-emerald-300/25 bg-emerald-500/12 text-emerald-100 shadow-[0_0_18px_rgba(16,185,129,0.12)]",
   item: "border-cyan-300/25 bg-cyan-500/12 text-cyan-100 shadow-[0_0_18px_rgba(34,211,238,0.12)]",
-  pet: "border-violet-300/25 bg-violet-500/12 text-violet-100 shadow-[0_0_18px_rgba(168,85,247,0.12)]",
   other:
     "border-white/15 bg-white/10 text-white/85 shadow-[0_0_18px_rgba(255,255,255,0.06)]",
 };
@@ -29,20 +30,107 @@ function typeLabel(type?: string) {
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
+function getResonanceMeta(chain?: InventoryCard["loreChain"]) {
+  switch (chain) {
+    case "lake":
+      return {
+        title: "Lake of Shadows Resonance",
+        text: "This card belongs to the Lake of Shadows set. When all 3 connected artifacts are gathered, their drowned echo begins to awaken.",
+        shell:
+          "border-sky-400/12 bg-[linear-gradient(180deg,rgba(6,16,28,0.88),rgba(4,6,12,0.94))]",
+        glow:
+          "bg-[radial-gradient(circle_at_30%_20%,rgba(56,189,248,0.12),transparent_60%)]",
+        icon: "◈",
+        iconClass:
+          "border-sky-300/15 bg-sky-300/[0.04] text-sky-200/70",
+        textClass: "text-sky-100/78",
+        subClass: "text-sky-100/45",
+      };
+    case "prism":
+      return {
+        title: "Prism Tower Resonance",
+        text: "This card belongs to the Prism Tower set. When the full trio is assembled, the relics begin answering one another.",
+        shell:
+          "border-violet-400/12 bg-[linear-gradient(180deg,rgba(18,10,30,0.88),rgba(6,6,14,0.94))]",
+        glow:
+          "bg-[radial-gradient(circle_at_30%_20%,rgba(167,139,250,0.12),transparent_60%)]",
+        icon: "✧",
+        iconClass:
+          "border-violet-300/15 bg-violet-300/[0.04] text-violet-200/70",
+        textClass: "text-violet-100/78",
+        subClass: "text-violet-100/45",
+      };
+    case "alchemist":
+      return {
+        title: "Alchemist's Lair Resonance",
+        text: "This card belongs to the Alchemist's Lair set. Completing the set causes stable and unstable creations to react as one system.",
+        shell:
+          "border-amber-400/12 bg-[linear-gradient(180deg,rgba(28,18,6,0.88),rgba(10,8,6,0.94))]",
+        glow:
+          "bg-[radial-gradient(circle_at_30%_20%,rgba(251,191,36,0.12),transparent_60%)]",
+        icon: "⬡",
+        iconClass:
+          "border-amber-300/15 bg-amber-300/[0.04] text-amber-200/70",
+        textClass: "text-amber-100/78",
+        subClass: "text-amber-100/45",
+      };
+    default:
+      return null;
+  }
+}
+
 function ModalSection({
   title,
   children,
+  className = "",
 }: {
   title: string;
   children: ReactNode;
+  className?: string;
 }) {
   return (
-    <section className="rounded-[22px] border border-zinc-800/80 bg-[linear-gradient(180deg,rgba(22,24,32,0.88),rgba(8,10,16,0.94))] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)] sm:p-5">
+    <section
+      className={`rounded-[22px] border border-zinc-800/80 bg-[linear-gradient(180deg,rgba(22,24,32,0.88),rgba(8,10,16,0.94))] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)] sm:p-5 ${className}`}
+    >
       <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.22em] text-white/45">
         {title}
       </div>
       <div className="text-sm leading-6 text-white/88">{children}</div>
     </section>
+  );
+}
+
+function ModalCardImage({ card }: { card: InventoryCard }) {
+  const cleanId = String(card.id ?? "").trim().toLowerCase();
+
+  const candidates = [
+    `/assets/cards/${card.type}_${cleanId}.png`,
+    `/assets/cards/${card.type}_${cleanId}.jpg`,
+    `/assets/cards/${card.type}_${cleanId}.jpeg`,
+    `/assets/cards/${card.type}_${cleanId}.webp`,
+    `/assets/cards/${cleanId}.png`,
+    `/assets/cards/${cleanId}.jpg`,
+    `/assets/cards/${cleanId}.jpeg`,
+    `/assets/cards/${cleanId}.webp`,
+  ];
+
+  const [index, setIndex] = useState(0);
+
+  if (index >= candidates.length) {
+    return (
+      <div className="flex h-full items-center justify-center px-6 text-center text-sm text-white/35">
+        No card art available
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={candidates[index]}
+      alt={card.name}
+      className="h-full w-full object-cover object-center"
+      onError={() => setIndex((prev) => prev + 1)}
+    />
   );
 }
 
@@ -109,6 +197,7 @@ export default function CardLibraryModal({
   const typeKey = String(card.type ?? "other").toLowerCase();
   const badgeClass = TYPE_STYLES[typeKey] ?? TYPE_STYLES.other;
   const rare = isRareCard(card);
+  const resonance = getResonanceMeta(card.loreChain);
 
   const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
     if (window.innerWidth >= 640) return;
@@ -139,9 +228,7 @@ export default function CardLibraryModal({
       return;
     }
 
-    if (dragOffset > 90) {
-      onClose();
-    }
+    if (dragOffset > 90) onClose();
 
     touchStartYRef.current = null;
     setDragging(false);
@@ -159,7 +246,7 @@ export default function CardLibraryModal({
       >
         <div className="relative min-h-[100dvh] w-full sm:flex sm:min-h-full sm:items-center sm:justify-center">
           <div
-            className={`relative mx-auto w-full max-w-5xl min-h-[100dvh] overflow-hidden rounded-none border bg-[linear-gradient(180deg,rgba(10,14,24,0.985),rgba(6,9,16,0.985))] shadow-[0_30px_100px_rgba(0,0,0,0.62)] sm:my-6 sm:min-h-0 sm:rounded-[30px] ${
+            className={`relative mx-auto min-h-[100dvh] w-full max-w-5xl overflow-hidden rounded-none border bg-[linear-gradient(180deg,rgba(10,14,24,0.985),rgba(6,9,16,0.985))] shadow-[0_30px_100px_rgba(0,0,0,0.62)] sm:my-6 sm:min-h-0 sm:rounded-[30px] ${
               rare
                 ? "border-red-500/30 before:pointer-events-none before:absolute before:inset-0 before:bg-[radial-gradient(circle_at_top,rgba(239,68,68,0.14),transparent_26%),radial-gradient(circle_at_12%_0%,rgba(245,158,11,0.10),transparent_22%)]"
                 : "border-zinc-700/80 before:pointer-events-none before:absolute before:inset-0 before:bg-[radial-gradient(circle_at_top,rgba(34,211,238,0.07),transparent_30%),radial-gradient(circle_at_12%_0%,rgba(245,158,11,0.08),transparent_22%)]"
@@ -175,7 +262,7 @@ export default function CardLibraryModal({
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="relative flex items-center justify-between border-b border-zinc-800/80 px-4 py-4 sm:px-6 sm:py-5">
+            <div className="relative flex items-start justify-between border-b border-zinc-800/80 px-4 py-4 sm:px-6 sm:py-5">
               <div
                 className={`pointer-events-none absolute inset-x-0 bottom-0 h-px ${
                   rare
@@ -194,9 +281,20 @@ export default function CardLibraryModal({
                 >
                   Arcane Archive
                 </div>
-                <h2 className="mt-1 truncate text-xl font-semibold text-white sm:text-2xl">
+
+                <h2 className="mt-1 text-xl font-semibold text-white sm:text-2xl">
                   {card.name}
                 </h2>
+
+                {card.whisper ? (
+                  <div
+                    className={`mt-1 text-sm italic ${
+                      rare ? "text-red-200/72" : "text-cyan-200/68"
+                    }`}
+                  >
+                    {card.whisper}
+                  </div>
+                ) : null}
               </div>
 
               <button
@@ -215,9 +313,9 @@ export default function CardLibraryModal({
               onTouchMove={handleTouchMove}
               onTouchEnd={handleTouchEnd}
             >
-              <div className="grid gap-4 p-4 pb-[max(20px,env(safe-area-inset-bottom))] sm:gap-5 sm:p-6 lg:grid-cols-[360px_minmax(0,1fr)]">
+              <div className="grid gap-4 p-4 pb-[max(20px,env(safe-area-inset-bottom))] sm:gap-5 sm:p-6 lg:grid-cols-[minmax(280px,320px)_minmax(0,1fr)] xl:grid-cols-[340px_minmax(0,1fr)]">
                 <div
-                  className={`relative overflow-hidden rounded-[26px] border p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] ${
+                  className={`relative overflow-hidden rounded-[26px] border p-4 sm:p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] ${
                     rare
                       ? "border-red-500/20 bg-[radial-gradient(circle_at_top,rgba(239,68,68,0.16),transparent_52%),radial-gradient(circle_at_bottom,rgba(245,158,11,0.08),transparent_40%),linear-gradient(180deg,rgba(26,16,20,0.96),rgba(10,8,14,0.98))]"
                       : "border-zinc-800/80 bg-[radial-gradient(circle_at_top,rgba(34,211,238,0.12),transparent_55%),radial-gradient(circle_at_bottom,rgba(245,158,11,0.08),transparent_40%),linear-gradient(180deg,rgba(18,23,34,0.96),rgba(8,10,16,0.98))]"
@@ -233,23 +331,11 @@ export default function CardLibraryModal({
                   <div className="relative overflow-hidden rounded-[24px] border border-zinc-700/80 bg-[linear-gradient(180deg,rgba(6,8,14,0.96),rgba(3,4,8,0.98))] shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_18px_40px_rgba(0,0,0,0.28)]">
                     <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.06),transparent_42%)]" />
 
-                    <div className="relative aspect-[3/4.2] w-full">
-                      {card.imageUrl ? (
-                        <>
-                          <div className="absolute inset-0 rounded-[18px] border border-white/10 bg-black/40 shadow-inner" />
-                          <div className="absolute inset-x-[8.5%] inset-y-[6.5%] overflow-hidden rounded-[12px] bg-black">
-                            <img
-                              src={card.imageUrl}
-                              alt={card.name}
-                              className="h-full w-full object-cover object-center"
-                            />
-                          </div>
-                        </>
-                      ) : (
-                        <div className="flex h-full items-center justify-center px-6 text-center text-sm text-white/35">
-                          No card art available
-                        </div>
-                      )}
+                    <div className="relative mx-auto aspect-[3/4.2] w-full max-w-[240px] sm:max-w-[260px] lg:max-w-none">
+                      <div className="absolute inset-0 rounded-[18px] border border-white/10 bg-black/40 shadow-inner" />
+                      <div className="absolute inset-x-[8.5%] inset-y-[6.5%] overflow-hidden rounded-[12px] bg-black">
+                        <ModalCardImage card={card} />
+                      </div>
                     </div>
                   </div>
 
@@ -263,25 +349,25 @@ export default function CardLibraryModal({
                       {typeLabel(card.type)}
                     </span>
 
-                    {rare && (
+                    {rare ? (
                       <span
                         className={`rounded-full border px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] ${rareCardBadgeClass()}`}
                       >
                         Rare
                       </span>
-                    )}
+                    ) : null}
 
-                    {card.isConsumed && (
+                    {card.isConsumed ? (
                       <span className="rounded-full border border-rose-300/20 bg-rose-500/10 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-rose-100/85">
                         Consumable
                       </span>
-                    )}
+                    ) : null}
 
-                    {typeof card.quantity === "number" && (
+                    {typeof card.quantity === "number" ? (
                       <span className="rounded-full border border-white/12 bg-white/[0.05] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/75">
                         Qty {card.quantity}
                       </span>
-                    )}
+                    ) : null}
                   </div>
                 </div>
 
@@ -291,8 +377,64 @@ export default function CardLibraryModal({
                       "No effect text has been added for this card yet."}
                   </ModalSection>
 
-                  {card.useText ? (
-                    <ModalSection title="Use">{card.useText}</ModalSection>
+                  {card.lore ? (
+                    <ModalSection title="Lore">{card.lore}</ModalSection>
+                  ) : null}
+
+                  {(card.useText || card.source) ? (
+                    <div className="grid gap-4 md:grid-cols-2">
+                      {card.useText ? (
+                        <ModalSection title="Use">{card.useText}</ModalSection>
+                      ) : (
+                        <div />
+                      )}
+
+                      {card.source ? (
+                        <ModalSection title="Discovered In">
+                          {card.source}
+                        </ModalSection>
+                      ) : (
+                        <div />
+                      )}
+                    </div>
+                  ) : null}
+
+                  {resonance ? (
+                    <section
+                      className={`relative overflow-hidden rounded-[22px] border p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)] sm:p-5 ${resonance.shell}`}
+                    >
+                      <div
+                        className={`pointer-events-none absolute inset-0 rounded-[22px] ${resonance.glow} opacity-40`}
+                      />
+                      <div className="relative">
+                        <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.22em] text-white/45">
+                          Resonance
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <div
+                            className={`flex h-7 w-7 items-center justify-center rounded-full border text-[11px] ${resonance.iconClass}`}
+                          >
+                            {resonance.icon}
+                          </div>
+                          <div
+                            className={`text-sm font-medium ${resonance.textClass}`}
+                          >
+                            {resonance.title}
+                          </div>
+                        </div>
+
+                        <div
+                          className={`mt-2 text-sm leading-6 ${resonance.subClass}`}
+                        >
+                          {resonance.text}
+                        </div>
+
+                        <div className="mt-3 border-t border-white/8 pt-2 text-[10px] uppercase tracking-[0.18em] text-white/35">
+                          Part of something larger.
+                        </div>
+                      </div>
+                    </section>
                   ) : null}
 
                   <div className="grid gap-4 md:grid-cols-2">

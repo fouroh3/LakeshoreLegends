@@ -2,14 +2,11 @@ import { useEffect, useMemo, useState } from "react";
 import AppTopBar from "../components/AppTopBar";
 import CardLibraryModal from "../components/CardLibraryModal";
 import { loadStudents } from "../data";
-import {
-  itemLibraryById,
-  itemLibraryByName,
-  type InventoryCard,
-} from "../data/itemLibrary";
+import type { InventoryCard } from "../types/inventory";
+import { itemLibraryById, itemLibraryByName } from "../data/itemLibrary";
 import { isRareCard, rareCardBadgeClass } from "../utils/rareCards";
 
-type CardTypeFilter = "all" | "relic" | "potion" | "item" | "pet" | "other";
+type CardTypeFilter = "all" | "relic" | "potion" | "item" | "other";
 
 type ResolvedLibraryCard = Omit<InventoryCard, "imageUrl"> & {
   imageUrl: string;
@@ -24,7 +21,6 @@ const TYPE_ORDER: CardTypeFilter[] = [
   "relic",
   "potion",
   "item",
-  "pet",
   "other",
 ];
 
@@ -65,13 +61,6 @@ const TYPE_META: Record<
     idle: "border-cyan-400/16 bg-cyan-500/[0.05] text-cyan-100/75 hover:bg-cyan-500/[0.1]",
     glow: "from-cyan-400/20 to-sky-300/10",
   },
-  pet: {
-    label: "Companions",
-    active:
-      "border-violet-300/35 bg-violet-500/16 text-violet-100 shadow-[0_0_20px_rgba(168,85,247,0.14)]",
-    idle: "border-violet-400/16 bg-violet-500/[0.05] text-violet-100/75 hover:bg-violet-500/[0.1]",
-    glow: "from-violet-400/20 to-fuchsia-300/10",
-  },
   other: {
     label: "Other",
     active:
@@ -82,9 +71,7 @@ const TYPE_META: Record<
 };
 
 function normalize(value: unknown) {
-  return String(value ?? "")
-    .trim()
-    .toLowerCase();
+  return String(value ?? "").trim().toLowerCase();
 }
 
 function titleize(value: string) {
@@ -92,8 +79,15 @@ function titleize(value: string) {
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
-function resolveCardImage(id: string) {
-  return `/assets/cards/${id}.png`;
+function resolveCardImage(id: string, type?: string) {
+  const cleanId = String(id ?? "").trim().toLowerCase();
+  const cleanType = String(type ?? "").trim().toLowerCase();
+
+  if (cleanType) {
+    return `/assets/cards/${cleanType}_${cleanId}.png`;
+  }
+
+  return `/assets/cards/${cleanId}.png`;
 }
 
 function typeKey(card: InventoryCard): CardTypeFilter {
@@ -101,7 +95,6 @@ function typeKey(card: InventoryCard): CardTypeFilter {
   if (value === "relic") return "relic";
   if (value === "potion") return "potion";
   if (value === "item") return "item";
-  if (value === "pet") return "pet";
   return "other";
 }
 
@@ -109,9 +102,15 @@ function matchesQuery(card: ResolvedLibraryCard, query: string) {
   const q = normalize(query);
   if (!q) return true;
 
-  return [card.name, card.type, card.effect, card.useText].some((value) =>
-    normalize(value).includes(q)
-  );
+  return [
+    card.name,
+    card.type,
+    card.effect,
+    card.useText,
+    card.lore,
+    card.whisper,
+    card.source,
+  ].some((value) => normalize(value).includes(q));
 }
 
 function cardCountLabel(count: number) {
@@ -122,20 +121,19 @@ function resolveCards(): ResolvedLibraryCard[] {
   const cards = Object.values(itemLibraryById ?? {}).filter(
     Boolean
   ) as InventoryCard[];
+
   const seen = new Set<string>();
 
   return cards
     .filter((card) => {
-      const key = String(card.id ?? card.name ?? "")
-        .trim()
-        .toLowerCase();
+      const key = String(card.id ?? card.name ?? "").trim().toLowerCase();
       if (!key || seen.has(key)) return false;
       seen.add(key);
       return true;
     })
     .map((card) => ({
       ...card,
-      imageUrl: resolveCardImage(String(card.id ?? "")),
+      imageUrl: resolveCardImage(String(card.id ?? ""), card.type),
     }))
     .sort((a, b) => {
       const typeA = typeKey(a);
@@ -166,7 +164,7 @@ function inventoryEntries(
       const parsed = JSON.parse(text);
       if (Array.isArray(parsed)) return parsed;
     } catch {
-      // fall through
+      // ignore
     }
 
     return text
@@ -188,7 +186,22 @@ function entryMatchesCard(
   if (typeof entry === "string") {
     const raw = normalize(entry);
     if (!raw) return false;
-    return raw === cardId || raw === cardName;
+
+    const normalizedRaw = raw
+      .replace(/[_\s]+/g, " ")
+      .replace(/[^a-z0-9 ]/g, "")
+      .trim();
+
+    const normalizedCardName = cardName
+      .replace(/[_\s]+/g, " ")
+      .replace(/[^a-z0-9 ]/g, "")
+      .trim();
+
+    return (
+      raw === cardId ||
+      raw === cardName ||
+      normalizedRaw === normalizedCardName
+    );
   }
 
   const row = entry as Record<string, unknown>;
@@ -210,12 +223,45 @@ function entryMatchesCard(
   return false;
 }
 
+function CardImage({ card }: { card: ResolvedLibraryCard }) {
+  const cleanId = String(card.id ?? "").trim().toLowerCase();
+
+  const candidates = [
+    `/assets/cards/${card.type}_${cleanId}.png`,
+    `/assets/cards/${card.type}_${cleanId}.jpg`,
+    `/assets/cards/${card.type}_${cleanId}.jpeg`,
+    `/assets/cards/${card.type}_${cleanId}.webp`,
+    `/assets/cards/${cleanId}.png`,
+    `/assets/cards/${cleanId}.jpg`,
+    `/assets/cards/${cleanId}.jpeg`,
+    `/assets/cards/${cleanId}.webp`,
+  ];
+
+  const [index, setIndex] = useState(0);
+
+  if (index >= candidates.length) {
+    return (
+      <div className="flex h-full w-full items-center justify-center text-sm text-white/35">
+        No art
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={candidates[index]}
+      alt={card.name}
+      className="h-full w-full object-cover object-center transition duration-300 group-hover:scale-[1.02]"
+      onError={() => setIndex((prev) => prev + 1)}
+    />
+  );
+}
+
 export default function CardLibraryPage({ onBack }: Props) {
   const allCards = useMemo(() => resolveCards(), []);
 
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<CardTypeFilter>("all");
-  const [selectedId, setSelectedId] = useState<string>("");
   const [activeCard, setActiveCard] = useState<ResolvedLibraryCard | null>(
     null
   );
@@ -273,18 +319,12 @@ export default function CardLibraryPage({ onBack }: Props) {
     });
   }, [allCards, filter, query]);
 
-  const selectedCard =
-    filteredCards.find((card) => String(card.id) === selectedId) ??
-    filteredCards[0] ??
-    null;
-
   const counts = useMemo(() => {
     return {
       all: allCards.length,
       relic: allCards.filter((c) => typeKey(c) === "relic").length,
       potion: allCards.filter((c) => typeKey(c) === "potion").length,
       item: allCards.filter((c) => typeKey(c) === "item").length,
-      pet: allCards.filter((c) => typeKey(c) === "pet").length,
       other: allCards.filter((c) => typeKey(c) === "other").length,
     };
   }, [allCards]);
@@ -330,7 +370,8 @@ export default function CardLibraryPage({ onBack }: Props) {
                 </h1>
 
                 <p className="mt-2 max-w-2xl text-sm leading-6 text-white/62">
-                  Search effects, compare uses, and inspect full card details.
+                  Search effects, compare uses, and inspect lore, whispers, and
+                  resonance-linked cards.
                 </p>
 
                 <div className="mt-4 flex flex-wrap gap-2.5">
@@ -363,7 +404,7 @@ export default function CardLibraryPage({ onBack }: Props) {
                 <input
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Search cards, effects, uses..."
+                  placeholder="Search cards, lore, whispers..."
                   className="mt-3 h-11 w-full rounded-full border border-white/10 bg-white/[0.06] px-4 text-sm text-white outline-none transition placeholder:text-white/35 focus:border-cyan-300/30 focus:bg-white/[0.09]"
                 />
 
@@ -436,10 +477,7 @@ export default function CardLibraryPage({ onBack }: Props) {
                 ) : (
                   <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,320px))] justify-center gap-6">
                     {filteredCards.map((card) => {
-                      const selected =
-                        String(card.id) === String(selectedCard?.id);
                       const type = typeKey(card);
-                      const meta = TYPE_META[type];
                       const rare = isRareCard(card);
 
                       return (
@@ -447,35 +485,24 @@ export default function CardLibraryPage({ onBack }: Props) {
                           key={String(card.id)}
                           type="button"
                           onClick={() => {
-                            setSelectedId(String(card.id));
                             setActiveCard(card);
                           }}
                           className={[
                             "group relative w-full overflow-hidden rounded-[26px] border text-left transition",
-                            selected
-                              ? `${meta.active} ${
-                                  rare
-                                    ? "border-red-400/40 shadow-[0_0_26px_rgba(239,68,68,0.16)]"
-                                    : ""
-                                } bg-[linear-gradient(180deg,rgba(255,255,255,0.07),rgba(255,255,255,0.03))]`
-                              : `border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))] hover:border-white/18 hover:bg-white/[0.06] ${
-                                  rare
-                                    ? "ring-1 ring-red-500/20 shadow-[0_10px_26px_rgba(239,68,68,0.10)]"
-                                    : ""
-                                }`,
+                            `border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))] hover:border-white/18 hover:bg-white/[0.06] ${
+                              rare
+                                ? "ring-1 ring-red-500/20 shadow-[0_10px_26px_rgba(239,68,68,0.10)]"
+                                : ""
+                            }`,
                           ].join(" ")}
                         >
                           <div className="px-6 pt-6">
                             <div className="flex justify-center">
                               <div className="w-full max-w-[240px]">
-                                <div className="relative w-full aspect-[3/4.2]">
+                                <div className="relative aspect-[3/4.2] w-full">
                                   <div className="absolute inset-0 rounded-[18px] border border-white/10 bg-black/40 shadow-inner" />
                                   <div className="absolute inset-x-[8.5%] inset-y-[6.5%] overflow-hidden rounded-[12px] bg-black">
-                                    <img
-                                      src={card.imageUrl}
-                                      alt={card.name}
-                                      className="h-full w-full object-cover object-center transition duration-300 group-hover:scale-[1.02]"
-                                    />
+                                    <CardImage card={card} />
                                   </div>
                                 </div>
                               </div>
@@ -501,11 +528,19 @@ export default function CardLibraryPage({ onBack }: Props) {
                                 {titleize(type)}
                               </div>
 
-                              {rare ? (
-                                <div
-                                  className={`rounded-full border px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] ${rareCardBadgeClass()}`}
-                                >
-                                  Rare
+                              <div
+                                className={`rounded-full border px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] ${
+                                  rare
+                                    ? rareCardBadgeClass()
+                                    : "border-zinc-700 bg-zinc-900 text-zinc-300"
+                                }`}
+                              >
+                                {rare ? "Rare" : "Common"}
+                              </div>
+
+                              {card.loreChain ? (
+                                <div className="rounded-full border border-cyan-300/12 bg-cyan-400/[0.06] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-cyan-100/72">
+                                  Resonance
                                 </div>
                               ) : null}
                             </div>

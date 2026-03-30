@@ -1,336 +1,360 @@
 // src/data/itemLibrary.ts
-
-export type InventoryCardType = "relic" | "potion" | "item" | "pet" | "other";
-
-export type InventoryCard = {
-  id: string;
-  name: string;
-  type: InventoryCardType;
-  effect: string;
-  useText?: string;
-  quantity?: number;
-  isConsumed?: boolean;
-  isEquipped?: boolean;
-  imageUrl?: string;
-};
-
-const itemImages = import.meta.glob("../assets/cards/items/*.png", {
-  eager: true,
-  import: "default",
-}) as Record<string, string>;
-
-const potionImages = import.meta.glob("../assets/cards/potions/*.png", {
-  eager: true,
-  import: "default",
-}) as Record<string, string>;
-
-const relicImages = import.meta.glob("../assets/cards/relics/*.png", {
-  eager: true,
-  import: "default",
-}) as Record<string, string>;
-
-function normalizeFileKey(value: string) {
-  return value
-    .toLowerCase()
-    .replace(/\.[^.]+$/, "")
-    .replace(/[^a-z0-9]+/g, "_")
-    .replace(/^_+|_+$/g, "");
-}
-
-function buildImageLookup(modules: Record<string, string>) {
-  const lookup: Record<string, string> = {};
-
-  for (const [path, url] of Object.entries(modules)) {
-    const fileName = path.split("/").pop() || "";
-    const normalized = normalizeFileKey(fileName);
-    lookup[normalized] = url;
-  }
-
-  return lookup;
-}
-
-const itemImageLookup = buildImageLookup(itemImages);
-const potionImageLookup = buildImageLookup(potionImages);
-const relicImageLookup = buildImageLookup(relicImages);
-
-function getItemImage(fileKey: string) {
-  return itemImageLookup[normalizeFileKey(fileKey)];
-}
-
-function getPotionImage(fileKey: string) {
-  return potionImageLookup[normalizeFileKey(fileKey)];
-}
-
-function getRelicImage(fileKey: string) {
-  return relicImageLookup[normalizeFileKey(fileKey)];
-}
+import type { InventoryCard } from "../types/inventory";
 
 export const itemLibrary: InventoryCard[] = [
   // ITEMS
   {
-    id: "item_tactical_map",
+    id: "tactical_map",
     name: "Tactical Map",
     type: "item",
-    effect: "Provides +2 to damage rolls for one Quest for each group member.",
-    useText: "Semi-Permanent (Use for one Quest only)",
-    imageUrl: getItemImage("item_tactical_map"),
+    effect: "Provides +2 to damage rolls for one quest for each group member.",
+    useText: "Semi-Permanent (use for one quest only)",
+    rarity: "common",
+    lore: "Marked and re-marked by hands that expected the land to stay still.",
+    whisper: "The path changes when you do.",
+    source: "Quest reward",
   },
   {
-    id: "item_fortune_token",
+    id: "fortune_token",
     name: "Fortune Token",
     type: "item",
-    effect:
-      "Allows the group to take an extra action (heal, strike, or card activation).",
+    effect: "Allows the group to take an extra action.",
     useText: "One-time use",
     isConsumed: true,
-    imageUrl: getItemImage("item_fortune_token"),
+    rarity: "common",
+    lore: "These tokens appear when paths begin to split. Some say they do not grant luck—only reveal it.",
+    whisper: "Spend it. Or regret not knowing what would have happened.",
+    loreChain: "prism",
+    source: "Prism-linked discovery",
   },
   {
-    id: "item_defenders_shield",
+    id: "defenders_shield",
     name: "Defender's Shield",
     type: "item",
     effect: "Reduces incoming damage by 2 for all group members.",
     useText: "One-time use",
     isConsumed: true,
-    imageUrl: getItemImage("item_defenders_shield"),
+    rarity: "common",
+    lore: "Worn smooth from use, this shield has turned aside more blows than its bearer can remember.",
+    whisper: "It prefers to be between you and something dangerous.",
+    source: "Battle cache",
   },
   {
-    id: "item_phoenix_feather",
+    id: "phoenix_feather",
     name: "Phoenix Feather",
     type: "item",
     effect: "Revives any fallen player and gives them 5 HP.",
     useText: "One-time use",
     isConsumed: true,
-    imageUrl: getItemImage("item_phoenix_feather"),
+    rarity: "rare",
+    lore: "Too warm to be dead matter. It curls slightly when death is near.",
+    whisper: "Once more.",
+    loreChain: "alchemist",
+    source: "Rare encounter",
   },
   {
-    id: "item_echoing_horn",
+    id: "echoing_horn",
     name: "Echoing Horn",
     type: "item",
-    effect:
-      "Enables the player to summon an additional ally during a strike move, allowing support from another group.",
+    effect: "Summons support from another group during a strike move.",
     useText: "One-time use",
     isConsumed: true,
-    imageUrl: getItemImage("item_echoing_horn"),
+    rarity: "rare",
+    lore: "Its sound carries farther than distance should allow.",
+    whisper: "Call them.",
+    source: "Guild vault",
   },
 
   // POTIONS
   {
-    id: "potion_healing_elixir",
+    id: "healing_elixir",
     name: "Healing Elixir",
     type: "potion",
     effect: "Restores 3 HP for one player.",
     useText: "One-time use",
     isConsumed: true,
-    imageUrl: getPotionImage("potion_healing_elixir"),
+    rarity: "common",
+    lore: "The liquid glows faintly in darkness, as if remembering warmth.",
+    whisper: "Not all wounds stay closed.",
+    source: "Standard alchemy stock",
   },
   {
-    id: "potion_vision_potion",
+    id: "vision_potion",
     name: "Vision Potion",
     type: "potion",
-    effect:
-      "Grants +2 to any single roll (heal or strike) for the next turn for all group members.",
+    effect: "Grants +2 to a single roll for all group members on the next turn.",
     useText: "One-time use",
     isConsumed: true,
-    imageUrl: getPotionImage("potion_vision_potion"),
+    rarity: "common",
+    lore: "For a moment, possibilities stop overlapping.",
+    whisper: "Look carefully.",
+    source: "Scholar stockroom",
   },
   {
-    id: "potion_endurance_elixir",
+    id: "endurance_elixir",
     name: "Endurance Elixir",
     type: "potion",
     effect: "Reduces damage by 1 for the next attack for all group members.",
     useText: "One-time use",
     isConsumed: true,
-    imageUrl: getPotionImage("potion_endurance_elixir"),
+    rarity: "common",
+    lore: "It settles heavy in the chest and steadies the legs.",
+    whisper: "Hold.",
+    source: "Battle stores",
   },
   {
-    id: "potion_strength_potion",
+    id: "strength_potion",
     name: "Strength Potion",
     type: "potion",
-    effect:
-      "Grants +3 damage to strikes for the next turn for each group member.",
+    effect: "Grants +3 damage to strikes for the next turn for each group member.",
     useText: "One-time use",
     isConsumed: true,
-    imageUrl: getPotionImage("potion_strength_potion"),
+    rarity: "common",
+    lore: "Too red in some light, too dark in others.",
+    whisper: "Harder.",
+    source: "Combat reward",
   },
   {
-    id: "potion_focus_brew",
+    id: "focus_brew",
     name: "Focus Brew",
     type: "potion",
-    effect: "Allows 1 player to re-roll a dice roll once during the turn.",
+    effect: "Allows one player to re-roll a dice roll once during the turn.",
     useText: "One-time use",
     isConsumed: true,
-    imageUrl: getPotionImage("potion_focus_brew"),
+    rarity: "common",
+    lore: "A simple mixture of herbs and heat, often brewed before moments that matter.",
+    whisper: "Steady hands. Quiet mind.",
+    source: "Common brew",
   },
   {
-    id: "potion_speed_serum",
+    id: "speed_serum",
     name: "Speed Serum",
     type: "potion",
-    effect:
-      "You may activate 3 cards the next time you choose 'Activate a Card'.",
+    effect: "You may activate 3 cards the next time you choose 'Activate a Card'.",
     useText: "One-time use",
     isConsumed: true,
-    imageUrl: getPotionImage("potion_speed_serum"),
+    rarity: "common",
+    lore: "The bottle always seems emptier than you remember.",
+    whisper: "Faster.",
+    source: "Restricted cabinet",
   },
   {
-    id: "potion_protection_potion",
+    id: "protection_potion",
     name: "Protection Potion",
     type: "potion",
-    effect: "Grants immunity to one attack (damage is nullified) for 1 player.",
+    effect: "Grants immunity to one attack for one player.",
     useText: "One-time use",
     isConsumed: true,
-    imageUrl: getPotionImage("potion_protection_potion"),
+    rarity: "common",
+    lore: "A thin shimmer clings to the glass long after it is touched.",
+    whisper: "Not today.",
+    source: "Guardian stores",
   },
   {
-    id: "potion_alchemists_brew",
+    id: "alchemists_brew",
     name: "Alchemist's Brew",
     type: "potion",
-    effect: "Doubles the effect of any one card played during the battle.",
+    effect: "Doubles the effect of any one card played during battle.",
     useText: "One-time use",
     isConsumed: true,
-    imageUrl: getPotionImage("potion_alchemists_brew"),
+    rarity: "rare",
+    lore: "Every batch differs. The formula was never written down—only remembered incorrectly.",
+    whisper: "Try it.",
+    loreChain: "alchemist",
+    source: "The Alchemist's Lair",
   },
   {
-    id: "potion_giants_brew",
+    id: "giants_brew",
     name: "Giant's Brew",
     type: "potion",
-    effect: "Grants +5 damage to strike for the next turn for 1 player.",
+    effect: "Grants +5 damage to strike for the next turn for one player.",
     useText: "One-time use",
     isConsumed: true,
-    imageUrl: getPotionImage("potion_giants_brew"),
+    rarity: "rare",
+    lore: "Too strong for most. The bottle is always slightly too heavy.",
+    whisper: "More.",
+    loreChain: "alchemist",
+    source: "The Alchemist's Lair",
   },
   {
-    id: "potion_shadow_veil",
+    id: "shadow_veil",
     name: "Shadow Veil",
     type: "potion",
-    effect:
-      "Provides invisibility for one turn for all group members and immunity from attack in that turn.",
+    effect: "Provides invisibility for one turn for all group members and immunity from attack during that turn.",
     useText: "One-time use",
     isConsumed: true,
-    imageUrl: getPotionImage("potion_shadow_veil"),
+    rarity: "rare",
+    lore: "Woven where the shoreline fades into nothing. Those beneath it are not always seen again.",
+    whisper: "Step out of the world.",
+    loreChain: "lake",
+    source: "The Lake of Shadows",
   },
 
   // RELICS
   {
-    id: "relic_amulet_of_insight",
+    id: "amulet_of_insight",
     name: "Amulet of Insight",
     type: "relic",
     effect: "Grants +2 to Wisdom rolls.",
     useText: "Permanent - Active",
     isEquipped: true,
-    imageUrl: getRelicImage("relic_amulet_of_insight"),
+    rarity: "common",
+    lore: "Some truths refuse to stay hidden.",
+    whisper: "Look again.",
+    loreChain: "prism",
+    source: "Prism Tower ruins",
   },
   {
-    id: "relic_ring_of_resilience",
+    id: "ring_of_resilience",
     name: "Ring of Resilience",
     type: "relic",
     effect: "Provides +2 to all Constitution rolls.",
     useText: "Permanent - Active",
     isEquipped: true,
-    imageUrl: getRelicImage("relic_ring_of_resilience"),
+    rarity: "common",
+    lore: "Too plain to be ordinary, too sturdy to ignore.",
+    whisper: "Endure.",
+    source: "Recovered relic",
   },
   {
-    id: "relic_bracelet_of_agility",
+    id: "bracelet_of_agility",
     name: "Bracelet of Agility",
     type: "relic",
     effect: "Provides +2 to Dexterity rolls.",
     useText: "Permanent - Active",
     isEquipped: true,
-    imageUrl: getRelicImage("relic_bracelet_of_agility"),
+    rarity: "common",
+    lore: "It shifts slightly on its own, as if anticipating movement.",
+    whisper: "Too slow.",
+    source: "Recovered relic",
   },
   {
-    id: "relic_pendant_of_knowledge",
+    id: "pendant_of_knowledge",
     name: "Pendant of Knowledge",
     type: "relic",
     effect: "Grants +2 to Intelligence rolls.",
     useText: "Permanent - Active",
     isEquipped: true,
-    imageUrl: getRelicImage("relic_pendant_of_knowledge"),
+    rarity: "common",
+    lore: "Inscribed in a script nobody fully remembers learning.",
+    whisper: "You knew this once.",
+    source: "Scholar archive",
   },
   {
-    id: "relic_belt_of_strength",
+    id: "belt_of_strength",
     name: "Belt of Strength",
     type: "relic",
     effect: "Provides +2 to Strength rolls.",
     useText: "Permanent - Active",
     isEquipped: true,
-    imageUrl: getRelicImage("relic_belt_of_strength"),
+    rarity: "common",
+    lore: "Forged for someone larger than you. It tightens when needed.",
+    whisper: "Lift it. Prove it.",
+    source: "Battle relic",
   },
   {
-    id: "relic_talisman_of_courage",
+    id: "talisman_of_courage",
     name: "Talisman of Courage",
     type: "relic",
     effect: "Reduces fear effects and grants +2 to all Charisma rolls.",
     useText: "Permanent - Active",
     isEquipped: true,
-    imageUrl: getRelicImage("relic_talisman_of_courage"),
+    rarity: "common",
+    lore: "Warm even in the cold. Heavier when doubt is near.",
+    whisper: "Stand anyway.",
+    source: "Guild reliquary",
   },
   {
-    id: "relic_cloak_of_resilience",
+    id: "cloak_of_resilience",
     name: "Cloak of Resilience",
     type: "relic",
     effect: "Provides a buffer to HP damage (reduces incoming damage by 1).",
     useText: "Permanent - Active",
     isEquipped: true,
-    imageUrl: getRelicImage("relic_cloak_of_resilience"),
+    rarity: "rare",
+    lore: "Recovered near the Lake of Shadows, it carries the memory of blows long past.",
+    whisper: "It has endured worse.",
+    loreChain: "lake",
+    source: "The Lake of Shadows",
   },
   {
-    id: "relic_pendant_of_luck",
+    id: "pendant_of_luck",
     name: "Pendant of Luck",
     type: "relic",
     effect: "Grants a +5 bonus to any single dice roll once per quest.",
     useText: "Semi-Permanent",
-    imageUrl: getRelicImage("relic_pendant_of_luck"),
+    rarity: "rare",
+    lore: "It hums faintly when choices matter.",
+    whisper: "Pick one.",
+    loreChain: "prism",
+    source: "Hidden cache",
   },
   {
-    id: "relic_crystal_orb",
+    id: "crystal_orb",
     name: "Crystal Orb",
     type: "relic",
     effect: "Reveals the boss’s next move or attack in advance for all groups.",
     useText: "Semi-Permanent",
-    imageUrl: getRelicImage("relic_crystal_orb"),
+    rarity: "rare",
+    lore: "It never shows the same thing twice.",
+    whisper: "You’re not supposed to see that.",
+    loreChain: "prism",
+    source: "Prism-linked vault",
   },
   {
-    id: "relic_brawlers_gauntlets",
+    id: "brawlers_gauntlets",
     name: "Brawler's Gauntlets",
     type: "relic",
     effect: "Adds +2 damage to all strikes made by the player.",
     useText: "Permanent - Active",
     isEquipped: true,
-    imageUrl: getRelicImage("relic_brawlers_gauntlets"),
+    rarity: "rare",
+    lore: "They tighten slightly before impact.",
+    whisper: "Again.",
+    source: "Battle reward",
   },
   {
-    id: "relic_glimmering_amulet",
+    id: "glimmering_amulet",
     name: "Glimmering Amulet",
     type: "relic",
     effect: "Automatically heals 2 HP at the end of each quest.",
     useText: "Permanent - Active",
     isEquipped: true,
-    imageUrl: getRelicImage("relic_glimmering_amulet"),
+    rarity: "rare",
+    lore: "Light bends differently around this amulet. Some reflections linger too long.",
+    whisper: "Look again.",
+    loreChain: "prism",
+    source: "Prism-linked discovery",
   },
   {
-    id: "relic_mystic_compass",
+    id: "mystic_compass",
     name: "Mystic Compass",
     type: "relic",
     effect: "Allows player to re-roll a dice once per quest.",
     useText: "Semi-Permanent",
-    imageUrl: getRelicImage("relic_mystic_compass"),
+    rarity: "rare",
+    lore: "The needle does not point north.",
+    whisper: "Not that way.",
+    loreChain: "prism",
+    source: "Prism Tower ruins",
   },
   {
-    id: "relic_stamina_helm",
+    id: "stamina_helm",
     name: "Stamina Helm",
     type: "relic",
     effect: "Allows the player to recover an additional 1 HP on a heal roll.",
     useText: "Permanent - Active",
     isEquipped: true,
-    imageUrl: getRelicImage("relic_stamina_helm"),
+    rarity: "rare",
+    lore: "Its interior is warmer than it should be, as if it remembers its last wearer.",
+    whisper: "Do not stop.",
+    loreChain: "lake",
+    source: "The Lake of Shadows",
   },
 ];
 
-export const itemLibraryById = Object.fromEntries(
-  itemLibrary.map((card) => [card.id, card])
-) as Record<string, InventoryCard>;
+export const itemLibraryById: Record<string, InventoryCard> =
+  Object.fromEntries(itemLibrary.map((c) => [c.id, c]));
 
-export const itemLibraryByName = Object.fromEntries(
-  itemLibrary.map((card) => [card.name.trim().toLowerCase(), card])
-) as Record<string, InventoryCard>;
+export const itemLibraryByName: Record<string, InventoryCard> =
+  Object.fromEntries(itemLibrary.map((c) => [c.name.toLowerCase(), c]));

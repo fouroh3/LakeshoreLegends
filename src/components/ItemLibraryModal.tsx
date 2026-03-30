@@ -1,7 +1,13 @@
+// src/components/ItemLibraryModal.tsx
+
 import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import type { InventoryCard, InventoryCardType } from "../types/inventory";
-import { getItemRarityClasses } from "../types/inventory";
+import {
+  isRareCard,
+  rareCardBadgeClass,
+  rareCardGlowClass,
+} from "../utils/rareCards";
 
 type Props = {
   open: boolean;
@@ -64,7 +70,7 @@ function LibraryTile({
   owned?: boolean;
   onSelect?: (card: InventoryCard) => void;
 }) {
-  const rarity = getItemRarityClasses(card.rarity);
+  const rare = isRareCard(card);
 
   return (
     <button
@@ -73,8 +79,12 @@ function LibraryTile({
       className={[
         "group relative w-full overflow-hidden rounded-2xl border p-3 text-left transition duration-200",
         selected
-          ? `border-cyan-500/50 bg-zinc-900 shadow-[0_0_0_1px_rgba(34,211,238,0.15),0_0_24px_rgba(34,211,238,0.10)] ${rarity.glow}`
-          : "border-zinc-800/90 bg-zinc-950/70 hover:-translate-y-[2px] hover:border-cyan-700/40 hover:bg-zinc-900/90",
+          ? `border-cyan-500/50 bg-zinc-900 shadow-[0_0_0_1px_rgba(34,211,238,0.15),0_0_24px_rgba(34,211,238,0.10)] ${
+              rare ? rareCardGlowClass() : ""
+            }`
+          : `border-zinc-800/90 bg-zinc-950/70 hover:-translate-y-[2px] hover:border-cyan-700/40 hover:bg-zinc-900/90 ${
+              rare ? rareCardGlowClass() : ""
+            }`,
       ].join(" ")}
     >
       <div className="flex items-start justify-between gap-2">
@@ -82,17 +92,20 @@ function LibraryTile({
           <div className="truncate text-sm font-semibold text-zinc-100">
             {card.name}
           </div>
+
           <div className="mt-1 flex flex-wrap items-center gap-1.5">
             <span className="text-[9px] uppercase tracking-[0.18em] text-zinc-500">
               {card.type}
             </span>
-            {card.rarity ? (
+
+            {rare ? (
               <span
-                className={`rounded-full border px-1.5 py-0.5 text-[8px] uppercase tracking-[0.16em] ${rarity.badge}`}
+                className={`rounded-full border px-1.5 py-0.5 text-[8px] uppercase tracking-[0.16em] ${rareCardBadgeClass()}`}
               >
-                {card.rarity}
+                Rare
               </span>
             ) : null}
+
             {owned ? (
               <span className="rounded-full border border-emerald-800 bg-emerald-950/40 px-1.5 py-0.5 text-[8px] uppercase tracking-[0.16em] text-emerald-200">
                 Owned
@@ -126,7 +139,7 @@ function LibraryDetail({
   card: InventoryCard | null;
   owned?: boolean;
 }) {
-  const rarity = getItemRarityClasses(card?.rarity);
+  const rare = isRareCard(card);
 
   return (
     <Panel className="h-full p-4">
@@ -146,7 +159,9 @@ function LibraryDetail({
         </div>
       ) : (
         <div
-          className={`rounded-[24px] border border-zinc-800 bg-[linear-gradient(180deg,rgba(39,39,42,0.95),rgba(9,9,11,0.95))] p-4 ${rarity.glow}`}
+          className={`rounded-[24px] border border-zinc-800 bg-[linear-gradient(180deg,rgba(39,39,42,0.95),rgba(9,9,11,0.95))] p-4 ${
+            rare ? rareCardGlowClass() : ""
+          }`}
         >
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="min-w-0">
@@ -155,11 +170,11 @@ function LibraryDetail({
                   {card.type}
                 </span>
 
-                {card.rarity ? (
+                {rare ? (
                   <span
-                    className={`rounded-full border px-2 py-0.5 text-[9px] uppercase tracking-[0.14em] ${rarity.badge}`}
+                    className={`rounded-full border px-2 py-0.5 text-[9px] uppercase tracking-[0.14em] ${rareCardBadgeClass()}`}
                   >
-                    {card.rarity}
+                    Rare
                   </span>
                 ) : null}
 
@@ -209,7 +224,9 @@ function LibraryDetail({
                 <div className="text-[10px] uppercase tracking-[0.18em] text-zinc-500">
                   Usage
                 </div>
-                <div className="mt-1 text-sm text-zinc-300">{card.useText}</div>
+                <div className="mt-1 text-sm text-zinc-300">
+                  {card.useText}
+                </div>
               </div>
             ) : null}
 
