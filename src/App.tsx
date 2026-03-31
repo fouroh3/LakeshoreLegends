@@ -58,10 +58,6 @@ export default function App() {
     window.location.href = url.toString();
   };
 
-  if (view === "battle") return <BattlePage onBack={() => goToView("")} />;
-  if (view === "store") return <StorePage onBack={() => goToView("")} />;
-  if (view === "cards") return <CardLibraryPage onBack={() => goToView("")} />;
-
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
@@ -334,6 +330,10 @@ export default function App() {
     attrFilterKey,
     attrFilterMin,
   ]);
+
+  if (view === "battle") return <BattlePage onBack={() => goToView("")} />;
+  if (view === "store") return <StorePage onBack={() => goToView("")} />;
+  if (view === "cards") return <CardLibraryPage onBack={() => goToView("")} />;
 
   return (
     <div className="min-h-screen w-full bg-[radial-gradient(circle_at_top,rgba(40,60,120,0.12),transparent_40%),#0a0a0a] text-zinc-100">

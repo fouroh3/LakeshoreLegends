@@ -71,7 +71,20 @@ const TYPE_META: Record<
 };
 
 function normalize(value: unknown) {
-  return String(value ?? "").trim().toLowerCase();
+  return String(value ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/[’']/g, "")
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ");
+}
+
+function normalizeKey(value: unknown) {
+  return String(value ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/[’']/g, "")
+    .replace(/\s+/g, " ");
 }
 
 function titleize(value: string) {
@@ -176,48 +189,83 @@ function inventoryEntries(
   return [];
 }
 
+function typedCardKey(card: InventoryCard) {
+  const type = String(card.type ?? "").trim().toLowerCase();
+  const id = String(card.id ?? "").trim().toLowerCase();
+  return type && id ? `${type}_${id}` : "";
+}
+
 function entryMatchesCard(
   entry: string | Record<string, unknown>,
   card: InventoryCard
 ) {
   const cardId = normalize(card.id);
   const cardName = normalize(card.name);
+  const cardTypedKey = normalizeKey(typedCardKey(card));
 
   if (typeof entry === "string") {
-    const raw = normalize(entry);
-    if (!raw) return false;
+    const rawKey = normalizeKey(entry);
+    const rawLabel = normalize(entry);
 
-    const normalizedRaw = raw
-      .replace(/[_\s]+/g, " ")
-      .replace(/[^a-z0-9 ]/g, "")
-      .trim();
+    if (!rawKey && !rawLabel) return false;
 
     const normalizedCardName = cardName
       .replace(/[_\s]+/g, " ")
       .replace(/[^a-z0-9 ]/g, "")
       .trim();
 
+    const normalizedRawLabel = rawLabel
+      .replace(/[_\s]+/g, " ")
+      .replace(/[^a-z0-9 ]/g, "")
+      .trim();
+
     return (
-      raw === cardId ||
-      raw === cardName ||
-      normalizedRaw === normalizedCardName
+      rawKey === cardTypedKey ||
+      rawLabel === cardId ||
+      rawLabel === cardName ||
+      normalizedRawLabel === normalizedCardName
     );
   }
 
   const row = entry as Record<string, unknown>;
-  const entryId = normalize(row.id);
-  const entryName = normalize(row.name);
-  const entryItemId = normalize(row.itemId);
-  const entryCardId = normalize(row.cardId);
 
-  if (entryId && entryId === cardId) return true;
-  if (entryItemId && entryItemId === cardId) return true;
-  if (entryCardId && entryCardId === cardId) return true;
-  if (entryName && entryName === cardName) return true;
+  const possibleKeyValues = [
+    row.id,
+    row.itemId,
+    row.cardId,
+    row.key,
+    row.inventoryKey,
+  ]
+    .map((v) => normalizeKey(v))
+    .filter(Boolean);
 
-  if (entryName) {
-    const libByName = itemLibraryByName?.[entryName];
-    if (libByName && normalize(libByName.id) === cardId) return true;
+  if (possibleKeyValues.some((v) => v === cardTypedKey)) return true;
+
+  const possibleNameValues = [
+    row.name,
+    row.title,
+    row.label,
+    row.item,
+    row.card,
+    row.cardName,
+  ]
+    .map((v) => normalize(v))
+    .filter(Boolean);
+
+  if (possibleNameValues.some((v) => v === cardName || v === cardId)) {
+    return true;
+  }
+
+  const possibleName =
+    possibleNameValues.find(Boolean) || normalize(row.name) || "";
+
+  if (possibleName) {
+    const libByName = itemLibraryByName?.[possibleName];
+    if (libByName) {
+      const libTypedKey = normalizeKey(typedCardKey(libByName));
+      const libId = normalize(libByName.id);
+      return libTypedKey === cardTypedKey || libId === cardId;
+    }
   }
 
   return false;

@@ -14,8 +14,65 @@ type Props = {
   onClose: () => void;
   cards: InventoryCard[];
   ownedIds?: string[];
+  allPeople?: any[];
+  currentPerson?: any | null;
   title?: string;
 };
+
+function normalizeKey(value: unknown) {
+  return String(value ?? "")
+    .toLowerCase()
+    .replace(/['’]/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function normalizeHomeroom(value: unknown) {
+  return String(value ?? "").trim().toLowerCase();
+}
+
+function getInventoryArray(person: any): any[] {
+  if (Array.isArray(person?.inventory)) return person.inventory;
+  if (Array.isArray(person?.items)) return person.items;
+  return [];
+}
+
+function countHomeroomHolders(
+  card: InventoryCard,
+  currentPerson: any,
+  allPeople: any[] = []
+) {
+  const targetHomeroom = normalizeHomeroom(
+    currentPerson?.homeroom ??
+      currentPerson?.homeRoom ??
+      currentPerson?.classroom
+  );
+
+  if (!targetHomeroom) return 0;
+
+  const targetId = normalizeKey(card.id);
+  const targetName = normalizeKey(card.name);
+
+  return allPeople.filter((person) => {
+    const personHomeroom = normalizeHomeroom(
+      person?.homeroom ?? person?.homeRoom ?? person?.classroom
+    );
+
+    if (personHomeroom !== targetHomeroom) return false;
+
+    const inventory = getInventoryArray(person);
+
+    return inventory.some((item: any) => {
+      const itemId = normalizeKey(item?.id);
+      const itemName = normalizeKey(item?.name);
+
+      return (
+        (targetId && itemId === targetId) ||
+        (targetName && itemName === targetName)
+      );
+    });
+  }).length;
+}
 
 function Panel({
   children,
@@ -135,9 +192,11 @@ function LibraryTile({
 function LibraryDetail({
   card,
   owned,
+  holderCount = 0,
 }: {
   card: InventoryCard | null;
   owned?: boolean;
+  holderCount?: number;
 }) {
   const rare = isRareCard(card);
 
@@ -250,6 +309,18 @@ function LibraryDetail({
               </div>
             ) : null}
 
+            <div>
+              <div className="text-[10px] uppercase tracking-[0.18em] text-zinc-500">
+                Homeroom Presence
+              </div>
+              <div className="mt-1 text-sm text-zinc-300">
+                {holderCount === 0 && "No one in this homeroom has this card"}
+                {holderCount === 1 && "1 player in this homeroom has this card"}
+                {holderCount > 1 &&
+                  `${holderCount} players in this homeroom have this card`}
+              </div>
+            </div>
+
             <div className="flex flex-wrap gap-2">
               {card.isEquipped ? (
                 <span className="rounded-full border border-emerald-800 bg-emerald-950/40 px-2 py-1 text-[10px] text-emerald-200">
@@ -274,6 +345,8 @@ export default function ItemLibraryModal({
   onClose,
   cards,
   ownedIds = [],
+  allPeople = [],
+  currentPerson = null,
   title = "Item Library",
 }: Props) {
   const [query, setQuery] = useState("");
@@ -338,6 +411,11 @@ export default function ItemLibraryModal({
       null,
     [filteredCards, selectedId]
   );
+
+  const selectedHolderCount = useMemo(() => {
+    if (!selectedCard || !currentPerson) return 0;
+    return countHomeroomHolders(selectedCard, currentPerson, allPeople);
+  }, [selectedCard, currentPerson, allPeople]);
 
   useEffect(() => {
     if (!open) return;
@@ -472,6 +550,7 @@ export default function ItemLibraryModal({
               <LibraryDetail
                 card={selectedCard}
                 owned={selectedCard ? ownedSet.has(selectedCard.id) : false}
+                holderCount={selectedHolderCount}
               />
             </aside>
           </div>
