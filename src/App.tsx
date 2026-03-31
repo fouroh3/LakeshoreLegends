@@ -392,8 +392,9 @@ export default function App() {
 
       <CharacterProfileModal
         person={selectedPerson}
-        open={!!selectedPerson}
+        open={Boolean(selectedPerson)}
         onClose={() => setSelectedPerson(null)}
+        allStudents={students}
       />
 
       <footer className="h-6" />

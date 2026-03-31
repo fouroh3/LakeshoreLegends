@@ -18,6 +18,7 @@ type Props = {
   person: any | null;
   open: boolean;
   onClose: () => void;
+  allStudents?: any[];
 };
 
 type InventoryFilter = "all" | "relic" | "potion" | "item" | "other";
@@ -1276,10 +1277,178 @@ function SkillsSection({ skillList }: { skillList: string[] }) {
   );
 }
 
+type ResonanceChain = "lake" | "prism" | "alchemist";
+
+type ResonanceBanner = {
+  chain: ResonanceChain;
+  source: "personal" | "guild";
+};
+
+function getCohortStudents(allStudents: any[], person: any) {
+  const targetHomeroom = String(person?.homeroom ?? "").trim().toLowerCase();
+  const targetGuild = String(person?.guild ?? "").trim().toLowerCase();
+
+  return allStudents.filter((student) => {
+    const homeroom = String(student?.homeroom ?? "").trim().toLowerCase();
+    const guild = String(student?.guild ?? "").trim().toLowerCase();
+
+    return homeroom === targetHomeroom && guild === targetGuild;
+  });
+}
+
+function getCompletedChainsFromInventories(
+  inventories: ResolvedInventoryCard[][]
+): Record<ResonanceChain, boolean> {
+  const uniqueByChain: Record<ResonanceChain, Set<string>> = {
+    lake: new Set<string>(),
+    prism: new Set<string>(),
+    alchemist: new Set<string>(),
+  };
+
+  for (const inventory of inventories) {
+    for (const card of inventory) {
+      if (!card.loreChain) continue;
+      uniqueByChain[card.loreChain].add(String(card.id));
+    }
+  }
+
+  return {
+    lake: uniqueByChain.lake.size >= 3,
+    prism: uniqueByChain.prism.size >= 3,
+    alchemist: uniqueByChain.alchemist.size >= 3,
+  };
+}
+
+
+function getResonanceMetaCompact(chain: ResonanceChain) {
+  switch (chain) {
+    case "lake":
+      return {
+        title: "Lake of Shadows",
+        icon: "◈",
+        shell:
+          "border-sky-400/10 bg-[linear-gradient(180deg,rgba(6,16,28,0.86),rgba(4,6,12,0.92))]",
+        glow:
+          "bg-[radial-gradient(circle_at_20%_25%,rgba(56,189,248,0.18),transparent_62%)]",
+        iconClass:
+          "border-sky-300/15 bg-sky-300/[0.05] text-sky-200/70",
+        textClass: "text-sky-100/85",
+        tagClass:
+          "border-sky-300/15 bg-sky-300/[0.06] text-sky-100/72",
+      };
+
+    case "prism":
+      return {
+        title: "Prism Tower",
+        icon: "✧",
+        shell:
+          "border-violet-400/10 bg-[linear-gradient(180deg,rgba(18,10,30,0.86),rgba(6,6,14,0.92))]",
+        glow:
+          "bg-[radial-gradient(circle_at_20%_25%,rgba(167,139,250,0.18),transparent_62%)]",
+        iconClass:
+          "border-violet-300/15 bg-violet-300/[0.05] text-violet-200/70",
+        textClass: "text-violet-100/85",
+        tagClass:
+          "border-violet-300/15 bg-violet-300/[0.06] text-violet-100/72",
+      };
+
+    case "alchemist":
+      return {
+        title: "Alchemist's Lair",
+        icon: "⬡",
+        shell:
+          "border-amber-400/10 bg-[linear-gradient(180deg,rgba(28,18,6,0.86),rgba(10,8,6,0.92))]",
+        glow:
+          "bg-[radial-gradient(circle_at_20%_25%,rgba(251,191,36,0.18),transparent_62%)]",
+        iconClass:
+          "border-amber-300/15 bg-amber-300/[0.05] text-amber-200/70",
+        textClass: "text-amber-100/85",
+        tagClass:
+          "border-amber-300/15 bg-amber-300/[0.06] text-amber-100/72",
+      };
+  }
+}
+
+function CompactResonanceStack({
+  banners,
+  hasInventory,
+}: {
+  banners: ResonanceBanner[];
+  hasInventory: boolean;
+}) {
+  if (!banners.length) return null;
+
+  function getSourceLabel(source: "personal" | "guild") {
+    return source === "personal" ? "Personal Resonance" : "Guild Resonance";
+  }
+
+  function getSourceLine(
+    source: "personal" | "guild",
+    hasInventory: boolean
+  ) {
+    if (source === "personal") {
+      return "Completed by this player.";
+    }
+
+    return hasInventory
+      ? "Activated through shared guild ownership."
+      : "This player benefits from the guild's completed resonance.";
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="text-center text-[10px] uppercase tracking-[0.22em] text-cyan-200/36">
+        Resonances
+      </div>
+
+      {banners.map((banner) => {
+        const meta = getResonanceMetaCompact(banner.chain);
+
+        return (
+          <div
+            key={`${banner.chain}-${banner.source}`}
+            className={`relative overflow-hidden rounded-[20px] border px-4 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.02),0_0_18px_rgba(0,0,0,0.22),0_0_24px_rgba(255,255,255,0.03)] ${meta.shell}`}
+          >
+            <div
+              className={`pointer-events-none absolute inset-0 rounded-[20px] ${meta.glow} opacity-75`}
+            />
+            <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.14),transparent)]" />
+
+            <div className="relative flex items-start gap-3.5">
+              <div
+                className={`mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border text-[13px] shadow-[0_0_12px_rgba(255,255,255,0.05)] ${meta.iconClass}`}
+              >
+                {meta.icon}
+              </div>
+
+              <div className="min-w-0 flex-1">
+                <div
+                  className={`text-[16px] font-semibold leading-5 ${meta.textClass}`}
+                >
+                  {meta.title}
+                </div>
+
+                <div className="mt-1 text-[11px] font-medium leading-4 text-white/45">
+                  {getSourceLabel(banner.source)}
+                </div>
+
+                <div className="mt-2.5 max-w-[24ch] text-[12px] leading-6 text-white/52">
+                  {getSourceLine(banner.source, hasInventory)}
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function CharacterProfileModal({
   person,
   open,
   onClose,
+  allStudents = [],
 }: Props) {
   const [visible, setVisible] = useState(false);
   const scrollYRef = useRef(0);
@@ -1353,25 +1522,60 @@ export default function CharacterProfileModal({
 
   const companion = useMemo(() => getCompanionInfo(person), [person]);
 
-  const completedChains = useMemo(() => {
-    const counts: Record<"lake" | "prism" | "alchemist", number> = {
-      lake: 0,
-      prism: 0,
-      alchemist: 0,
-    };
+const cohortStudents = useMemo(() => {
+  if (!person) return [];
+  return getCohortStudents(allStudents, person);
+}, [allStudents, person]);
 
-    for (const card of inventory) {
-      if (card.loreChain) {
-        counts[card.loreChain] += 1;
-      }
+const cohortInventories = useMemo(() => {
+  return cohortStudents.map((student) =>
+    normalizeInventory(student?.inventory)
+  );
+}, [cohortStudents]);
+
+const guildCompletedChains = useMemo(() => {
+  return getCompletedChainsFromInventories(cohortInventories);
+}, [cohortInventories]);
+
+const personalCompletedChains = useMemo(() => {
+  return getCompletedChainsFromInventories([inventory]);
+}, [inventory]);
+
+
+const resonanceBanners = useMemo<ResonanceBanner[]>(() => {
+  const order: ResonanceChain[] = ["lake", "prism", "alchemist"];
+  const banners: ResonanceBanner[] = [];
+
+  for (const chain of order) {
+    const personallyComplete = personalCompletedChains[chain];
+    const guildComplete = guildCompletedChains[chain];
+
+    if (personallyComplete) {
+      banners.push({
+        chain,
+        source: "personal",
+      });
+      continue;
     }
 
-    return {
-      lake: counts.lake >= 3,
-      prism: counts.prism >= 3,
-      alchemist: counts.alchemist >= 3,
-    };
-  }, [inventory]);
+    if (guildComplete) {
+      banners.push({
+        chain,
+        source: "guild",
+      });
+    }
+  }
+
+  return banners;
+}, [guildCompletedChains, personalCompletedChains]);
+
+console.log({
+  student: person?.first,
+  allStudentsCount: allStudents.length,
+  guildCompletedChains,
+  personalCompletedChains,
+  resonanceBanners,
+});
 
   if (!open || !person) return null;
 
@@ -1503,104 +1707,19 @@ export default function CharacterProfileModal({
                             </div>
                           </div>
 
-                          {(completedChains.lake ||
-                            completedChains.prism ||
-                            completedChains.alchemist) ? (
-                            <div className="relative overflow-hidden rounded-[20px] border border-cyan-400/10 bg-[linear-gradient(180deg,rgba(6,10,18,0.96),rgba(4,6,10,0.98))] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.03),0_0_28px_rgba(34,211,238,0.08)]">
-                              <div className="pointer-events-none absolute inset-0">
-                                <div className="absolute left-1/2 top-[-30px] h-28 w-28 -translate-x-1/2 rounded-full bg-cyan-300/8 blur-2xl" />
-                              </div>
-
-                              <div className="relative flex flex-col items-center text-center">
-                                <div className="relative flex h-12 w-12 items-center justify-center">
-                                  <div className="pointer-events-none absolute left-1/2 top-1/2 h-12 w-12 -translate-x-1/2 -translate-y-1/2 rounded-full border border-cyan-300/12" />
-                                  <div className="pointer-events-none absolute left-1/2 top-1/2 h-[28px] w-[28px] -translate-x-1/2 -translate-y-1/2 rotate-45 border border-cyan-300/10" />
-                                  <div className="absolute left-1/2 top-1/2 h-8 w-8 -translate-x-1/2 -translate-y-1/2 rounded-full bg-cyan-300/[0.05] blur-md" />
-
-                                  <div className="relative flex h-9 w-9 items-center justify-center rounded-full border border-cyan-300/20 bg-cyan-300/[0.05] text-cyan-200/70 shadow-[0_0_18px_rgba(34,211,238,0.10)]">
-                                    ✦
-                                  </div>
-                                </div>
-
-                                <div className="mt-2 text-[10px] uppercase tracking-[0.26em] text-cyan-200/40">
-                                  Arcane Resonances
-                                </div>
-
-                                <div className="mt-1 text-sm font-medium text-cyan-50/90">
-                                  The artifacts are beginning to respond.
-                                </div>
-                              </div>
-
-                              <div className="mt-3 h-px bg-[linear-gradient(90deg,transparent,rgba(103,232,249,0.22),transparent)]" />
-
-                              <div className="mt-3 space-y-2.5">
-                                {completedChains.lake ? (
-                                  <div className="relative rounded-[14px] border border-sky-400/10 bg-[linear-gradient(180deg,rgba(6,16,28,0.85),rgba(4,6,12,0.92))] px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.02),0_0_12px_rgba(56,189,248,0.08)]">
-                                    <div className="pointer-events-none absolute inset-0 rounded-[14px] bg-[radial-gradient(circle_at_30%_20%,rgba(56,189,248,0.12),transparent_60%)] opacity-40" />
-
-                                    <div className="relative flex items-center gap-2">
-                                      <div className="flex h-6 w-6 items-center justify-center rounded-full border border-sky-300/15 bg-sky-300/[0.04] text-[11px] text-sky-200/65">
-                                        ◈
-                                      </div>
-
-                                      <div className="text-sm font-medium text-sky-100/85">
-                                        Lake of Shadows Resonance
-                                      </div>
-                                    </div>
-
-                                    <div className="relative mt-1 pl-8 text-xs leading-5 text-sky-100/40">
-                                      The recovered artifacts carry the same drowned echo.
-                                    </div>
-                                  </div>
-                                ) : null}
-
-                                {completedChains.prism ? (
-                                  <div className="relative rounded-[14px] border border-violet-400/10 bg-[linear-gradient(180deg,rgba(18,10,30,0.85),rgba(6,6,14,0.92))] px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.02),0_0_12px_rgba(167,139,250,0.08)]">
-                                    <div className="pointer-events-none absolute inset-0 rounded-[14px] bg-[radial-gradient(circle_at_30%_20%,rgba(167,139,250,0.12),transparent_60%)] opacity-40" />
-
-                                    <div className="relative flex items-center gap-2">
-                                      <div className="flex h-6 w-6 items-center justify-center rounded-full border border-violet-300/15 bg-violet-300/[0.04] text-[11px] text-violet-200/65">
-                                        ✧
-                                      </div>
-
-                                      <div className="text-sm font-medium text-violet-100/85">
-                                        Prism Tower Resonance
-                                      </div>
-                                    </div>
-
-                                    <div className="relative mt-1 pl-8 text-xs leading-5 text-violet-100/40">
-                                      Seer-marked relics are beginning to answer one another.
-                                    </div>
-                                  </div>
-                                ) : null}
-
-                                {completedChains.alchemist ? (
-                                  <div className="relative rounded-[14px] border border-amber-400/10 bg-[linear-gradient(180deg,rgba(28,18,6,0.85),rgba(10,8,6,0.92))] px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.02),0_0_12px_rgba(251,191,36,0.08)]">
-                                    <div className="pointer-events-none absolute inset-0 rounded-[14px] bg-[radial-gradient(circle_at_30%_20%,rgba(251,191,36,0.12),transparent_60%)] opacity-40" />
-
-                                    <div className="relative flex items-center gap-2">
-                                      <div className="flex h-6 w-6 items-center justify-center rounded-full border border-amber-300/15 bg-amber-300/[0.04] text-[11px] text-amber-200/65">
-                                        ⬡
-                                      </div>
-
-                                      <div className="text-sm font-medium text-amber-100/85">
-                                        Alchemist&apos;s Lair Resonance
-                                      </div>
-                                    </div>
-
-                                    <div className="relative mt-1 pl-8 text-xs leading-5 text-amber-100/40">
-                                      Stable and unstable creations are reacting as one system.
-                                    </div>
-                                  </div>
-                                ) : null}
-                              </div>
+                          {resonanceBanners.length ? (
+                            <div className="mt-3">
+                              <CompactResonanceStack 
+                                banners={resonanceBanners} 
+                                hasInventory={inventory.length > 0} 
+                                />
                             </div>
-                          ) : null}
-
+                            ) : null}
                           <CompanionPanel
                             companion={companion}
                             guildTheme={guildTheme}
                           />
+                          
                         </div>
 
                         <div className="pt-4 text-center text-[10px] uppercase tracking-[0.22em] text-zinc-600 lg:mt-auto">
