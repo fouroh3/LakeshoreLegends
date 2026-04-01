@@ -1,3 +1,5 @@
+// src/pages/CardLibraryPage.tsx
+
 import { useEffect, useMemo, useState } from "react";
 import AppTopBar from "../components/AppTopBar";
 import CardLibraryModal from "../components/CardLibraryModal";
@@ -109,6 +111,32 @@ function typeKey(card: InventoryCard): CardTypeFilter {
   if (value === "potion") return "potion";
   if (value === "item") return "item";
   return "other";
+}
+
+function resonancePillClass(loreChain?: InventoryCard["loreChain"]) {
+  switch (loreChain) {
+    case "lake":
+      return "border-sky-400/40 bg-sky-500/[0.16] text-sky-200 shadow-[0_0_18px_rgba(56,189,248,0.35)]";
+    case "prism":
+      return "border-violet-400/40 bg-violet-500/[0.16] text-violet-200 shadow-[0_0_18px_rgba(167,139,250,0.35)]";
+    case "alchemist":
+      return "border-amber-400/40 bg-amber-500/[0.16] text-amber-200 shadow-[0_0_18px_rgba(251,191,36,0.35)]";
+    default:
+      return "border-cyan-300/20 bg-cyan-400/[0.08] text-cyan-100";
+  }
+}
+
+function resonanceCardGlow(loreChain?: InventoryCard["loreChain"]) {
+  switch (loreChain) {
+    case "lake":
+      return "ring-1 ring-sky-400/20 shadow-[0_10px_28px_rgba(56,189,248,0.12)]";
+    case "prism":
+      return "ring-1 ring-violet-400/20 shadow-[0_10px_28px_rgba(167,139,250,0.12)]";
+    case "alchemist":
+      return "ring-1 ring-amber-400/20 shadow-[0_10px_28px_rgba(251,191,36,0.12)]";
+    default:
+      return "";
+  }
 }
 
 function matchesQuery(card: ResolvedLibraryCard, query: string) {
@@ -536,12 +564,11 @@ export default function CardLibraryPage({ onBack }: Props) {
                             setActiveCard(card);
                           }}
                           className={[
-                            "group relative w-full overflow-hidden rounded-[26px] border text-left transition",
-                            `border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))] hover:border-white/18 hover:bg-white/[0.06] ${
-                              rare
-                                ? "ring-1 ring-red-500/20 shadow-[0_10px_26px_rgba(239,68,68,0.10)]"
-                                : ""
-                            }`,
+                            "group relative flex h-full w-full flex-col overflow-hidden rounded-[26px] border text-left transition",
+                            `border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))] hover:border-white/18 hover:bg-white/[0.06]`,
+                            rare
+                              ? "ring-1 ring-red-500/25 shadow-[0_10px_26px_rgba(239,68,68,0.14)]"
+                              : resonanceCardGlow(card.loreChain),
                           ].join(" ")}
                         >
                           <div className="px-6 pt-6">
@@ -557,7 +584,7 @@ export default function CardLibraryPage({ onBack }: Props) {
                             </div>
                           </div>
 
-                          <div className="px-5 pb-5 pt-4">
+                          <div className="flex flex-1 flex-col px-5 pb-5 pt-4">
                             <div className="text-[1.15rem] font-semibold text-white">
                               {card.name}
                             </div>
@@ -566,31 +593,57 @@ export default function CardLibraryPage({ onBack }: Props) {
                               {card.effect || "No effect text available."}
                             </div>
 
-                            <div className="mt-5 flex flex-wrap items-center gap-2">
-                              <div className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/70">
-                                {inventoryCounts[String(card.id ?? "")] ?? 0}{" "}
-                                players
-                              </div>
-
-                              <div className="rounded-full border border-white/12 bg-black/30 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/80">
-                                {titleize(type)}
-                              </div>
-
-                              <div
-                                className={`rounded-full border px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] ${
-                                  rare
-                                    ? rareCardBadgeClass()
-                                    : "border-zinc-700 bg-zinc-900 text-zinc-300"
-                                }`}
-                              >
-                                {rare ? "Rare" : "Common"}
-                              </div>
-
-                              {card.loreChain ? (
-                                <div className="rounded-full border border-cyan-300/12 bg-cyan-400/[0.06] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-cyan-100/72">
-                                  Resonance
+                            <div className="mt-5 flex flex-1 flex-col justify-end">
+                              <div className="flex min-h-[38px] flex-wrap items-center gap-2">
+                                <div className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/70">
+                                  {inventoryCounts[String(card.id ?? "")] ?? 0}{" "}
+                                  players
                                 </div>
-                              ) : null}
+
+                                <div className="rounded-full border border-white/12 bg-black/30 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/80">
+                                  {titleize(type)}
+                                </div>
+
+                                <div
+                                  className={`rounded-full border px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] ${
+                                    rare
+                                      ? rareCardBadgeClass()
+                                      : "border-zinc-700 bg-zinc-900 text-zinc-300"
+                                  }`}
+                                >
+                                  {rare ? "Rare" : "Common"}
+                                </div>
+                              </div>
+
+            <div className="mt-2 min-h-[38px]">
+              {card.loreChain ? (
+                <div
+                  className={`relative inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] backdrop-blur-sm ${resonancePillClass(
+                    card.loreChain
+                  )}`}
+                >
+                  {/* glow aura */}
+                  <div className="absolute inset-0 rounded-full opacity-30 blur-md" />
+
+                  {/* content */}
+                  <div className="relative flex items-center gap-2">
+                    <span className="h-1.5 w-1.5 rounded-full bg-current opacity-90" />
+
+                    {card.loreChain === "lake"
+                      ? "Lake Resonance"
+                      : card.loreChain === "prism"
+                      ? "Prism Resonance"
+                      : card.loreChain === "alchemist"
+                      ? "Alchemist Resonance"
+                      : "Resonance"}
+                  </div>
+                </div>
+              ) : (
+                <div className="invisible inline-flex rounded-full border px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em]">
+                  Resonance
+                </div>
+              )}
+            </div>
                             </div>
                           </div>
                         </button>
