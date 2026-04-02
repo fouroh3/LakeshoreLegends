@@ -607,7 +607,7 @@ export default function BattlePage({ onBack }: Props) {
 
       <div className="min-h-[100dvh] flex flex-col">
         <div className="flex-1 overflow-auto">
-          <div className="w-full max-w-none px-3 py-2 sm:px-4 lg:px-6">
+          <div className="mx-auto w-full max-w-[1480px] px-3 py-2 sm:px-4 lg:px-6">
             {err && (
               <div className="mb-2 rounded-xl border border-red-900/50 bg-red-950/40 px-3 py-2 text-sm text-red-200">
                 {err}
@@ -633,7 +633,7 @@ export default function BattlePage({ onBack }: Props) {
             />
 
             <div className="mt-2 rounded-2xl border border-zinc-900/60 bg-zinc-950/15 p-2">
-              <div className="grid grid-cols-1 gap-2 lg:grid-cols-[1fr_360px]">
+              <div className="grid grid-cols-1 gap-2 lg:grid-cols-[minmax(0,1fr)_360px]">
                 <StudentGrid
                   activeHomeroom={activeHomeroom}
                   guildFilter={guildFilter}

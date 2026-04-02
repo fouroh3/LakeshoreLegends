@@ -1739,7 +1739,7 @@ console.log({
                           : "translate-y-2 opacity-0"
                       }`}
                     >
-                      <div className="grid gap-3 xl:grid-cols-[minmax(0,1.45fr)_minmax(280px,0.55fr)]">
+                      <div className="grid gap-3 lg:grid-cols-[minmax(0,1.45fr)_minmax(280px,0.55fr)]">
                         <AttributeSection
                           person={person}
                           guildTheme={guildTheme}

@@ -436,16 +436,16 @@ export default function CardLibraryPage({ onBack }: Props) {
         <div className="relative z-[1] px-3 pt-3 sm:px-4 sm:pt-4">
           <div className="mx-auto max-w-[1480px]">
             <div className="overflow-hidden rounded-[22px] border border-white/10 bg-[radial-gradient(circle_at_top,rgba(34,211,238,0.06),transparent_45%),linear-gradient(180deg,rgba(9,14,25,0.94),rgba(6,10,18,0.94))] shadow-[0_14px_38px_rgba(0,0,0,0.28)] backdrop-blur-xl">
-              <div className="px-4 py-4 sm:px-5 sm:py-5">
+              <div className="px-4 py-4 sm:px-5 sm:py-5 lg:px-6 lg:py-6">
                 <div className="inline-flex rounded-full border border-cyan-300/15 bg-cyan-400/[0.08] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-cyan-100/65">
                   Card Library
                 </div>
 
-                <h1 className="mt-3 text-xl font-semibold text-white sm:text-2xl">
+                <h1 className="mt-3 text-xl font-semibold text-white sm:text-2xl lg:text-[2rem]">
                   Browse every available card
                 </h1>
 
-                <p className="mt-2 max-w-2xl text-sm leading-6 text-white/62">
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-white/62 lg:text-[15px]">
                   Search effects, compare uses, and inspect lore, whispers, and
                   resonance-linked cards.
                 </p>
@@ -469,10 +469,10 @@ export default function CardLibraryPage({ onBack }: Props) {
           </div>
         </div>
 
-        <div className="relative z-[1] px-3 pb-8 pt-4 sm:px-4 sm:pt-5">
+        <div className="relative z-[1] px-3 pb-8 pt-4 sm:px-4 sm:pt-5 lg:pb-10">
           <div className="mx-auto max-w-[1480px]">
-            <div className="grid gap-4 xl:grid-cols-[290px_minmax(0,1fr)]">
-              <aside className="rounded-[24px] border border-white/10 bg-[linear-gradient(180deg,rgba(9,14,25,0.92),rgba(7,10,18,0.92))] p-4 shadow-[0_12px_34px_rgba(0,0,0,0.24)] backdrop-blur-xl">
+            <div className="grid gap-4 lg:grid-cols-[290px_minmax(0,1fr)] xl:grid-cols-[300px_minmax(0,1fr)]">
+              <aside className="rounded-[24px] border border-white/10 bg-[linear-gradient(180deg,rgba(9,14,25,0.92),rgba(7,10,18,0.92))] p-4 shadow-[0_12px_34px_rgba(0,0,0,0.24)] backdrop-blur-xl lg:sticky lg:top-4 lg:self-start">
                 <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/42">
                   Search & Filter
                 </div>
@@ -518,7 +518,7 @@ export default function CardLibraryPage({ onBack }: Props) {
                 </div>
               </aside>
 
-              <section className="rounded-[24px] border border-white/10 bg-[linear-gradient(180deg,rgba(9,14,25,0.92),rgba(7,10,18,0.92))] p-4 shadow-[0_12px_34px_rgba(0,0,0,0.24)] backdrop-blur-xl sm:p-5">
+              <section className="min-w-0 rounded-[24px] border border-white/10 bg-[linear-gradient(180deg,rgba(9,14,25,0.92),rgba(7,10,18,0.92))] p-4 shadow-[0_12px_34px_rgba(0,0,0,0.24)] backdrop-blur-xl sm:p-5 lg:p-6">
                 <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/42">
@@ -551,7 +551,7 @@ export default function CardLibraryPage({ onBack }: Props) {
                     </div>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,320px))] justify-center gap-6">
+                  <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
                     {filteredCards.map((card) => {
                       const type = typeKey(card);
                       const rare = isRareCard(card);
@@ -564,16 +564,16 @@ export default function CardLibraryPage({ onBack }: Props) {
                             setActiveCard(card);
                           }}
                           className={[
-                            "group relative flex h-full w-full flex-col overflow-hidden rounded-[26px] border text-left transition",
-                            `border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))] hover:border-white/18 hover:bg-white/[0.06]`,
+                            "group relative flex h-full min-w-0 w-full flex-col overflow-hidden rounded-[26px] border text-left transition",
+                            "border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))] hover:border-white/18 hover:bg-white/[0.06]",
                             rare
                               ? "ring-1 ring-red-500/25 shadow-[0_10px_26px_rgba(239,68,68,0.14)]"
                               : resonanceCardGlow(card.loreChain),
                           ].join(" ")}
                         >
-                          <div className="px-6 pt-6">
+                          <div className="px-5 pt-5 lg:px-6 lg:pt-6">
                             <div className="flex justify-center">
-                              <div className="w-full max-w-[240px]">
+                              <div className="w-full max-w-[220px] lg:max-w-[240px]">
                                 <div className="relative aspect-[3/4.2] w-full">
                                   <div className="absolute inset-0 rounded-[18px] border border-white/10 bg-black/40 shadow-inner" />
                                   <div className="absolute inset-x-[8.5%] inset-y-[6.5%] overflow-hidden rounded-[12px] bg-black">
@@ -584,8 +584,8 @@ export default function CardLibraryPage({ onBack }: Props) {
                             </div>
                           </div>
 
-                          <div className="flex flex-1 flex-col px-5 pb-5 pt-4">
-                            <div className="text-[1.15rem] font-semibold text-white">
+                          <div className="flex flex-1 flex-col px-5 pb-5 pt-4 lg:px-6 lg:pb-6">
+                            <div className="text-[1.1rem] font-semibold text-white lg:text-[1.15rem]">
                               {card.name}
                             </div>
 
@@ -615,35 +615,33 @@ export default function CardLibraryPage({ onBack }: Props) {
                                 </div>
                               </div>
 
-            <div className="mt-2 min-h-[38px]">
-              {card.loreChain ? (
-                <div
-                  className={`relative inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] backdrop-blur-sm ${resonancePillClass(
-                    card.loreChain
-                  )}`}
-                >
-                  {/* glow aura */}
-                  <div className="absolute inset-0 rounded-full opacity-30 blur-md" />
+                              <div className="mt-2 min-h-[38px]">
+                                {card.loreChain ? (
+                                  <div
+                                    className={`relative inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] backdrop-blur-sm ${resonancePillClass(
+                                      card.loreChain
+                                    )}`}
+                                  >
+                                    <div className="absolute inset-0 rounded-full opacity-30 blur-md" />
 
-                  {/* content */}
-                  <div className="relative flex items-center gap-2">
-                    <span className="h-1.5 w-1.5 rounded-full bg-current opacity-90" />
+                                    <div className="relative flex items-center gap-2">
+                                      <span className="h-1.5 w-1.5 rounded-full bg-current opacity-90" />
 
-                    {card.loreChain === "lake"
-                      ? "Lake Resonance"
-                      : card.loreChain === "prism"
-                      ? "Prism Resonance"
-                      : card.loreChain === "alchemist"
-                      ? "Alchemist Resonance"
-                      : "Resonance"}
-                  </div>
-                </div>
-              ) : (
-                <div className="invisible inline-flex rounded-full border px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em]">
-                  Resonance
-                </div>
-              )}
-            </div>
+                                      {card.loreChain === "lake"
+                                        ? "Lake Resonance"
+                                        : card.loreChain === "prism"
+                                        ? "Prism Resonance"
+                                        : card.loreChain === "alchemist"
+                                        ? "Alchemist Resonance"
+                                        : "Resonance"}
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="invisible inline-flex rounded-full border px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em]">
+                                    Resonance
+                                  </div>
+                                )}
+                              </div>
                             </div>
                           </div>
                         </button>
