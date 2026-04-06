@@ -1,3 +1,4 @@
+// src/pages/battle/components/RightRail.tsx
 import { useEffect, useMemo, useState } from "react";
 import type { Student } from "../../../types";
 import type { BossState } from "../../../bossApi";
@@ -163,7 +164,9 @@ export default function RightRail({
     return Math.max(0, Math.min(1, boss.currentHP / Math.max(1, boss.maxHP)));
   }, [boss]);
 
-  const bossDefeated = Boolean(boss && boss.currentHP <= 0);
+  const bossDefeated = useMemo(() => {
+    return Boolean(boss && boss.currentHP <= 0);
+  }, [boss]);
 
   const bossBarColor = useMemo(() => hpBarColorFromPct(bossPct), [bossPct]);
 
@@ -177,7 +180,7 @@ export default function RightRail({
 
   const attackDisabledReason = useMemo(() => {
     if (!hasBossConfigured) return "No boss configured";
-    if (bossDefeated) return "Boss already defeated";
+    if (bossDefeated) return "Boss defeated";
     if (studentHealMode) return "Switch Group Action to ATTACK";
     if (!isTeacher && !guildAttacksOpen) return "Guild attacks are CLOSED";
     if (!activeRound || activeRound <= 0) return "Missing round";
@@ -227,21 +230,16 @@ export default function RightRail({
       : "";
 
   return (
-    <div className="min-h-0 overflow-auto pr-1">
-      <div className="sticky top-0 z-20">
-        <div
-          className={[
-            `${card} relative overflow-hidden p-3 backdrop-blur bg-zinc-950/60`,
-            "",
-          ].join(" ")}
-        >
-          {bossDefeated && (
-            <div className="pointer-events-none absolute inset-0 z-40 flex flex-col items-center justify-center rounded-2xl bg-black/80 backdrop-blur-[2px]">
-              <div className="text-6xl leading-none drop-shadow-[0_0_18px_rgba(255,255,255,0.25)]">
+    <div className="relative min-h-0 overflow-hidden pr-1">
+      {bossDefeated && (
+        <div className="pointer-events-none absolute inset-0 z-[999] bg-zinc-950/98 backdrop-blur-sm">
+          <div className="sticky top-0 h-screen">
+            <div className="absolute left-1/2 top-[30vh] flex -translate-x-1/2 -translate-y-1/2 flex-col items-center animate-[fadeIn_0.4s_ease-out]">
+              <div className="text-6xl leading-none drop-shadow-[0_0_20px_rgba(255,255,255,0.35)]">
                 💀
               </div>
 
-              <div className="mt-4 text-[22px] font-black tracking-[0.28em] text-zinc-100 drop-shadow-[0_0_12px_rgba(255,255,255,0.25)]">
+              <div className="mt-4 text-[22px] font-black tracking-[0.28em] text-zinc-100 drop-shadow-[0_0_14px_rgba(255,255,255,0.25)]">
                 DEFEATED
               </div>
 
@@ -249,8 +247,14 @@ export default function RightRail({
                 The battle is won
               </div>
             </div>
-          )}
+          </div>
+        </div>
+      )}
 
+      <div className="sticky top-0 z-20">
+        <div
+          className={`${card} relative overflow-hidden p-3 backdrop-blur bg-zinc-950/60`}
+        >
           <div className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-amber-400/20 to-transparent" />
 
           <div className="relative flex items-start gap-3">
@@ -266,7 +270,6 @@ export default function RightRail({
                 className={[
                   "relative h-14 w-14 overflow-hidden rounded-2xl",
                   bossSubmitting ? "animate-pulse" : "",
-                  bossDefeated ? "opacity-70 saturate-50" : "",
                 ].join(" ")}
               >
                 {bossMeta?.logo ? (
@@ -295,16 +298,11 @@ export default function RightRail({
                 </div>
               )}
 
-              <div
-                className={[
-                  "truncate text-lg font-extrabold tracking-wide text-zinc-100",
-                  bossDefeated ? "opacity-85" : "",
-                ].join(" ")}
-              >
+              <div className="truncate text-lg font-extrabold tracking-wide text-zinc-100">
                 {bossMeta?.bossName || boss?.bossName || bossName || "Boss"}
               </div>
 
-              <div className="relative mt-1 flex flex-wrap items-center gap-2">
+              <div className="mt-1 flex flex-wrap items-center gap-2">
                 <span className={pill}>
                   {!hasBossConfigured
                     ? "No Boss Set"
@@ -400,18 +398,7 @@ export default function RightRail({
       )}
 
       {showAttackUi && (
-        <div className={`${card} relative overflow-hidden p-3`}>
-          {bossDefeated && (
-            <div className="absolute inset-0 z-20 flex flex-col items-center justify-center rounded-2xl bg-black/68 backdrop-blur-[2px]">
-              <div className="text-3xl leading-none">💀</div>
-              <div className="mt-2 text-[15px] font-black tracking-[0.24em] text-zinc-100">
-                BOSS DEFEATED
-              </div>
-              <div className="mt-1 text-[10px] uppercase tracking-[0.16em] text-zinc-400">
-                Boss controls disabled
-              </div>
-            </div>
-          )}
+        <div className={`${card} p-3`}>
           <div className={label}>Boss Attack</div>
 
           <div className="mt-3 space-y-2">
@@ -656,6 +643,17 @@ export default function RightRail({
           50% {
             opacity: 0.45;
             filter: brightness(1.35);
+          }
+        }
+
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+            transform: scale(0.98);
+          }
+          to {
+            opacity: 1;
+            transform: scale(1);
           }
         }
       `}</style>
