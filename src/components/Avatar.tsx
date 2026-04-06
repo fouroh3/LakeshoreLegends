@@ -1,3 +1,5 @@
+// src/components/Avatar.tsx
+
 import React, { useMemo } from "react";
 
 export type AvatarBadge = string | React.ReactNode;

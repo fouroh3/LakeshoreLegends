@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
 import AppTopBar from "../../components/AppTopBar";
+import CharacterProfileModal from "../../components/CharacterProfileModal";
 import type { Student, Guild } from "../../types";
 import { loadStudents } from "../../data";
 import { submitHpDelta } from "../../hpApi";
@@ -23,7 +24,7 @@ import {
 import type { GroupAction } from "./battleTypes";
 
 import BattleTopControls from "./components/BattleTopControls";
-import StudentGrid from "./components/StudentGrid";
+import StudentGrid from "./components/BattleStudentGrid";
 import RightRail from "./components/RightRail";
 
 type Props = { onBack: () => void };
@@ -65,6 +66,7 @@ export default function BattlePage({ onBack }: Props) {
   const [students, setStudents] = useState<Student[]>([]);
   const [loadingStudents, setLoadingStudents] = useState(true);
   const [err, setErr] = useState<string | null>(null);
+  const [profileStudent, setProfileStudent] = useState<Student | null>(null);
 
   const [activeHomeroom, setActiveHomeroom] = useState("");
   const [activeSessionId, setActiveSessionId] = useState("");
@@ -283,6 +285,7 @@ export default function BattlePage({ onBack }: Props) {
     setBossDamage("");
     setBossNote("");
     setBossCooldownUntil(0);
+    setProfileStudent(null);
   }, [activeHomeroom]);
 
   const selectedStudents = useMemo(() => {
@@ -506,9 +509,7 @@ export default function BattlePage({ onBack }: Props) {
           bossKey: boss.bossKey || currentBossKey,
           delta: deltaValue,
           source: bossNote.trim(),
-          requestId: `${activeSessionId}:${
-            boss.bossInstanceId
-          }:${makeSubmitNonce()}`,
+          requestId: `${activeSessionId}:${boss.bossInstanceId}:${makeSubmitNonce()}`,
           round,
           guild: cleanGuild,
           homeroom: activeHomeroom,
@@ -607,7 +608,7 @@ export default function BattlePage({ onBack }: Props) {
 
       <div className="min-h-[100dvh] flex flex-col">
         <div className="flex-1 overflow-auto">
-          <div className="mx-auto w-full max-w-[1480px] px-3 py-2 sm:px-4 lg:px-6">
+          <div className="mx-auto w-full max-w-none px-3 py-2 sm:px-4 lg:px-6">
             {err && (
               <div className="mb-2 rounded-xl border border-red-900/50 bg-red-950/40 px-3 py-2 text-sm text-red-200">
                 {err}
@@ -641,6 +642,7 @@ export default function BattlePage({ onBack }: Props) {
                   selectedIds={selectedIds}
                   toggleSelect={toggleSelect}
                   getDisplayHp={getDisplayHp}
+                  onOpenProfile={(student: Student) => setProfileStudent(student)}
                 />
 
                 <RightRail
@@ -692,6 +694,13 @@ export default function BattlePage({ onBack }: Props) {
           </div>
         </div>
       </div>
+
+      <CharacterProfileModal
+        person={profileStudent}
+        open={Boolean(profileStudent)}
+        onClose={() => setProfileStudent(null)}
+        allStudents={students}
+      />
     </div>
   );
 }

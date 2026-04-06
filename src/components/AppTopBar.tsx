@@ -1,3 +1,5 @@
+// src/components/AppTopBar.tsx
+
 import logoUrl from "../assets/Lakeshore Legends Logo.png";
 
 type TopBarView = "dashboard" | "store" | "cards" | "battle";

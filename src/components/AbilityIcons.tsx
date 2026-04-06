@@ -1,3 +1,6 @@
+// src/components/AbilityIcons.tsx
+
+
 import React from "react";
 type IconProps = React.SVGProps<SVGSVGElement> & { className?: string };
 

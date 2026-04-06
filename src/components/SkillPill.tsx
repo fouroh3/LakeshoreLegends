@@ -1,3 +1,5 @@
+// src/components/SkillPill.tsx
+
 type Props = {
   text: string;
 };
