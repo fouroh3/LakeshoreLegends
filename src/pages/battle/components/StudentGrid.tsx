@@ -36,7 +36,7 @@ export default function StudentGrid({
   }, [students]);
 
   return (
-    <div className="min-h-0 overflow-auto pr-1">
+    <div className="min-h-0 overflow-auto px-1">
       <div className="mb-2 flex h-[22px] items-center gap-2 px-1">
         <div className="truncate text-[10px] uppercase tracking-widest text-zinc-500">
           Students ({activeHomeroom || "—"}) ·{" "}
@@ -47,7 +47,7 @@ export default function StudentGrid({
 
       <div className="mb-2 border-t border-zinc-900/60" />
 
-      <div className="grid auto-rows-fr grid-cols-2 gap-2 md:grid-cols-4">
+      <div className="grid auto-rows-fr grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-4">
         {visible.map((s) => {
           const id = normId(s.id);
           const hp = getDisplayHp(id);
