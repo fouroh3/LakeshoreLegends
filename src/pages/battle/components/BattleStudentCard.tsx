@@ -22,9 +22,8 @@ const guildGlowMap: Record<string, string> = {
 };
 
 const tileBase =
-  "relative text-left rounded-2xl transition p-2.5 h-full flex flex-col overflow-hidden bg-zinc-950/25 shadow-[0_10px_40px_rgb(0,0,0,0.45)]";
-const tileHover =
-  "hover:border hover:border-zinc-800/70 hover:bg-zinc-950/30";
+  "relative text-left rounded-2xl transition p-3 h-full flex flex-col overflow-hidden bg-zinc-950/25 shadow-[0_10px_40px_rgb(0,0,0,0.45)]";
+const tileHover = "hover:border hover:border-zinc-800/70 hover:bg-zinc-950/30";
 const tileSelected =
   "ring-2 ring-cyan-300/35 bg-cyan-400/5 border border-cyan-300/70";
 const tileUnselected = "border border-transparent";
@@ -67,13 +66,7 @@ function StatPill({
   );
 }
 
-function TileSkills({
-  student,
-  muted,
-}: {
-  student: Student;
-  muted?: boolean;
-}) {
+function TileSkills({ student, muted }: { student: Student; muted?: boolean }) {
   const skills = useMemo(() => skillsToArray(student.skills), [student.skills]);
   if (skills.length === 0) return null;
 
@@ -155,10 +148,10 @@ function BattleStudentCardInner({
         glow,
       ].join(" ")}
     >
-      <div className="pointer-events-none absolute inset-0 z-0">
+      <div className="pointer-events-none absolute inset-0 z-0 rounded-2xl">
         <div className="absolute -inset-10 opacity-70 bg-[radial-gradient(60%_60%_at_20%_10%,rgba(255,255,255,0.10),rgba(0,0,0,0)_60%)]" />
-        <div className="absolute inset-0 opacity-90 bg-gradient-to-br from-zinc-900/35 via-zinc-950/10 to-black/0" />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-transparent" />
+        <div className="absolute inset-0 opacity-90 bg-gradient-to-br from-zinc-900/35 via-zinc-950/10 to-black/0 rounded-2xl" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-transparent rounded-2xl" />
       </div>
 
       {isDead && (
@@ -171,7 +164,7 @@ function BattleStudentCardInner({
       )}
 
       <div className="relative z-10 flex items-start justify-between gap-2">
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <div className="text-[12px] leading-[14px] font-semibold text-zinc-100 truncate">
             {fullName(student)}
           </div>
@@ -194,18 +187,18 @@ function BattleStudentCardInner({
               onOpenProfile(student);
             }}
             className={[
-              "flex h-6 w-6 items-center justify-center rounded-full border border-zinc-800/70 bg-zinc-950/70 text-zinc-400 transition active:scale-[0.97]",
+              "flex h-5 w-5 items-center justify-center rounded-full border border-zinc-800/70 bg-zinc-950/70 text-zinc-400 transition active:scale-[0.97]",
               glow,
               "hover:border-cyan-300/40 hover:bg-cyan-500/[0.10] hover:text-cyan-200",
             ].join(" ")}
             title="Open character profile"
             aria-label="Open character profile"
           >
-            <Eye className="h-3 w-3" />
+            <Eye className="h-3.5 w-3.5" />
           </button>
 
           <span
-            className={`px-2 py-0.5 rounded-full text-[10px] leading-[12px] ${status.pillClass}`}
+            className={`px-2 py-0.5 rounded-full text-[10px] leading-[12px] shrink-0 ${status.pillClass}`}
           >
             {status.label}
           </span>
@@ -244,7 +237,7 @@ function BattleStudentCardInner({
         </div>
       </div>
 
-      <div className="relative z-10 mt-2 grid grid-cols-2 gap-1">
+      <div className="relative z-10 mt-2 grid grid-cols-2 gap-1.5">
         <StatPill label="Strength" value={(student as any).str} muted={muted} />
         <StatPill
           label="Dexterity"

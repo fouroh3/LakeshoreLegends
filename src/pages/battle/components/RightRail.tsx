@@ -164,6 +164,10 @@ export default function RightRail({
     return Math.max(0, Math.min(1, boss.currentHP / Math.max(1, boss.maxHP)));
   }, [boss]);
 
+  const bossDefeated = useMemo(() => {
+    return Boolean(boss && boss.currentHP <= 0);
+  }, [boss]);
+
   const bossBarColor = useMemo(() => hpBarColorFromPct(bossPct), [bossPct]);
 
   const cooldownMs = useMemo(() => {
@@ -176,6 +180,7 @@ export default function RightRail({
 
   const attackDisabledReason = useMemo(() => {
     if (!hasBossConfigured) return "No boss configured";
+    if (bossDefeated) return "Boss defeated";
     if (studentHealMode) return "Switch Group Action to ATTACK";
     if (!isTeacher && !guildAttacksOpen) return "Guild attacks are CLOSED";
     if (!activeRound || activeRound <= 0) return "Missing round";
@@ -183,6 +188,7 @@ export default function RightRail({
     return "";
   }, [
     hasBossConfigured,
+    bossDefeated,
     studentHealMode,
     isTeacher,
     guildAttacksOpen,
@@ -214,7 +220,7 @@ export default function RightRail({
     );
   }, [boss?.bossName, bossName, questName, bossKey]);
 
-  const isLowBossHp = bossPct > 0 && bossPct <= 0.3;
+  const isLowBossHp = !bossDefeated && bossPct > 0 && bossPct <= 0.3;
 
   const selectedStudentName =
     selectedStudents.length === 1
@@ -224,7 +230,27 @@ export default function RightRail({
       : "";
 
   return (
-    <div className="min-h-0 overflow-auto pr-1">
+    <div className="relative min-h-0 overflow-hidden pr-1">
+      {bossDefeated && (
+        <div className="pointer-events-none absolute inset-0 z-[999] bg-zinc-950/98 backdrop-blur-sm">
+          <div className="sticky top-0 h-screen">
+            <div className="absolute left-1/2 top-[30vh] flex -translate-x-1/2 -translate-y-1/2 flex-col items-center animate-[fadeIn_0.4s_ease-out]">
+              <div className="text-6xl leading-none drop-shadow-[0_0_20px_rgba(255,255,255,0.35)]">
+                💀
+              </div>
+
+              <div className="mt-4 text-[22px] font-black tracking-[0.28em] text-zinc-100 drop-shadow-[0_0_14px_rgba(255,255,255,0.25)]">
+                DEFEATED
+              </div>
+
+              <div className="mt-2 text-[11px] uppercase tracking-[0.16em] text-amber-300/80">
+                The battle is won
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="sticky top-0 z-20">
         <div
           className={`${card} relative overflow-hidden p-3 backdrop-blur bg-zinc-950/60`}
@@ -278,10 +304,14 @@ export default function RightRail({
 
               <div className="mt-1 flex flex-wrap items-center gap-2">
                 <span className={pill}>
-                  {hasBossConfigured ? "Boss Active" : "No Boss Set"}
+                  {!hasBossConfigured
+                    ? "No Boss Set"
+                    : bossDefeated
+                    ? "Defeated"
+                    : "Boss Active"}
                 </span>
 
-                {!isTeacher && (
+                {!isTeacher && !bossDefeated && (
                   <span className={pill}>
                     Guild Attacks:{" "}
                     <span
@@ -379,7 +409,9 @@ export default function RightRail({
               onChange={(e) => setBossDamage(e.target.value)}
               inputMode="numeric"
               placeholder="e.g. 250"
-              disabled={Boolean(!hasBossConfigured || bossSubmitting)}
+              disabled={Boolean(
+                !hasBossConfigured || bossSubmitting || bossDefeated
+              )}
             />
 
             <div className={label}>Note (optional)</div>
@@ -388,7 +420,9 @@ export default function RightRail({
               value={bossNote}
               onChange={(e) => setBossNote(e.target.value)}
               placeholder="e.g. Shadows combo"
-              disabled={Boolean(!hasBossConfigured || bossSubmitting)}
+              disabled={Boolean(
+                !hasBossConfigured || bossSubmitting || bossDefeated
+              )}
             />
 
             <div className="mt-1 flex flex-wrap items-center gap-2">
@@ -427,7 +461,9 @@ export default function RightRail({
               )}
               title={attackDisabledReason || undefined}
             >
-              {cooldownMs > 0
+              {bossDefeated
+                ? "Boss Defeated"
+                : cooldownMs > 0
                 ? `Cooldown… ${(cooldownMs / 1000).toFixed(1)}s`
                 : bossSubmitting
                 ? "Submitting…"
@@ -607,6 +643,17 @@ export default function RightRail({
           50% {
             opacity: 0.45;
             filter: brightness(1.35);
+          }
+        }
+
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+            transform: scale(0.98);
+          }
+          to {
+            opacity: 1;
+            transform: scale(1);
           }
         }
       `}</style>
