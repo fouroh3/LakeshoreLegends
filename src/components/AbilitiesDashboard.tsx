@@ -1,3 +1,5 @@
+// src/components/AbilitiesDashboard.tsx
+
 import {
   Fragment,
   useEffect,
@@ -715,7 +717,7 @@ export default function AbilitiesDashboard({
   return (
     <Fragment>
       <div className="relative z-[200] px-3 pt-3 sm:px-4">
-        <div className="relative z-[200] mx-auto max-w-[1380px]">
+        <div className="relative z-[200] mx-auto max-w-[2000px]">
           <div className="overflow-visible rounded-[20px] border border-white/10 bg-[linear-gradient(180deg,rgba(10,14,24,0.9),rgba(7,10,18,0.82))] shadow-[0_12px_34px_rgba(0,0,0,0.3)] backdrop-blur-xl">
             <div className="overflow-visible px-3 py-3 sm:px-4 sm:py-3.5">
               <div className="flex flex-col items-center gap-3">
@@ -827,18 +829,18 @@ export default function AbilitiesDashboard({
                       onChange={(e) => setSortKey(e.target.value)}
                       className="h-10 rounded-full border border-white/10 bg-white/8 px-4 text-[10px] font-semibold uppercase tracking-[0.16em] text-white outline-none transition hover:bg-white/10 sm:text-[11px]"
                     >
-                      <option value="homeroom">Sort: Homeroom</option>
-                      <option value="name-az">Sort: Name A–Z</option>
-                      <option value="name-za">Sort: Name Z–A</option>
-                      <option value="guild">Sort: Guild</option>
-                      <option value="hp-desc">Sort: HP High–Low</option>
-                      <option value="hp-asc">Sort: HP Low–High</option>
-                      <option value="strength">Sort: Strength</option>
-                      <option value="dexterity">Sort: Dexterity</option>
-                      <option value="constitution">Sort: Constitution</option>
-                      <option value="intelligence">Sort: Intelligence</option>
-                      <option value="wisdom">Sort: Wisdom</option>
-                      <option value="charisma">Sort: Charisma</option>
+                      <option value="homeroom">Homeroom</option>
+                      <option value="name-az">Name A–Z</option>
+                      <option value="name-za">Name Z–A</option>
+                      <option value="guild">Guild</option>
+                      <option value="hp-desc">HP High–Low</option>
+                      <option value="hp-asc">HP Low–High</option>
+                      <option value="strength">Strength</option>
+                      <option value="dexterity">Dexterity</option>
+                      <option value="constitution">Constitution</option>
+                      <option value="intelligence">Intelligence</option>
+                      <option value="wisdom">Wisdom</option>
+                      <option value="charisma">Charisma</option>
                     </select>
 
                     <button
@@ -970,7 +972,7 @@ export default function AbilitiesDashboard({
       </div>
 
       <div className="relative z-0 px-3 pb-8 pt-4 sm:px-4 sm:pt-5">
-        <div className="relative z-0 mx-auto max-w-[1380px]">
+        <div className="relative z-0 mx-auto max-w-[2000px]">
           <AbilitiesGrid>
             {visibleData.map((person, index) => (
               <AbilityCard

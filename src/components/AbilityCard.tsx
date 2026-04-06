@@ -1,3 +1,5 @@
+// src/components/AbilityCard.tsx
+
 import { useMemo } from "react";
 import Avatar from "./Avatar";
 import StatBar from "./StatBar";

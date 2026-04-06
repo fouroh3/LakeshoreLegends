@@ -12,6 +12,7 @@ export type BattleStudentGridProps = {
   selectedIds: string[];
   toggleSelect: (id: string) => void;
   getDisplayHp: (studentId: string) => HpStateRow;
+  onOpenProfile: (student: Student) => void;
 };
 
 export default function BattleStudentGrid({
@@ -21,6 +22,7 @@ export default function BattleStudentGrid({
   selectedIds,
   toggleSelect,
   getDisplayHp,
+  onOpenProfile,
 }: BattleStudentGridProps) {
   const selectedSet = useMemo(
     () => new Set(selectedIds.map(normId)),
@@ -58,6 +60,7 @@ export default function BattleStudentGrid({
               hp={hp}
               selected={isSelected}
               onToggle={() => toggleSelect(id)}
+              onOpenProfile={onOpenProfile}
             />
           );
         })}

@@ -1,3 +1,5 @@
+// src/App.tsx
+
 import { useEffect, useMemo, useState } from "react";
 import AbilitiesDashboard from "./components/AbilitiesDashboard";
 import AppTopBar from "./components/AppTopBar";
@@ -357,7 +359,7 @@ export default function App() {
         />
       )}
 
-      <main className="relative z-[1] mx-auto w-full max-w-[1480px] px-3 pb-6 pt-4 sm:px-4 lg:px-6">
+      <main className="relative z-[1] mx-auto w-full max-w-[1900px] px-3 pb-6 pt-4 sm:px-4 lg:px-6">
         {err && (
           <div className="mx-auto mb-4 max-w-[1600px] rounded-xl border border-red-900/50 bg-red-950/40 px-4 py-3 text-red-200">
             {err}

@@ -1,3 +1,5 @@
+// src/components/StatBar.tsx
+
 import React from "react";
 
 export type Density = "comfortable" | "compact" | "ultra";
