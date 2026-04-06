@@ -1,3 +1,5 @@
+// src/pages/battle/hooks/useGuildTotals.ts
+
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { BATTLE_GUILD_TOTALS_CSV } from "../battleConstants";
 import { usePolling } from "./usePolling";
@@ -171,7 +173,7 @@ export function useGuildTotals(pageActive: boolean, bossInstanceId: string) {
     void tick();
   }, [tick]);
 
-  usePolling(pageActive && !!cleanBossInstanceId, 3000, tick);
+  usePolling(pageActive && !!cleanBossInstanceId, 10000, tick);
 
   const top = useMemo(() => rows.slice(0, 6), [rows]);
 
