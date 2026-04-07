@@ -7,15 +7,6 @@ import { getBossMeta } from "../battleBossMeta";
 
 type Banner = { type: "ok" | "err"; msg: string } | null;
 
-type GuildTotalsRow = {
-  bossInstanceId: string;
-  homeroom: string;
-  guild: string;
-  damage: number;
-  hits: number;
-  lastHitAt: string;
-};
-
 type Props = {
   hasBossConfigured: boolean;
   bossName: string;
@@ -55,9 +46,6 @@ type Props = {
 
   groupAction: "ATTACK" | "HEAL";
   setGroupAction: (v: "ATTACK" | "HEAL") => void;
-
-  guildTotals: GuildTotalsRow[];
-  guildTotalsErr: string | null;
 };
 
 const card =
@@ -133,8 +121,6 @@ export default function RightRail({
   banner,
   groupAction,
   setGroupAction,
-  guildTotals,
-  guildTotalsErr,
 }: Props) {
   const [now, setNow] = useState(() => Date.now());
 
@@ -596,43 +582,6 @@ export default function RightRail({
           <BannerBox banner={banner} />
         </div>
       )}
-
-      <div className={`${card} mt-2 p-3`}>
-        <div className={label}>Guild Totals (This Battle)</div>
-
-        {guildTotalsErr && (
-          <div className="mt-2 text-xs text-red-200/80">{guildTotalsErr}</div>
-        )}
-
-        {!guildTotalsErr && guildTotals.length === 0 && (
-          <div className="mt-2 text-xs text-zinc-500">
-            No totals yet (waiting for first actions).
-          </div>
-        )}
-
-        <div className="mt-2 space-y-1">
-          {guildTotals.map((r) => (
-            <div
-              key={`${r.bossInstanceId}:${r.guild}`}
-              className="flex items-center justify-between rounded-xl border border-zinc-900/60 bg-zinc-950/20 px-2 py-1"
-            >
-              <div className="min-w-0">
-                <div className="truncate text-sm text-zinc-100">{r.guild}</div>
-                <div className="text-[10px] text-zinc-500">
-                  {r.hits} hit{r.hits === 1 ? "" : "s"}
-                </div>
-              </div>
-
-              <div className="text-xs tabular-nums text-zinc-300 text-right">
-                <div>
-                  <span className="text-zinc-500">DMG </span>
-                  {r.damage}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
 
       <style>{`
         @keyframes bossHpBlink {
