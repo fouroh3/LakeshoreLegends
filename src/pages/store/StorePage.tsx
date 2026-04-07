@@ -386,12 +386,17 @@ export default function StorePage({ onBack }: Props) {
       if (!pin.trim()) throw new Error("Enter the Store PIN.");
       if (!confirmOk) throw new Error("Confirm your StudentID to purchase.");
 
+      const requestId = `xp:${selectedStudentId}:${pendingTarget}:${Date.now()}:${Math.random()
+        .toString(16)
+        .slice(2)}`;
+
       const res = await spendXpWithRetry(
         {
           studentId: selectedStudentId,
           pin: pin.trim(),
           target: pendingTarget,
           points: 1,
+          requestId,
         },
         { retries: 3, baseDelayMs: 250 }
       );

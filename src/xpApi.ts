@@ -42,6 +42,7 @@ export type SpendXpArgs = {
   points: number;
   pin: string;
   openNonce?: string;
+  requestId?: string;
 };
 
 function toNum(v: any, fallback = 0) {
@@ -152,6 +153,7 @@ export async function spendXp(args: SpendXpArgs) {
     points,
     pin,
     openNonce,
+    requestId: args.requestId ?? "",
   });
 
   const data = await fetchJsonStrict(url, {
