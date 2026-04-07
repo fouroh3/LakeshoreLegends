@@ -1,18 +1,18 @@
+// src/pages/battle/BattlePage.tsx
+
 import { useEffect, useMemo, useState, useCallback } from "react";
 import AppTopBar from "../../components/AppTopBar";
 import CharacterProfileModal from "../../components/CharacterProfileModal";
 import type { Student, Guild } from "../../types";
 import { loadStudents } from "../../data";
-import { submitHpDelta } from "../../hpApi";
 import { submitBossDelta } from "../../bossApi";
 
 import { usePageActive } from "./hooks/usePageActive";
 import { useBattleControl } from "./hooks/useBattleControl";
 import { useHpState } from "./hooks/useHpState";
 import { useBossState } from "./hooks/useBossState";
-import { useGuildTotals } from "./hooks/useGuildTotals";
 
-import { GROUP_ACTION_KEY, MAX_HP } from "./battleConstants";
+import { HP_API_URL, GROUP_ACTION_KEY, MAX_HP } from "./battleConstants";
 import {
   fullName,
   makeSubmitNonce,
@@ -47,6 +47,44 @@ function makeBossAttackLockKey(args: {
     String(args.round || 0).trim(),
     normalizeGuildKey(args.guild),
   ].join("::");
+}
+async function submitHpBatch(args: {
+  sessionId: string;
+  note?: string;
+  requestId: string;
+  entries: Array<{ studentId: string; delta: number; note?: string }>;
+}) {
+  const res = await fetch(HP_API_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      action: "logbatch",
+      sessionId: args.sessionId,
+      note: args.note ?? "",
+      requestId: args.requestId,
+      entries: args.entries,
+    }),
+  });
+
+  const data = await res.json().catch(() => null);
+
+  if (!res.ok || !data?.ok) {
+    throw new Error(data?.error || `HP batch submit failed: ${res.status}`);
+  }
+
+  return data as {
+    ok: true;
+    count: number;
+    results: Array<{
+      studentId: string;
+      baseHP: number;
+      before: number;
+      after: number;
+      delta: number;
+    }>;
+  };
 }
 
 export default function BattlePage({ onBack }: Props) {
@@ -191,11 +229,6 @@ export default function BattlePage({ onBack }: Props) {
   const { boss, setBoss, bossErr, applyOptimisticBoss, clearBossPending } =
     useBossState(pageActive, currentBossKey, bossInstanceId);
 
-  const { top: guildTotals, err: guildTotalsErr } = useGuildTotals(
-    pageActive,
-    bossInstanceId
-  );
-
   const activeRound = useMemo(() => {
     const n = Number((currentBattleRow as any)?.round ?? 1);
     return Number.isFinite(n) && n > 0 ? Math.floor(n) : 1;
@@ -321,6 +354,15 @@ export default function BattlePage({ onBack }: Props) {
       return;
     }
 
+    // ✅ LIMIT GUARD
+    if (selectedIds.length > 15) {
+      setBanner({
+        type: "err",
+        msg: "Max 15 targets at once — split into 2 submissions.",
+      });
+      return;
+    }
+
     if (!Number.isFinite(delta) || delta === 0) {
       setBanner({ type: "err", msg: "Pick a damage/heal amount." });
       return;
@@ -328,63 +370,70 @@ export default function BattlePage({ onBack }: Props) {
 
     setSubmitting(true);
 
-    let ok = 0;
-    let fail = 0;
-
     const cleanSessionId = stripQuotes(activeSessionId).trim();
     const submitNonce = makeSubmitNonce();
 
+    const snapshot = selectedIds.map((idRaw) => {
+      const id = normId(idRaw);
+      const hp = getDisplayHp(id);
+      const before = hp.currentHP;
+      const base = Math.min(MAX_HP, Math.max(1, hp.baseHP || MAX_HP));
+      const after = Math.max(0, Math.min(base, before + delta));
+
+      return {
+        studentId: id,
+        before,
+        baseHP: base,
+        after,
+      };
+    });
+
     try {
-      for (const idRaw of selectedIds) {
-        const id = normId(idRaw);
-        const hp = getDisplayHp(id);
-
-        const before = hp.currentHP;
-        const base = Math.min(MAX_HP, Math.max(1, hp.baseHP || MAX_HP));
-        const after = Math.max(0, Math.min(base, before + delta));
-
-        applyOptimisticHp(id, {
-          studentId: id,
-          baseHP: base,
-          currentHP: after,
+      // optimistic update
+      for (const row of snapshot) {
+        applyOptimisticHp(row.studentId, {
+          studentId: row.studentId,
+          baseHP: row.baseHP,
+          currentHP: row.after,
         });
-
-        try {
-          const requestId = `${cleanSessionId}:${id}:${submitNonce}`;
-          await submitHpDelta({
-            studentId: id,
-            delta,
-            note: note.trim(),
-            sessionId: cleanSessionId,
-            requestId,
-          });
-          ok++;
-        } catch {
-          clearPending(id);
-          applyOptimisticHp(id, {
-            studentId: id,
-            baseHP: base,
-            currentHP: before,
-          });
-          fail++;
-        }
       }
 
-      setBanner(
-        fail === 0
-          ? {
-              type: "ok",
-              msg: `Submitted ✅ (${ok} target${ok === 1 ? "" : "s"})`,
-            }
-          : {
-              type: "err",
-              msg: `Partial: ${ok} ok, ${fail} failed.`,
-            }
-      );
+      await submitHpBatch({
+        sessionId: cleanSessionId,
+        note: note.trim(),
+        requestId: `${cleanSessionId}:batch:${submitNonce}`,
+        entries: snapshot.map((row) => ({
+          studentId: row.studentId,
+          delta,
+          note: note.trim(),
+        })),
+      });
+
+      setBanner({
+        type: "ok",
+        msg: `Submitted ✅ (${snapshot.length} target${
+          snapshot.length === 1 ? "" : "s"
+        })`,
+      });
 
       setSelectedIds([]);
-    } finally {
       setNote("");
+    } catch (e: any) {
+      // rollback
+      for (const row of snapshot) {
+        clearPending(row.studentId);
+        applyOptimisticHp(row.studentId, {
+          studentId: row.studentId,
+          baseHP: row.baseHP,
+          currentHP: row.before,
+        });
+      }
+
+      setBanner({
+        type: "err",
+        msg: e?.message || "Submit failed.",
+      });
+    } finally {
       setSubmitting(false);
     }
   }, [
@@ -509,7 +558,9 @@ export default function BattlePage({ onBack }: Props) {
           bossKey: boss.bossKey || currentBossKey,
           delta: deltaValue,
           source: bossNote.trim(),
-          requestId: `${activeSessionId}:${boss.bossInstanceId}:${makeSubmitNonce()}`,
+          requestId: `${activeSessionId}:${
+            boss.bossInstanceId
+          }:${makeSubmitNonce()}`,
           round,
           guild: cleanGuild,
           homeroom: activeHomeroom,
@@ -642,7 +693,9 @@ export default function BattlePage({ onBack }: Props) {
                   selectedIds={selectedIds}
                   toggleSelect={toggleSelect}
                   getDisplayHp={getDisplayHp}
-                  onOpenProfile={(student: Student) => setProfileStudent(student)}
+                  onOpenProfile={(student: Student) =>
+                    setProfileStudent(student)
+                  }
                 />
 
                 <RightRail
@@ -680,8 +733,6 @@ export default function BattlePage({ onBack }: Props) {
                   banner={banner}
                   groupAction={groupAction}
                   setGroupAction={setGroupAction}
-                  guildTotals={guildTotals}
-                  guildTotalsErr={guildTotalsErr}
                 />
               </div>
             </div>
