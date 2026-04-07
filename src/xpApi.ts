@@ -1,29 +1,22 @@
 // src/xpApi.ts
+import { XP_API_URL } from "./data";
 
 export type AttrKey = "STR" | "DEX" | "CON" | "INT" | "WIS" | "CHA";
 
 export type AttrsBundle = {
-  base: Record<AttrKey, number>;
-  bonus: Record<AttrKey, number>;
-  final: Record<AttrKey, number>;
+  before?: Partial<Record<AttrKey, number>>;
+  after?: Partial<Record<AttrKey, number>>;
+  final?: Partial<Record<AttrKey, number>>;
 };
 
 export type StoreState = {
   storeLocked: boolean;
-  windowLabel?: string;
   xpPerPoint: number;
   maxPointsPerOpen: number;
+  windowLabel?: string;
   openNonce?: string;
   now?: string;
   xpLastWriteIso?: string;
-};
-
-export type XpTxn = {
-  timestamp: string;
-  type: "EARN" | "SPEND";
-  xp: number;
-  target?: string;
-  note?: string;
 };
 
 export type XpSummary = {
@@ -32,161 +25,146 @@ export type XpSummary = {
   spent: number;
   balance: number;
   spendablePoints: number;
-  recent: XpTxn[];
+  recent: Array<{
+    timestamp: string;
+    type: string;
+    xp: number;
+    target?: string;
+    note?: string;
+  }>;
   attrs?: AttrsBundle;
+  now?: string;
 };
 
 export type SpendXpArgs = {
   studentId: string;
+  target: AttrKey;
+  points: number;
   pin: string;
-  target: AttrKey;
-  points: number;
-
-  /**
-   * ✅ Optional idempotency key.
-   * If you pass one, it MUST be unique per "Submit" click.
-   * If you don't pass one, we auto-generate.
-   */
-  requestId?: string;
+  openNonce?: string;
 };
 
-export type SpendXpResponse = {
-  ok: true;
-  studentId: string;
-  target: AttrKey;
-  points: number;
-  costXp: number;
-  balanceBefore: number;
-  balanceAfter: number;
-  bonusBefore?: number;
-  bonusAfter?: number;
-  attrs?: AttrsBundle;
-  summary?: XpSummary;
-  xpLastWriteIso?: string;
-
-  /** optional echo (Apps Script may echo it; we also inject it client-side) */
-  requestId?: string;
-
-  /** optional flag if server deduped */
-  deduped?: boolean;
-};
-
-const XP_API_URL =
-  "https://script.google.com/macros/s/AKfycbw6gMIFYPvaljF3Ls-waojzprU6bygZZonOIJeKLopN2NSKgkDT-EsRKznxQiGpth_6/exec";
-
-/* ---------------- helpers ---------------- */
-
-function toBool(v: any): boolean {
-  if (typeof v === "boolean") return v;
-  const s = String(v ?? "")
-    .trim()
-    .toLowerCase();
-  if (["true", "1", "yes", "y"].includes(s)) return true;
-  if (["false", "0", "no", "n"].includes(s)) return false;
-  return false;
+function toNum(v: any, fallback = 0) {
+  const n = typeof v === "number" ? v : Number.parseFloat(String(v ?? ""));
+  return Number.isFinite(n) ? n : fallback;
 }
 
-function makeRequestId(): string {
-  const c: any = globalThis.crypto as any;
-  if (c && typeof c.randomUUID === "function") return c.randomUUID();
-  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-}
-
-async function fetchJson(url: string, init?: RequestInit) {
-  // IMPORTANT:
-  // - Do NOT set custom headers for GET (avoids CORS preflight)
-  // - Only set headers when we truly need them (we won’t, since POST uses form encoding below)
-  const res = await fetch(url, {
-    ...init,
-    mode: "cors",
-    cache: "no-store",
-    redirect: "follow",
-  });
-
+async function fetchJsonStrict(url: string, init?: RequestInit) {
+  const res = await fetch(url, init);
   const text = await res.text();
 
-  let data: any;
+  let json: any;
   try {
-    data = text ? JSON.parse(text) : null;
+    json = text ? JSON.parse(text) : null;
   } catch {
-    throw new Error("Invalid JSON from XP API");
+    const snippet = text.slice(0, 220).replace(/\s+/g, " ").trim();
+    throw new Error(
+      `XP API returned non-JSON (HTTP ${res.status}). Snippet: ${
+        snippet || "(empty)"
+      }`
+    );
   }
 
-  if (!res.ok || data?.ok === false) {
-    throw new Error(data?.error || `XP API error (${res.status})`);
+  if (!res.ok) {
+    const msg = json?.error || json?.message || `XP API HTTP ${res.status}`;
+    throw new Error(msg);
   }
 
-  return data;
+  return json;
 }
 
-/* ---------------- API ---------------- */
-
 export async function getStoreState(): Promise<StoreState> {
-  const url = `${XP_API_URL}?action=xpState&t=${Date.now()}`;
-  const data = await fetchJson(url);
+  const url = `${XP_API_URL}?action=xpstate&_=${Date.now()}`;
+  const data = await fetchJsonStrict(url, { method: "GET" });
+
+  if (!data?.ok) {
+    throw new Error(
+      data?.error || data?.message || "Failed to load store state"
+    );
+  }
 
   return {
-    storeLocked: toBool(data.storeLocked),
-    windowLabel: String(data.windowLabel ?? ""),
-    xpPerPoint: Number(data.xpPerPoint ?? 5),
-    maxPointsPerOpen: Number(data.maxPointsPerOpen ?? 999),
-    openNonce: String(data.openNonce ?? ""),
-    now: String(data.now ?? ""),
-    xpLastWriteIso: String(data.xpLastWriteIso ?? ""),
+    storeLocked: Boolean(data.storeLocked),
+    xpPerPoint: Math.max(1, Math.round(toNum(data.xpPerPoint, 5))),
+    maxPointsPerOpen: Math.max(
+      1,
+      Math.round(toNum(data.maxPointsPerOpen, 999))
+    ),
+    windowLabel: data.windowLabel ? String(data.windowLabel) : "",
+    openNonce: data.openNonce ? String(data.openNonce) : "",
+    now: data.now ? String(data.now) : "",
+    xpLastWriteIso: data.xpLastWriteIso
+      ? String(data.xpLastWriteIso)
+      : undefined,
   };
 }
 
 export async function getXpSummary(studentId: string): Promise<XpSummary> {
-  const url = `${XP_API_URL}?action=xpSummary&studentId=${encodeURIComponent(
-    studentId
-  )}&t=${Date.now()}`;
+  const cleanId = String(studentId ?? "").trim();
+  if (!cleanId) throw new Error("Missing studentId.");
 
-  const data = await fetchJson(url);
+  const url =
+    `${XP_API_URL}?action=xpsummary` +
+    `&studentId=${encodeURIComponent(cleanId)}` +
+    `&_=${Date.now()}`;
+
+  const data = await fetchJsonStrict(url, { method: "GET" });
+
+  if (!data?.ok) {
+    throw new Error(
+      data?.error || data?.message || "Failed to load XP summary"
+    );
+  }
 
   return {
-    studentId: String(data.studentId || studentId),
-    earned: Number(data.earned ?? 0),
-    spent: Number(data.spent ?? 0),
-    balance: Number(data.balance ?? 0),
-    spendablePoints: Number(data.spendablePoints ?? 0),
-    recent: Array.isArray(data.recent)
-      ? data.recent.map((r: any) => ({
-          timestamp: String(r.timestamp ?? ""),
-          type:
-            String(r.type ?? "EARN").toUpperCase() === "SPEND"
-              ? "SPEND"
-              : "EARN",
-          xp: Number(r.xp ?? 0),
-          target: r.target ? String(r.target) : undefined,
-          note: r.note ? String(r.note) : undefined,
-        }))
-      : [],
+    studentId: String(data.studentId ?? cleanId),
+    earned: Math.round(toNum(data.earned, 0)),
+    spent: Math.round(toNum(data.spent, 0)),
+    balance: Math.round(toNum(data.balance, 0)),
+    spendablePoints: Math.max(0, Math.round(toNum(data.spendablePoints, 0))),
+    recent: Array.isArray(data.recent) ? data.recent : [],
     attrs: data.attrs ?? undefined,
+    now: data.now ? String(data.now) : "",
   };
 }
 
-export async function spendXp(args: SpendXpArgs): Promise<SpendXpResponse> {
-  // ✅ Send as x-www-form-urlencoded to avoid preflight entirely
-  const body = new URLSearchParams();
-  body.set("action", "spendXp");
-  body.set("studentId", args.studentId);
-  body.set("pin", args.pin);
-  body.set("target", args.target);
-  body.set("points", String(args.points));
+export async function spendXp(args: SpendXpArgs) {
+  const studentId = String(args.studentId ?? "").trim();
+  const target = String(args.target ?? "")
+    .trim()
+    .toUpperCase() as AttrKey;
+  const points = Math.max(1, Math.round(toNum(args.points, 1)));
+  const pin = String(args.pin ?? "").trim();
+  const openNonce = String(args.openNonce ?? "").trim();
 
-  // ✅ Idempotency key (dedupe double-tap / retries)
-  const requestId = String(args.requestId || makeRequestId());
-  body.set("requestId", requestId);
+  if (!studentId) throw new Error("Missing studentId.");
+  if (!["STR", "DEX", "CON", "INT", "WIS", "CHA"].includes(target)) {
+    throw new Error("Invalid target.");
+  }
+  if (!pin) throw new Error("Missing PIN.");
 
-  // cache bust
-  body.set("t", String(Date.now()));
+  const url = `${XP_API_URL}?action=spendxp&_=${Date.now()}`;
 
-  const data = await fetchJson(XP_API_URL, {
-    method: "POST",
-    body,
-    // NO headers — browser sets correct form header automatically
+  const body = JSON.stringify({
+    action: "spendxp",
+    studentId,
+    target,
+    points,
+    pin,
+    openNonce,
   });
 
-  // ✅ Ensure requestId is available to the caller even if server doesn't echo it
-  return { ...(data as SpendXpResponse), requestId };
+  const data = await fetchJsonStrict(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "text/plain;charset=utf-8",
+    },
+    body,
+  });
+
+  if (!data?.ok) {
+    throw new Error(data?.error || data?.message || "XP purchase failed.");
+  }
+
+  return data;
 }
