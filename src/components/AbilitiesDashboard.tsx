@@ -270,6 +270,25 @@ function matchesSearch(student: Student, rawQuery: string) {
   );
 }
 
+function resolveAttrKey(attr: string) {
+  switch (attr) {
+    case "strength":
+      return "str";
+    case "dexterity":
+      return "dex";
+    case "constitution":
+      return "con";
+    case "intelligence":
+      return "int";
+    case "wisdom":
+      return "wis";
+    case "charisma":
+      return "cha";
+    default:
+      return attr;
+  }
+}
+
 function matchesAttr(
   student: Student,
   attrFilterKey: string,
@@ -278,7 +297,9 @@ function matchesAttr(
   if (!attrFilterKey || attrFilterMin <= 0) return true;
 
   const row = student as Record<string, unknown>;
-  const value = Number(row[attrFilterKey] ?? 0);
+  const key = resolveAttrKey(attrFilterKey);
+  const value = Number(row[key] ?? 0);
+
   return value >= attrFilterMin;
 }
 
@@ -320,7 +341,8 @@ function compareBySort(a: Student, b: Student, sortKey: string) {
     case "intelligence":
     case "wisdom":
     case "charisma":
-      return num(bRow[sortKey]) - num(aRow[sortKey]) || compareName();
+      const key = resolveAttrKey(sortKey);
+      return num(bRow[key]) - num(aRow[key]) || compareName();
     case "homeroom":
     default:
       return compareHomeroom(aHomeroom, bHomeroom) || compareName();
