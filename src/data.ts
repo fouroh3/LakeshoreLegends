@@ -1,4 +1,3 @@
-// src/data.ts
 import type { Student } from "./types";
 
 // ✅ Lakeshore Legends Apps Script Web App (XP/HP API)
@@ -17,16 +16,22 @@ const CACHE_MS = 10_000;
 
 function normalizeHeader(h: string) {
   return String(h || "")
+    .replace(/\u00a0/g, " ")
     .trim()
     .toLowerCase()
-    .replace(/\u00a0/g, " ")
     .replace(/[^\w]+/g, " ")
     .replace(/\s+/g, " ")
     .trim();
 }
 
+function squashHeader(h: string) {
+  return normalizeHeader(h).replace(/[\s_]+/g, "");
+}
+
 function toNum(v: any, fallback = 0) {
-  const n = Number(String(v ?? "").replace(/[^\d.-]/g, ""));
+  const s = String(v ?? "").trim();
+  if (!s) return fallback;
+  const n = Number(s.replace(/[^\d.-]/g, ""));
   return Number.isFinite(n) ? n : fallback;
 }
 
@@ -74,15 +79,54 @@ function parseCSV(text: string): string[][] {
 
 function headerIndex(headers: string[]) {
   const map = new Map<string, number>();
-  headers.forEach((h, i) => map.set(normalizeHeader(h), i));
+  headers.forEach((h, i) => {
+    map.set(normalizeHeader(h), i);
+  });
   return map;
 }
 
-function pick(map: Map<string, number>, ...keys: string[]) {
-  for (const k of keys) {
-    const idx = map.get(normalizeHeader(k));
+/**
+ * Strict header lookup:
+ * exact normalized match only
+ */
+function pickStrict(map: Map<string, number>, ...keys: string[]) {
+  for (const key of keys) {
+    const idx = map.get(normalizeHeader(key));
     if (idx != null) return idx;
   }
+  return -1;
+}
+
+/**
+ * Flexible header lookup:
+ * 1) exact normalized match
+ * 2) exact match after removing spaces/underscores
+ * 3) contains match after removing spaces/underscores
+ */
+function pickFlexible(map: Map<string, number>, ...keys: string[]) {
+  const entries = Array.from(map.entries());
+
+  for (const key of keys) {
+    const nk = normalizeHeader(key);
+    const exact = map.get(nk);
+    if (exact != null) return exact;
+  }
+
+  for (const key of keys) {
+    const sk = squashHeader(key);
+    for (const [header, idx] of entries) {
+      if (squashHeader(header) === sk) return idx;
+    }
+  }
+
+  for (const key of keys) {
+    const sk = squashHeader(key);
+    for (const [header, idx] of entries) {
+      const sh = squashHeader(header);
+      if (sh.includes(sk) || sk.includes(sh)) return idx;
+    }
+  }
+
   return -1;
 }
 
@@ -128,19 +172,18 @@ function splitName(nameRaw: any): { first: string; last: string } {
 
 function rowsToStudents(rows: string[][]): Student[] {
   if (!rows.length) return [];
+
   const headers = rows[0];
   const idx = headerIndex(headers);
 
-  const iId = pick(idx, "id", "studentid", "student id");
-  const iName = pick(idx, "name", "student name");
-
-  // optional separate columns
-  const iFirst = pick(idx, "first", "firstname", "first name");
-  const iLast = pick(idx, "last", "lastname", "last name");
-
-  const iHomeroom = pick(idx, "homeroom", "hr", "class");
-  const iGuild = pick(idx, "guild");
-  const iPortrait = pick(
+  // strict lookups for identity columns
+  const iId = pickStrict(idx, "id", "student id", "studentid");
+  const iName = pickStrict(idx, "name", "student name");
+  const iFirst = pickStrict(idx, "first", "first name", "firstname");
+  const iLast = pickStrict(idx, "last", "last name", "lastname");
+  const iHomeroom = pickStrict(idx, "homeroom", "home room", "hr", "class");
+  const iGuild = pickStrict(idx, "guild");
+  const iPortrait = pickStrict(
     idx,
     "portraiturl",
     "portrait url",
@@ -148,59 +191,58 @@ function rowsToStudents(rows: string[][]): Student[] {
     "avatar",
     "avatarurl"
   );
-  const iSkills = pick(idx, "skills", "skill");
-  const iInventory = pick(idx, "inventory");
+  const iSkills = pickStrict(idx, "skills", "skill");
+  const iInventory = pickStrict(idx, "inventory");
 
-  // base stats
-  const iStr = pick(idx, "str", "strength");
-  const iDex = pick(idx, "dex", "dexterity");
-  const iCon = pick(idx, "con", "constitution");
-  const iInt = pick(idx, "int", "intelligence");
-  const iWis = pick(idx, "wis", "wisdom");
-  const iCha = pick(idx, "cha", "charisma");
+  // flexible lookups for stats/bonus columns
+  const iStr = pickFlexible(idx, "str", "strength");
+  const iDex = pickFlexible(idx, "dex", "dexterity");
+  const iCon = pickFlexible(idx, "con", "constitution");
+  const iInt = pickFlexible(idx, "int", "intelligence");
+  const iWis = pickFlexible(idx, "wis", "wisdom");
+  const iCha = pickFlexible(idx, "cha", "charisma");
 
-  // bonus stats
-  const iStrB = pick(
+  const iStrB = pickFlexible(
     idx,
-    "str_bonus",
     "str bonus",
-    "strength_bonus",
-    "strength bonus"
+    "str_bonus",
+    "strength bonus",
+    "strength_bonus"
   );
-  const iDexB = pick(
+  const iDexB = pickFlexible(
     idx,
-    "dex_bonus",
     "dex bonus",
-    "dexterity_bonus",
-    "dexterity bonus"
+    "dex_bonus",
+    "dexterity bonus",
+    "dexterity_bonus"
   );
-  const iConB = pick(
+  const iConB = pickFlexible(
     idx,
-    "con_bonus",
     "con bonus",
-    "constitution_bonus",
-    "constitution bonus"
+    "con_bonus",
+    "constitution bonus",
+    "constitution_bonus"
   );
-  const iIntB = pick(
+  const iIntB = pickFlexible(
     idx,
-    "int_bonus",
     "int bonus",
-    "intelligence_bonus",
-    "intelligence bonus"
+    "int_bonus",
+    "intelligence bonus",
+    "intelligence_bonus"
   );
-  const iWisB = pick(
+  const iWisB = pickFlexible(
     idx,
-    "wis_bonus",
     "wis bonus",
-    "wisdom_bonus",
-    "wisdom bonus"
+    "wis_bonus",
+    "wisdom bonus",
+    "wisdom_bonus"
   );
-  const iChaB = pick(
+  const iChaB = pickFlexible(
     idx,
-    "cha_bonus",
     "cha bonus",
-    "charisma_bonus",
-    "charisma bonus"
+    "cha_bonus",
+    "charisma bonus",
+    "charisma_bonus"
   );
 
   const out: Student[] = [];
