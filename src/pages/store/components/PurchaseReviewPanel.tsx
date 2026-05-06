@@ -34,23 +34,25 @@ export default function PurchaseReviewPanel({
 
   if (!attr) {
     return (
-      <div className={`${innerCard} px-5 py-8 text-center`}>
-        <div className={`${label} flex items-center justify-center gap-2`}>
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-[11px] font-black text-white/40">
+      <div className={`${innerCard} px-5 py-5`}>
+        <div className="flex items-center gap-3">
+          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/10 text-[11px] font-black text-white/40">
             6
           </span>
 
-          <span className="text-white/40">
-            Confirm Purchase
-          </span>
+          <div>
+            <div className={`${label} text-white/38`}>
+              Confirm Purchase
+            </div>
+
+            <div className="mt-1 text-base font-semibold text-white">
+              Choose a stat card to continue
+            </div>
+          </div>
         </div>
 
-        <div className="mt-4 text-2xl font-semibold text-white">
-          Choose an attribute first
-        </div>
-
-        <div className="mt-2 text-sm text-white/52">
-          Select a stat card above to preview the upgrade and unlock purchase confirmation.
+        <div className="mt-4 rounded-2xl border border-white/[0.04] bg-black/16 px-4 py-3 text-sm text-white/54">
+          Your selected upgrade will appear here before purchase confirmation.
         </div>
       </div>
     );
