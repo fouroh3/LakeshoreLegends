@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import AppTopBar from "../../components/AppTopBar";
 import type { Student } from "../../types";
 import { loadStudents } from "../../data";
 import { fetchHpMap } from "../../hpApi";
 import {
+  getApiVersions,
   getStoreState,
   getXpSummary,
   spendXp,
@@ -82,8 +83,10 @@ export default function StorePage({ onBack }: Props) {
   const [pendingTarget, setPendingTarget] = useState<AttrKey | null>(null);
 
   const [spending, setSpending] = useState(false);
-  const [spendErr, setSpendErr] = useState<string | null>(null);
-  const [toast, setToast] = useState<string | null>(null);
+  const [, setSpendErr] = useState<string | null>(null);
+  const [, setToast] = useState<string | null>(null);
+  const lastHpVersionRef = useRef<string | null>(null);
+  const lastXpVersionRef = useRef<string | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -110,82 +113,91 @@ export default function StorePage({ onBack }: Props) {
     };
   }, []);
 
-  useEffect(() => {
-    let alive = true;
+useEffect(() => {
+  let alive = true;
 
-    const tick = async () => {
-      try {
-        setHpErr(null);
-        const next = await fetchHpMap();
-        if (!alive) return;
-        setHpMap(next);
-      } catch (e) {
-        if (!alive) return;
-        setHpErr(e instanceof Error ? e.message : "Failed to load HP state");
+  const tick = async (force = false) => {
+    try {
+      const versions = await getApiVersions();
+
+      const hpChanged =
+        force ||
+        lastHpVersionRef.current === null ||
+        versions.hpLastWriteIso !== lastHpVersionRef.current;
+
+      const xpChanged =
+        force ||
+        lastXpVersionRef.current === null ||
+        versions.xpLastWriteIso !== lastXpVersionRef.current;
+
+      if (hpChanged) {
+        try {
+          setHpErr(null);
+          const nextHp = await fetchHpMap();
+          if (!alive) return;
+          setHpMap(nextHp);
+          lastHpVersionRef.current = versions.hpLastWriteIso;
+        } catch (e) {
+          if (!alive) return;
+          setHpErr(e instanceof Error ? e.message : "Failed to load HP state");
+        }
       }
-    };
 
-    void tick();
+      if (xpChanged) {
+        try {
+          setStoreErr(null);
+          const nextStore = await getStoreState();
+          if (!alive) return;
+          setStore(nextStore);
+          lastXpVersionRef.current = versions.xpLastWriteIso;
 
-    const id = window.setInterval(() => {
-      void tick();
-    }, 5000);
-
-    const onVis = () => {
-      if (document.visibilityState === "visible") {
-        void tick();
+          if (selectedId) {
+            const nextSummary = await getXpSummary(selectedId);
+            if (!alive) return;
+            setSummary(nextSummary);
+            setServerAttrs(nextSummary.attrs ?? null);
+          }
+        } catch (e) {
+          if (!alive) return;
+          setStoreErr(
+            e instanceof Error ? e.message : "Failed to load store state"
+          );
+          setStore(
+            (prev) =>
+              prev ?? {
+                storeLocked: true,
+                xpPerPoint: 5,
+                maxPointsPerOpen: 999,
+              }
+          );
+        }
       }
-    };
+    } catch (e) {
+      if (!alive) return;
+      setStoreErr(e instanceof Error ? e.message : "Failed to load API state");
+    }
+  };
 
-    document.addEventListener("visibilitychange", onVis);
+  void tick(true);
 
-    return () => {
-      alive = false;
-      window.clearInterval(id);
-      document.removeEventListener("visibilitychange", onVis);
-    };
-  }, []);
+  const id = window.setInterval(() => {
+    void tick(false);
+  }, 5000);
 
-  useEffect(() => {
-    let alive = true;
+  const onVis = () => {
+    if (document.visibilityState === "visible") {
+      void tick(true);
+    }
+  };
 
-    const tick = async () => {
-      try {
-        setStoreErr(null);
-        const st = await getStoreState();
-        if (!alive) return;
-        setStore(st);
-      } catch (e) {
-        if (!alive) return;
-        setStoreErr(
-          e instanceof Error ? e.message : "Failed to load store state"
-        );
-        setStore(
-          (prev) =>
-            prev ?? { storeLocked: true, xpPerPoint: 5, maxPointsPerOpen: 999 }
-        );
-      }
-    };
+  document.addEventListener("visibilitychange", onVis);
 
-    void tick();
-    const id = window.setInterval(() => {
-      void tick();
-    }, 5000);
-
-    const onVis = () => {
-      if (document.visibilityState === "visible") {
-        void tick();
-      }
-    };
-
-    document.addEventListener("visibilitychange", onVis);
-
-    return () => {
-      alive = false;
-      window.clearInterval(id);
-      document.removeEventListener("visibilitychange", onVis);
-    };
-  }, []);
+  return () => {
+    alive = false;
+    window.clearInterval(id);
+    document.removeEventListener("visibilitychange", onVis);
+  };
+}, [selectedId]);
 
   const xpPerPoint = store?.xpPerPoint ?? 5;
   const storeLocked = store?.storeLocked ?? true;
@@ -332,46 +344,6 @@ export default function StorePage({ onBack }: Props) {
     return 0;
   }
 
-  const pendingMeta = useMemo(() => {
-    if (!selected || !pendingTarget) return null;
-
-    const current = displayAttr(pendingTarget);
-    const next = current + 1;
-    const costXp = xpPerPoint;
-    const bal = summary?.balance ?? 0;
-    const afterBal = bal - costXp;
-    const afterPoints = Math.floor(Math.max(0, afterBal) / xpPerPoint);
-
-    const titleMap: Record<AttrKey, string> = {
-      STR: "Strength",
-      DEX: "Dexterity",
-      CON: "Constitution",
-      INT: "Intelligence",
-      WIS: "Wisdom",
-      CHA: "Charisma",
-    };
-
-    const iconMap: Record<AttrKey, string> = {
-      STR: "💪",
-      DEX: "🏹",
-      CON: "🛡️",
-      INT: "🧠",
-      WIS: "🦉",
-      CHA: "💬",
-    };
-
-    return {
-      current,
-      next,
-      costXp,
-      bal,
-      afterBal,
-      afterPoints,
-      title: titleMap[pendingTarget],
-      icon: iconMap[pendingTarget],
-    };
-  }, [selected, pendingTarget, xpPerPoint, summary?.balance, serverAttrs]);
-
   async function confirmSpend() {
     if (!selected || !pendingTarget) return;
     if (storeLocked) return;
@@ -396,24 +368,36 @@ export default function StorePage({ onBack }: Props) {
           pin: pin.trim(),
           target: pendingTarget,
           points: 1,
+          openNonce: store?.openNonce ?? "",
           requestId,
         },
         { retries: 3, baseDelayMs: 250 }
       );
 
-      if (res?.attrs) setServerAttrs(res.attrs);
+            const purchasedTarget = pendingTarget;
+      const beforeAttr = Number(
+        res?.beforeAttr ?? displayAttr(purchasedTarget)
+      );
+      const afterAttr = Number(res?.afterAttr ?? beforeAttr + 1);
+
+      setServerAttrs((prev) => ({
+        ...(prev ?? {}),
+        final: {
+          ...(prev?.final ?? {}),
+          [purchasedTarget]: afterAttr,
+        },
+      }));
 
       if (res?.summary) {
         setSummary(res.summary as XpSummary);
-        const attrsFromSummary = (res.summary as { attrs?: AttrsBundle }).attrs;
-        if (attrsFromSummary) setServerAttrs(attrsFromSummary);
       } else {
         const nextSummary = await getXpSummary(selectedStudentId);
         setSummary(nextSummary);
-        if (nextSummary.attrs) setServerAttrs(nextSummary.attrs);
       }
 
-      setToast(`✅ Purchased +1 ${pendingTarget}`);
+      setToast(
+        `✅ Purchased +1 ${purchasedTarget}: ${beforeAttr} → ${afterAttr}. XP updated.`
+      );
       window.setTimeout(() => setToast(null), 1800);
       setPendingTarget(null);
     } catch (e) {
@@ -536,13 +520,12 @@ export default function StorePage({ onBack }: Props) {
                   />
 
                   <PurchaseReviewPanel
-                    pendingMeta={pendingMeta}
-                    pointsAvailable={pointsAvailable}
-                    canConfirmPurchase={canConfirmPurchase}
+                    pendingTarget={pendingTarget}
+                    displayAttr={displayAttr}
+                    xpPerPoint={xpPerPoint}
+                    summaryBalance={summary?.balance ?? null}
+                    canConfirm={canConfirmPurchase}
                     spending={spending}
-                    spendErr={spendErr}
-                    toast={toast}
-                    onCancel={() => setPendingTarget(null)}
                     onConfirm={() => {
                       void confirmSpend();
                     }}

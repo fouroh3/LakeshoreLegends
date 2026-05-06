@@ -1,3 +1,5 @@
+// src/pages/store/components/LegendSelectionPanel.tsx
+
 import type { Student } from "../../../types";
 import { hpStatus } from "../../../utils/hpStatus";
 import {
@@ -237,7 +239,13 @@ export default function LegendSelectionPanel({
 
       <div className="mt-4 space-y-3">
         <div className={`${softPanel} px-3 py-3`}>
-          <div className={label}>Homeroom</div>
+          <div className={`${label} flex items-center gap-2`}>
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-cyan-400/20 text-[11px] font-black text-cyan-200">
+              1
+            </span>
+
+            Choose Homeroom
+          </div>
           <div className="relative mt-1.5">
             <select
               className={select}
@@ -245,9 +253,19 @@ export default function LegendSelectionPanel({
               onChange={(e) => setHr(e.target.value)}
               disabled={homerooms.length === 0}
             >
-              <option value="">Select…</option>
+              <option
+                value=""
+                className="bg-slate-950 text-white"
+              >
+                Select…
+              </option>
+
               {homerooms.map((x) => (
-                <option key={x} value={x}>
+                <option
+                  key={x}
+                  value={x}
+                  className="bg-slate-950 text-white"
+                >
                   {x}
                 </option>
               ))}
@@ -259,7 +277,21 @@ export default function LegendSelectionPanel({
         </div>
 
         <div className={`${softPanel} px-3 py-3`}>
-          <div className={label}>Guild</div>
+          <div className={`${label} flex items-center gap-2`}>
+            <span
+              className={`flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-black ${
+                hr
+                  ? "bg-cyan-400/20 text-cyan-200"
+                  : "bg-white/10 text-white/40"
+              }`}
+            >
+              2
+            </span>
+
+            <span className={!hr ? "text-white/40" : ""}>
+              Choose Guild
+            </span>
+          </div>
           <div className="relative mt-1.5">
             <select
               className={select}
@@ -267,11 +299,19 @@ export default function LegendSelectionPanel({
               onChange={(e) => setGuild(e.target.value)}
               disabled={!hr}
             >
-              <option value="">
+              <option
+                value=""
+                className="bg-slate-950 text-white"
+              >
                 {hr ? "All guilds" : "Select homeroom first"}
               </option>
+
               {guildsForHr.map((g) => (
-                <option key={g} value={g}>
+                <option
+                  key={g}
+                  value={g}
+                  className="bg-slate-950 text-white"
+                >
                   {g}
                 </option>
               ))}
@@ -283,7 +323,21 @@ export default function LegendSelectionPanel({
         </div>
 
         <div className={`${softPanel} px-3 py-3`}>
-          <div className={label}>Student</div>
+                    <div className={`${label} flex items-center gap-2`}>
+            <span
+              className={`flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-black ${
+                hr
+                  ? "bg-cyan-400/20 text-cyan-200"
+                  : "bg-white/10 text-white/40"
+              }`}
+            >
+              3
+            </span>
+
+            <span className={!hr ? "text-white/40" : ""}>
+              Choose Your Legend
+            </span>
+          </div>
           <div className="relative mt-1.5">
             <select
               className={`${select} ${
@@ -293,13 +347,22 @@ export default function LegendSelectionPanel({
               onChange={(e) => setSelectedId(e.target.value)}
               disabled={!hr}
             >
-              <option value="">
+              <option
+                value=""
+                className="bg-slate-950 text-white"
+              >
                 {hr ? "Select…" : "Select homeroom first"}
               </option>
+
               {studentsForPick.map((s) => {
                 const id = String((s as Record<string, unknown>).id ?? "");
+
                 return (
-                  <option key={id} value={id}>
+                  <option
+                    key={id}
+                    value={id}
+                    className="bg-slate-950 text-white"
+                  >
                     {fullName(s)} • {id}
                   </option>
                 );
