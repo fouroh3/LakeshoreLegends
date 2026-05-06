@@ -174,78 +174,80 @@ export default function StoreSummaryPanel({
       </div>
 
       <div className={`${innerCard} px-4 py-4`}>
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <div className={label}>Purchase Status</div>
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <div className={label}>Ready Check</div>
 
-            <div className="mt-1 text-lg font-semibold text-white">
-              Ready Check
-            </div>
-          </div>
-
-          <span className={getStatusPill(storeLocked)}>
-            {storeLocked ? "Closed" : "Open"}
-          </span>
-        </div>
-
-        <div className="mt-4 space-y-3">
-          {[
-            {
-              title: "Store access",
-              ok: !storeLocked,
-              good: "Store is open",
-              bad: "Store is closed",
-            },
-            {
-              title: "PIN entered",
-              ok: !!pin.trim(),
-              good: "PIN ready",
-              bad: "PIN required",
-            },
-            {
-              title: "Student confirmed",
-              ok: confirmOk,
-              good: "Student ID matches",
-              bad: "Confirm Student ID",
-            },
-            {
-              title: "Enough XP",
-              ok: hasEnoughPoints,
-              good: "Can buy 1 point",
-              bad: `Need ${xpPerPoint} XP`,
-            },
-          ].map((item) => (
-            <div
-              key={item.title}
-              className="flex items-center justify-between gap-3 rounded-2xl border border-white/[0.04] bg-white/[0.025] px-3 py-3"
-            >
-              <div className="text-sm text-white/74">{item.title}</div>
-
-              <div
-                className={`rounded-full border px-3 py-1 text-[11px] ${
-                  item.ok
-                    ? "border-emerald-400/18 bg-emerald-400/[0.09] text-emerald-100"
-                    : "border-white/[0.05] bg-white/[0.035] text-white/60"
-                }`}
-              >
-                {item.ok ? item.good : item.bad}
+              <div className="mt-1 text-base font-semibold text-white">
+                Store Status
               </div>
             </div>
-          ))}
-        </div>
 
-        <div className="mt-4 rounded-2xl border border-white/[0.04] bg-black/16 px-3 py-3 text-xs leading-5 text-white/56">
-          {storeLocked
-            ? "Store is currently locked."
-            : !pin.trim()
-            ? "Step 4: enter the Store PIN."
-            : !confirmOk
-            ? "Step 4: confirm your Student ID."
-            : !hasEnoughPoints
-            ? `You need ${xpPerPoint} XP to buy 1 stat point.`
-            : pendingTarget
-            ? "Step 6: review your upgrade and confirm the purchase."
-            : "Step 5: choose a stat card below."}
+            <span className={getStatusPill(storeLocked)}>
+              {storeLocked ? "Closed" : "Open"}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            {[
+              {
+                title: "PIN",
+                ok: !!pin.trim(),
+                good: "Ready",
+                bad: "Needed",
+              },
+              {
+                title: "ID",
+                ok: confirmOk,
+                good: "Verified",
+                bad: "Check",
+              },
+              {
+                title: "XP",
+                ok: hasEnoughPoints,
+                good: "Enough",
+                bad: `Need ${xpPerPoint}`,
+              },
+              {
+                title: "Next",
+                ok: !!pendingTarget,
+                good: "Review",
+                bad: "Pick Stat",
+              },
+            ].map((item) => (
+              <div
+                key={item.title}
+                className="rounded-xl border border-white/[0.05] bg-white/[0.025] px-3 py-2"
+              >
+                <div className="text-[10px] uppercase tracking-[0.18em] text-white/34">
+                  {item.title}
+                </div>
+
+                <div
+                  className={`mt-1 text-sm font-semibold ${
+                    item.ok ? "text-emerald-100" : "text-white/50"
+                  }`}
+                >
+                  {item.ok ? item.good : item.bad}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="rounded-xl border border-white/[0.04] bg-black/14 px-3 py-2 text-xs leading-5 text-white/52">
+            {storeLocked
+              ? "Store is currently locked."
+              : !pin.trim()
+              ? "Enter the Store PIN."
+              : !confirmOk
+              ? "Confirm your Student ID."
+              : !hasEnoughPoints
+              ? `You need ${xpPerPoint} XP to buy 1 stat point.`
+              : pendingTarget
+              ? "Review and confirm your upgrade."
+              : "Choose a stat card below."}
+          </div>
         </div>
       </div>
     </div>

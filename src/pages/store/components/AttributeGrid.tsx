@@ -52,10 +52,19 @@ export default function AttributeGrid({
     <div
       className={[
         innerCard,
-        "px-4 py-4 sm:px-5",
+        "px-4 py-4 sm:px-5 transition-all duration-500",
+
         canSelectAttribute
-          ? "border-cyan-300/15 bg-slate-950/70 shadow-[0_0_34px_rgba(34,211,238,0.06)]"
-          : "bg-slate-950/40 opacity-90",
+          ? [
+              "border-cyan-300/20",
+              "bg-[linear-gradient(180deg,rgba(10,18,30,0.96),rgba(6,10,18,0.98))]",
+              "shadow-[0_0_44px_rgba(34,211,238,0.12)]",
+              "ring-1 ring-cyan-300/10",
+            ].join(" ")
+          : [
+              "bg-slate-950/40",
+              "opacity-85",
+            ].join(" "),
       ].join(" ")}
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
@@ -64,7 +73,7 @@ export default function AttributeGrid({
             <span
               className={`flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-black ${
                 canSelectAttribute
-                  ? "bg-cyan-400/20 text-cyan-200"
+                  ? "bg-cyan-300 text-slate-950 shadow-[0_0_18px_rgba(34,211,238,0.65)]"
                   : "bg-white/10 text-white/40"
               }`}
             >
@@ -76,12 +85,22 @@ export default function AttributeGrid({
             </span>
           </div>
 
-          <div className="mt-1 text-xl font-semibold tracking-tight text-white">
-            Pick one stat to upgrade
+          <div
+            className={`mt-1 text-xl font-semibold tracking-tight ${
+              canSelectAttribute ? "text-cyan-100" : "text-white"
+            }`}
+          >
+            {canSelectAttribute ? "Store unlocked — pick one stat" : "Pick one stat to upgrade"}
           </div>
 
-          <div className="mt-1 text-sm text-white/56">
-            Each purchase adds +1 permanently. Select a card to preview the upgrade.
+          <div
+            className={`mt-1 text-sm ${
+              canSelectAttribute ? "text-cyan-100/70" : "text-white/56"
+            }`}
+          >
+            {canSelectAttribute
+              ? "Your verification is complete. Choose a stat card below."
+              : "Each purchase adds +1 permanently. Select a card to preview the upgrade."}
           </div>
         </div>
 
