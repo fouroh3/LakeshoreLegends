@@ -1,3 +1,5 @@
+// src/pages/store/StorePage.tsx
+
 import { useEffect, useMemo, useRef, useState } from "react";
 import AppTopBar from "../../components/AppTopBar";
 import type { Student } from "../../types";
@@ -83,6 +85,7 @@ export default function StorePage({ onBack }: Props) {
   const [pendingTarget, setPendingTarget] = useState<AttrKey | null>(null);
 
   const [spending, setSpending] = useState(false);
+  const [lastPurchased, setLastPurchased] = useState<AttrKey | null>(null);
   const [, setSpendErr] = useState<string | null>(null);
   const [, setToast] = useState<string | null>(null);
   const lastHpVersionRef = useRef<string | null>(null);
@@ -398,8 +401,14 @@ useEffect(() => {
       setToast(
         `✅ Purchased +1 ${purchasedTarget}: ${beforeAttr} → ${afterAttr}. XP updated.`
       );
-      window.setTimeout(() => setToast(null), 1800);
-      setPendingTarget(null);
+
+      setPendingTarget(purchasedTarget);
+      setLastPurchased(purchasedTarget);
+
+      window.setTimeout(() => {
+        setLastPurchased(null);
+        setToast(null);
+      }, 2200);
     } catch (e) {
       setSpendErr(e instanceof Error ? e.message : "Spend failed");
     } finally {
@@ -444,7 +453,7 @@ useEffect(() => {
             noHomerooms={noHomerooms}
           />
 
-          <div className="grid grid-cols-1 gap-5 lg:grid-cols-[340px_minmax(0,1fr)] xl:grid-cols-[360px_minmax(0,1fr)]">
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-[360px_minmax(0,1fr)]">
             <LegendSelectionPanel
               homerooms={homerooms}
               hr={hr}
@@ -487,7 +496,7 @@ useEffect(() => {
               )}
 
               {selected && (
-                <div className="space-y-5">
+                <div className="space-y-3 xl:space-y-5">
                   <StoreSummaryPanel
                     xpPerPoint={xpPerPoint}
                     maxPoints={maxPoints}
@@ -505,7 +514,7 @@ useEffect(() => {
                     guildTheme={guildTheme}
                   />
 
-                  <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1.05fr)_minmax(360px,0.95fr)]">
+                  <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_360px] xl:gap-5 xl:grid-cols-[minmax(0,1.05fr)_minmax(360px,0.95fr)]">
                     <AttributeGrid
                       xpPerPoint={xpPerPoint}
                       storeLocked={storeLocked}
@@ -527,6 +536,7 @@ useEffect(() => {
                       summaryBalance={summary?.balance ?? null}
                       canConfirm={canConfirmPurchase}
                       spending={spending}
+                      lastPurchased={lastPurchased}
                       onConfirm={() => {
                         void confirmSpend();
                       }}

@@ -3,7 +3,6 @@
 import type { Student } from "../../../types";
 import { hpStatus } from "../../../utils/hpStatus";
 import {
-  getStatusPill,
   innerCard,
   label,
   select,
@@ -14,7 +13,6 @@ import {
   cleanText,
   fullName,
   initialsForStudent,
-  rosterBaseAttr,
 } from "../storeUtils";
 
 type Props = {
@@ -48,39 +46,7 @@ type Props = {
   };
 };
 
-function statChip(labelText: string, value: number) {
-  return (
-    <div className="rounded-2xl border border-white/[0.05] bg-white/[0.03] px-3 py-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.025)]">
-      <div className="text-[10px] uppercase tracking-[0.2em] text-white/40">
-        {labelText}
-      </div>
-      <div className="mt-1 text-base font-semibold tabular-nums text-white">
-        {value}
-      </div>
-    </div>
-  );
-}
 
-function readoutTile(
-  title: string,
-  value: string | number,
-  subtitle: string,
-  accentClass = ""
-) {
-  return (
-    <div
-      className={`rounded-[22px] border border-white/[0.05] bg-[linear-gradient(180deg,rgba(255,255,255,0.045),rgba(255,255,255,0.02))] px-4 py-4 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.025)] ${accentClass}`}
-    >
-      <div className="text-[10px] uppercase tracking-[0.22em] text-white/42">
-        {title}
-      </div>
-      <div className="mt-2 text-3xl font-bold leading-none tabular-nums text-white">
-        {value}
-      </div>
-      <div className="mt-2 text-xs text-white/46">{subtitle}</div>
-    </div>
-  );
-}
 
 function num(v: unknown, fallback = 0) {
   const n = Number(v);
@@ -134,11 +100,6 @@ export default function LegendSelectionPanel({
   selectedId,
   setSelectedId,
   selected,
-  summaryBalance,
-  summarySpendable,
-  storeLocked,
-  loading,
-  err,
   liveHp,
   liveMaxHp,
   guildTheme,
@@ -208,37 +169,29 @@ export default function LegendSelectionPanel({
     ? "before:absolute before:inset-[-12px] before:rounded-[36px] before:bg-emerald-400/8 before:blur-2xl before:content-['']"
     : "";
 
-  const readoutGlow = !selected
-    ? ""
-    : storeLocked
-    ? "shadow-[0_0_0_1px_rgba(255,255,255,0.03),0_14px_28px_rgba(0,0,0,0.22)]"
-    : "shadow-[0_0_0_1px_rgba(34,211,238,0.10),0_18px_36px_rgba(14,165,233,0.08)]";
-
-  const str = selected ? rosterBaseAttr(selected, "STR") : 0;
-  const dex = selected ? rosterBaseAttr(selected, "DEX") : 0;
-  const con = selected ? rosterBaseAttr(selected, "CON") : 0;
-  const intVal = selected ? rosterBaseAttr(selected, "INT") : 0;
 
   return (
     <aside
-      className={`${shellCardBase} ${guildTheme.border} ${guildTheme.tintBg} px-4 py-4 sm:px-5 ${guildTheme.shellGlow}`}
+      className={`${shellCardBase} ${guildTheme.border} ${guildTheme.tintBg} px-3 py-3 xl:px-5 xl:py-5 ${guildTheme.shellGlow}`}
     >
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex items-center justify-between gap-3">
         <div>
-          <div className="text-[11px] uppercase tracking-[0.24em] text-white/42">
+          <div className="text-[10px] uppercase tracking-[0.22em] text-white/42 xl:text-[11px] xl:tracking-[0.24em]">
             Legend Selection
           </div>
-          <div className="mt-1 text-xl font-semibold tracking-tight text-white">
+
+          <div className="mt-1 text-lg font-semibold tracking-tight text-white xl:text-xl">
             Choose your legend
           </div>
         </div>
-        <div className="rounded-full border border-white/[0.05] bg-white/[0.035] px-3 py-1 text-xs text-white/56">
+
+        <div className="rounded-full border border-white/[0.05] bg-white/[0.035] px-2.5 py-1 text-[11px] text-white/56 xl:px-3 xl:text-xs">
           {studentsForPick.length || 0} shown
         </div>
       </div>
 
-      <div className="mt-4 space-y-3">
-        <div className={`${softPanel} px-3 py-3`}>
+      <div className="mt-3 grid grid-cols-1 gap-2 lg:grid-cols-3 xl:mt-4 xl:block xl:space-y-3">
+        <div className={`${softPanel} px-3 py-2 xl:py-3`}>
           <div className={`${label} flex items-center gap-2`}>
             <span className="flex h-5 w-5 items-center justify-center rounded-full bg-cyan-400/20 text-[11px] font-black text-cyan-200">
               1
@@ -246,6 +199,7 @@ export default function LegendSelectionPanel({
 
             Choose Homeroom
           </div>
+
           <div className="relative mt-1.5">
             <select
               className={select}
@@ -270,13 +224,14 @@ export default function LegendSelectionPanel({
                 </option>
               ))}
             </select>
+
             <div className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-white/36">
               ▾
             </div>
           </div>
         </div>
 
-        <div className={`${softPanel} px-3 py-3`}>
+        <div className={`${softPanel} px-3 py-2 xl:py-3`}>
           <div className={`${label} flex items-center gap-2`}>
             <span
               className={`flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-black ${
@@ -292,6 +247,7 @@ export default function LegendSelectionPanel({
               Choose Guild
             </span>
           </div>
+
           <div className="relative mt-1.5">
             <select
               className={select}
@@ -316,14 +272,15 @@ export default function LegendSelectionPanel({
                 </option>
               ))}
             </select>
+
             <div className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-white/36">
               ▾
             </div>
           </div>
         </div>
 
-        <div className={`${softPanel} px-3 py-3`}>
-                    <div className={`${label} flex items-center gap-2`}>
+        <div className={`${softPanel} px-3 py-2 xl:py-3`}>
+          <div className={`${label} flex items-center gap-2`}>
             <span
               className={`flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-black ${
                 hr
@@ -338,6 +295,7 @@ export default function LegendSelectionPanel({
               Choose Your Legend
             </span>
           </div>
+
           <div className="relative mt-1.5">
             <select
               className={`${select} ${
@@ -368,6 +326,7 @@ export default function LegendSelectionPanel({
                 );
               })}
             </select>
+
             <div className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-white/36">
               ▾
             </div>
@@ -376,7 +335,7 @@ export default function LegendSelectionPanel({
       </div>
 
       <div
-        className={`${innerCard} mt-4 overflow-hidden px-4 py-4 ${
+        className={`${innerCard} mt-4 hidden overflow-hidden px-4 py-4 xl:block ${
           selected
             ? `${guildTheme.border} ${guildTheme.softPanel} ${guildTheme.cardGlow}`
             : ""
@@ -386,6 +345,7 @@ export default function LegendSelectionPanel({
           <div
             className={`absolute inset-x-0 top-0 h-28 bg-gradient-to-b ${guildTheme.gradient} opacity-90`}
           />
+
           <div className="relative">
             <div className="flex flex-col items-center text-center">
               <div className={`relative mt-1 ${avatarTone}`}>
@@ -408,6 +368,7 @@ export default function LegendSelectionPanel({
                       ) || "—"
                     : "Select a student"}
                 </span>
+
                 <span
                   className={`rounded-full border px-3 py-1 text-xs ${
                     selected
@@ -420,6 +381,7 @@ export default function LegendSelectionPanel({
                       "No guild"
                     : "No guild"}
                 </span>
+
                 <span
                   className={`rounded-full border px-3 py-1 text-xs ${healthPillClass}`}
                 >
@@ -437,6 +399,7 @@ export default function LegendSelectionPanel({
             >
               <div className="flex items-center justify-between gap-3">
                 <div className={label}>Health</div>
+
                 <div className="text-sm font-semibold tabular-nums text-white">
                   {selected ? `${hp}/${safeMaxHp}` : "—"}
                 </div>
@@ -454,77 +417,12 @@ export default function LegendSelectionPanel({
               </div>
             </div>
 
-            <div className="mt-4 grid grid-cols-2 gap-2">
-              {statChip("Strength", str)}
-              {statChip("Dexterity", dex)}
-              {statChip("Constitution", con)}
-              {statChip("Intelligence", intVal)}
-            </div>
+
           </div>
         </div>
       </div>
 
-      <div
-        className={`${innerCard} mt-4 overflow-hidden px-4 py-4 ${readoutGlow}`}
-      >
-        <div className="relative">
-          <div className="absolute inset-x-0 top-0 h-20 bg-[linear-gradient(180deg,rgba(255,255,255,0.035),transparent)]" />
-
-          <div className="relative">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <div className={label}>Quick Readout</div>
-                <div className="mt-1 text-lg font-semibold tracking-tight text-white">
-                  Store Readiness
-                </div>
-              </div>
-              <span className={getStatusPill(storeLocked)}>
-                {storeLocked ? "Closed" : "Open"}
-              </span>
-            </div>
-
-            <div className="mt-4 grid grid-cols-2 gap-3">
-              {readoutTile(
-                "XP Balance",
-                selected ? summaryBalance ?? "—" : "—",
-                selected ? "Total stored XP" : "Select a legend first",
-                "shadow-[0_0_0_1px_rgba(255,255,255,0.02),0_10px_22px_rgba(0,0,0,0.18)]"
-              )}
-
-              {readoutTile(
-                "Spendable",
-                selected ? summarySpendable ?? "—" : "—",
-                selected ? "Available points now" : "Awaiting selection",
-                !storeLocked
-                  ? "shadow-[0_0_0_1px_rgba(34,211,238,0.08),0_12px_24px_rgba(14,165,233,0.08)]"
-                  : "shadow-[0_0_0_1px_rgba(255,255,255,0.02),0_10px_22px_rgba(0,0,0,0.18)]"
-              )}
-            </div>
-
-            <div className="mt-4 rounded-[18px] border border-white/[0.05] bg-white/[0.025] px-3.5 py-3">
-              {loading ? (
-                <div className="text-sm text-white/62">Loading roster…</div>
-              ) : err ? (
-                <div className="text-sm text-red-200">{err}</div>
-              ) : !selected ? (
-                <div className="text-sm text-white/52">
-                  Select a legend to load XP totals and purchase readiness.
-                </div>
-              ) : storeLocked ? (
-                <div className="text-sm text-white/56">
-                  The store is currently locked. XP is visible, but purchases
-                  are disabled until it opens.
-                </div>
-              ) : (
-                <div className="text-sm text-white/60">
-                  Legend is loaded. Enter the Store PIN and confirm the ID to
-                  begin upgrades.
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
+ 
     </aside>
   );
 }

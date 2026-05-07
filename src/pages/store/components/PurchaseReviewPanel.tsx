@@ -5,6 +5,7 @@ import { ATTRS, innerCard, label } from "../storeTheme";
 
 type Props = {
   pendingTarget: AttrKey | null;
+  lastPurchased: AttrKey | null;
   displayAttr: (key: AttrKey) => number;
   xpPerPoint: number;
   summaryBalance: number | null;
@@ -22,6 +23,7 @@ type Props = {
 
 export default function PurchaseReviewPanel({
   pendingTarget,
+  lastPurchased,
   displayAttr,
   xpPerPoint,
   summaryBalance,
@@ -34,14 +36,14 @@ export default function PurchaseReviewPanel({
 
   if (!attr) {
     return (
-      <div className={`${innerCard} px-5 py-5`}>
+      <div className={`${innerCard} px-3 py-3 xl:px-5 xl:py-5`}>
         <div className="flex items-center gap-3">
           <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/10 text-[11px] font-black text-white/40">
             6
           </span>
 
           <div>
-            <div className={`${label} text-white/38`}>Confirm Purchase</div>
+            <div className={`${label} text-white/38`}>Purchase Review</div>
 
             <div className="mt-1 text-base font-semibold text-white">
               Choose a stat card to continue
@@ -50,7 +52,7 @@ export default function PurchaseReviewPanel({
         </div>
 
         <div className="mt-4 rounded-2xl border border-white/[0.04] bg-black/16 px-4 py-3 text-sm text-white/54">
-          Your selected upgrade will appear here before purchase confirmation.
+          Your selected upgrade will appear here before purchase.
         </div>
       </div>
     );
@@ -60,6 +62,7 @@ export default function PurchaseReviewPanel({
   const next = current + 1;
   const remaining =
     summaryBalance == null ? null : summaryBalance - xpPerPoint;
+  const wasJustPurchased = lastPurchased === attr.key;
 
   return (
     <div
@@ -78,15 +81,15 @@ export default function PurchaseReviewPanel({
               6
             </span>
 
-            Confirm Purchase
+            Purchase Review
           </div>
 
           <div className="mt-1 text-xl font-semibold tracking-tight text-white">
-            Upgrade {attr.title}
+            Buy {attr.title}
           </div>
 
           <div className="mt-1 text-sm text-white/56">
-            Review before spending XP.
+            Review your upgrade before spending XP.
           </div>
         </div>
 
@@ -100,7 +103,9 @@ export default function PurchaseReviewPanel({
           className={[
             "relative overflow-hidden rounded-[26px] border px-5 py-5",
             guildTheme.border,
-            "bg-[linear-gradient(180deg,rgba(20,27,38,0.88),rgba(10,14,22,0.96))]",
+            wasJustPurchased
+              ? "bg-[linear-gradient(180deg,rgba(6,78,59,0.55),rgba(10,14,22,0.96))] ring-1 ring-emerald-300/20"
+              : "bg-[linear-gradient(180deg,rgba(20,27,38,0.88),rgba(10,14,22,0.96))]",
           ].join(" ")}
         >
           <div
@@ -125,8 +130,15 @@ export default function PurchaseReviewPanel({
                 </div>
               </div>
 
-              <div className="rounded-full border border-cyan-300/15 bg-cyan-400/[0.10] px-3 py-1 text-xs font-semibold text-cyan-100">
-                +1
+              <div
+                className={[
+                  "rounded-full border px-3 py-1 text-xs font-semibold",
+                  wasJustPurchased
+                    ? "border-emerald-300/20 bg-emerald-400/[0.12] text-emerald-100"
+                    : "border-cyan-300/15 bg-cyan-400/[0.10] text-cyan-100",
+                ].join(" ")}
+              >
+                {wasJustPurchased ? "Purchased" : "+1 Upgrade"}
               </div>
             </div>
 
@@ -177,26 +189,46 @@ export default function PurchaseReviewPanel({
                 </span>
               </div>
             </div>
+
+            <div className="mt-5 rounded-2xl border border-white/[0.05] bg-black/18 px-4 py-3">
+              <div className="flex items-start gap-3">
+                <div className="mt-0.5 text-lg">🔒</div>
+
+                <div>
+                  <div className="text-sm font-semibold text-white">
+                    This upgrade is permanent
+                  </div>
+
+                  <div className="mt-1 text-xs leading-5 text-white/52">
+                    Purchased stat upgrades cannot be refunded or reversed.
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              disabled={!canConfirm || spending || wasJustPurchased}
+              onClick={onConfirm}
+              className={[
+                "mt-5 w-full rounded-[24px] px-5 py-4 text-[17px] font-semibold tracking-tight transition-all duration-200",
+                wasJustPurchased
+                  ? "border border-emerald-300/20 bg-emerald-400/[0.14] text-emerald-100 shadow-[0_0_28px_rgba(52,211,153,0.16)]"
+                  : canConfirm && !spending
+                  ? "bg-[linear-gradient(180deg,#37d7f6,#22c7ee)] text-slate-950 shadow-[0_0_28px_rgba(34,211,238,0.28)] hover:scale-[1.02]"
+                  : "cursor-not-allowed border border-white/[0.05] bg-white/[0.04] text-white/34",
+              ].join(" ")}
+            >
+              {wasJustPurchased
+                ? `Purchased — ${attr.title} upgraded`
+                : spending
+                ? "Processing Purchase..."
+                : canConfirm
+                ? `Buy +1 ${attr.title} (${xpPerPoint} XP)`
+                : "Verification Required"}
+            </button>
           </div>
         </div>
-
-        <button
-          type="button"
-          disabled={!canConfirm || spending}
-          onClick={onConfirm}
-          className={[
-            "mt-4 w-full rounded-[22px] px-5 py-4 text-base font-semibold transition-all duration-200",
-            canConfirm && !spending
-              ? "bg-cyan-400 text-slate-950 shadow-[0_0_28px_rgba(34,211,238,0.28)] hover:scale-[1.02] hover:bg-cyan-300"
-              : "cursor-not-allowed border border-white/[0.05] bg-white/[0.04] text-white/34",
-          ].join(" ")}
-        >
-          {spending
-            ? "Processing Purchase..."
-            : canConfirm
-            ? `Confirm +1 ${attr.title}`
-            : "Verification Required"}
-        </button>
       </div>
     </div>
   );
