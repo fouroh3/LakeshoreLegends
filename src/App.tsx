@@ -28,7 +28,16 @@ export default function App() {
   const view = useMemo<ViewMode>(() => {
     const params = new URLSearchParams(window.location.search);
     const raw = params.get("view") || "";
-        if (
+
+    const path = window.location.pathname
+      .replace(/^\/+|\/+$/g, "")
+      .toLowerCase();
+
+    if (path === "bossdisplay") {
+      return "boss-display";
+    }
+
+    if (
       raw === "store" ||
       raw === "battle" ||
       raw === "cards" ||
@@ -36,6 +45,7 @@ export default function App() {
     ) {
       return raw;
     }
+
     return "";
   }, []);
 
