@@ -48,6 +48,7 @@ function makeBossAttackLockKey(args: {
     normalizeGuildKey(args.guild),
   ].join("::");
 }
+
 async function submitHpBatch(args: {
   sessionId: string;
   note?: string;
@@ -99,6 +100,7 @@ async function submitHpBatch(args: {
     }>;
   };
 }
+
 
 export default function BattlePage({ onBack }: Props) {
   const pageActive = usePageActive();
@@ -367,7 +369,6 @@ export default function BattlePage({ onBack }: Props) {
       return;
     }
 
-    // ✅ LIMIT GUARD
     if (selectedIds.length > 15) {
       setBanner({
         type: "err",
@@ -402,7 +403,6 @@ export default function BattlePage({ onBack }: Props) {
     });
 
     try {
-      // optimistic update
       for (const row of snapshot) {
         applyOptimisticHp(row.studentId, {
           studentId: row.studentId,
@@ -411,44 +411,43 @@ export default function BattlePage({ onBack }: Props) {
         });
       }
 
-const result = await submitHpBatch({
-  sessionId: cleanSessionId,
-  note: note.trim(),
-  requestId: `${cleanSessionId}:batch:${submitNonce}`,
-  entries: snapshot.map((row) => ({
-    studentId: row.studentId,
-    delta,
-    note: note.trim(),
-  })),
-});
+      const result = await submitHpBatch({
+        sessionId: cleanSessionId,
+        note: note.trim(),
+        requestId: `${cleanSessionId}:batch:${submitNonce}`,
+        entries: snapshot.map((row) => ({
+          studentId: row.studentId,
+          delta,
+          note: note.trim(),
+        })),
+      });
 
-const appliedCount = Array.isArray(result.results)
-  ? result.results.length
-  : result.count ?? snapshot.length;
+      const appliedCount = Array.isArray(result.results)
+        ? result.results.length
+        : result.count ?? snapshot.length;
 
-if (Array.isArray(result.results)) {
-  for (const row of result.results) {
-    applyOptimisticHp(row.studentId, {
-      studentId: row.studentId,
-      baseHP: row.baseHP,
-      currentHP: row.after,
-    });
-  }
-}
+      if (Array.isArray(result.results)) {
+        for (const row of result.results) {
+          applyOptimisticHp(row.studentId, {
+            studentId: row.studentId,
+            baseHP: row.baseHP,
+            currentHP: row.after,
+          });
+        }
+      }
 
-setBanner({
-  type: "ok",
-  msg: result.deduped
-    ? "Already submitted ✅ No duplicate damage/heal was applied."
-    : `Applied ✅ (${appliedCount}/${snapshot.length} target${
-        snapshot.length === 1 ? "" : "s"
-      })`,
-});
+      setBanner({
+        type: "ok",
+        msg: result.deduped
+          ? "Already submitted ✅ No duplicate damage/heal was applied."
+          : `Applied ✅ (${appliedCount}/${snapshot.length} target${
+              snapshot.length === 1 ? "" : "s"
+            })`,
+      });
 
       setSelectedIds([]);
       setNote("");
     } catch (e: any) {
-      // rollback
       for (const row of snapshot) {
         clearPending(row.studentId);
         applyOptimisticHp(row.studentId, {

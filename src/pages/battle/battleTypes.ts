@@ -15,6 +15,8 @@ export type BattleControlRow = {
   bossKey?: string;
   bossInstanceId?: string;
   guildAttacks?: string;
+  round?: number;
+  turn?: string;
 };
 
 export type PendingHp = { expected: number; base: number; ts: number };
