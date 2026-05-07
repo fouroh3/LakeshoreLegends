@@ -505,32 +505,34 @@ useEffect(() => {
                     guildTheme={guildTheme}
                   />
 
-                  <AttributeGrid
-                    xpPerPoint={xpPerPoint}
-                    storeLocked={storeLocked}
-                    pin={pin}
-                    confirmOk={confirmOk}
-                    hasEnoughPoints={hasEnoughPoints}
-                    canSelectAttribute={canSelectAttribute}
-                    withinWindow={withinWindow}
-                    pendingTarget={pendingTarget}
-                    setPendingTarget={setPendingTarget}
-                    displayAttr={displayAttr}
-                    guildTheme={guildTheme}
-                  />
+                  <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1.05fr)_minmax(360px,0.95fr)]">
+                    <AttributeGrid
+                      xpPerPoint={xpPerPoint}
+                      storeLocked={storeLocked}
+                      pin={pin}
+                      confirmOk={confirmOk}
+                      hasEnoughPoints={hasEnoughPoints}
+                      canSelectAttribute={canSelectAttribute}
+                      withinWindow={withinWindow}
+                      pendingTarget={pendingTarget}
+                      setPendingTarget={setPendingTarget}
+                      displayAttr={displayAttr}
+                      guildTheme={guildTheme}
+                    />
 
-                  <PurchaseReviewPanel
-                    pendingTarget={pendingTarget}
-                    displayAttr={displayAttr}
-                    xpPerPoint={xpPerPoint}
-                    summaryBalance={summary?.balance ?? null}
-                    canConfirm={canConfirmPurchase}
-                    spending={spending}
-                    onConfirm={() => {
-                      void confirmSpend();
-                    }}
-                    guildTheme={guildTheme}
-                  />
+                    <PurchaseReviewPanel
+                      pendingTarget={pendingTarget}
+                      displayAttr={displayAttr}
+                      xpPerPoint={xpPerPoint}
+                      summaryBalance={summary?.balance ?? null}
+                      canConfirm={canConfirmPurchase}
+                      spending={spending}
+                      onConfirm={() => {
+                        void confirmSpend();
+                      }}
+                      guildTheme={guildTheme}
+                    />
+                  </div>
                 </div>
               )}
             </section>
