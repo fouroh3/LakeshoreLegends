@@ -1,3 +1,5 @@
+// src/pages/battle/battleBossMeta.ts
+
 import lakeOfShadowsLogo from "../../assets/quests/Quest Logo - Lake of Shadows.png";
 import alchemistsLairLogo from "../../assets/quests/Quest Logo - Alchemists Lair.png";
 import ensnaringCryptLogo from "../../assets/quests/Quest Logo - Ensnaring Crypt.png";

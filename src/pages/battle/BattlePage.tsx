@@ -68,7 +68,19 @@ async function submitHpBatch(args: {
     }),
   });
 
-  const data = await res.json().catch(() => null);
+  const text = await res.text();
+
+  let data: any = null;
+
+  try {
+    data = text ? JSON.parse(text) : null;
+  } catch {
+    throw new Error(
+      `HP API returned non-JSON (${res.status}). ${text
+        .slice(0, 140)
+        .replace(/\s+/g, " ")}`
+    );
+  }
 
   if (!res.ok || !data?.ok) {
     throw new Error(data?.error || `HP batch submit failed: ${res.status}`);
@@ -76,8 +88,9 @@ async function submitHpBatch(args: {
 
   return data as {
     ok: true;
-    count: number;
-    results: Array<{
+    deduped?: boolean;
+    count?: number;
+    results?: Array<{
       studentId: string;
       baseHP: number;
       before: number;
@@ -398,23 +411,39 @@ export default function BattlePage({ onBack }: Props) {
         });
       }
 
-      await submitHpBatch({
-        sessionId: cleanSessionId,
-        note: note.trim(),
-        requestId: `${cleanSessionId}:batch:${submitNonce}`,
-        entries: snapshot.map((row) => ({
-          studentId: row.studentId,
-          delta,
-          note: note.trim(),
-        })),
-      });
+const result = await submitHpBatch({
+  sessionId: cleanSessionId,
+  note: note.trim(),
+  requestId: `${cleanSessionId}:batch:${submitNonce}`,
+  entries: snapshot.map((row) => ({
+    studentId: row.studentId,
+    delta,
+    note: note.trim(),
+  })),
+});
 
-      setBanner({
-        type: "ok",
-        msg: `Submitted ✅ (${snapshot.length} target${
-          snapshot.length === 1 ? "" : "s"
-        })`,
-      });
+const appliedCount = Array.isArray(result.results)
+  ? result.results.length
+  : result.count ?? snapshot.length;
+
+if (Array.isArray(result.results)) {
+  for (const row of result.results) {
+    applyOptimisticHp(row.studentId, {
+      studentId: row.studentId,
+      baseHP: row.baseHP,
+      currentHP: row.after,
+    });
+  }
+}
+
+setBanner({
+  type: "ok",
+  msg: result.deduped
+    ? "Already submitted ✅ No duplicate damage/heal was applied."
+    : `Applied ✅ (${appliedCount}/${snapshot.length} target${
+        snapshot.length === 1 ? "" : "s"
+      })`,
+});
 
       setSelectedIds([]);
       setNote("");
