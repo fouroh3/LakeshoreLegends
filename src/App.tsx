@@ -26,25 +26,14 @@ type ViewMode = "" | "store" | "battle" | "cards" | "boss-display";
 
 export default function App() {
   const view = useMemo<ViewMode>(() => {
-    const params = new URLSearchParams(window.location.search);
-    const raw = params.get("view") || "";
-
     const path = window.location.pathname
       .replace(/^\/+|\/+$/g, "")
       .toLowerCase();
 
-    if (path === "bossdisplay") {
-      return "boss-display";
-    }
-
-    if (
-      raw === "store" ||
-      raw === "battle" ||
-      raw === "cards" ||
-      raw === "boss-display"
-    ) {
-      return raw;
-    }
+    if (path === "store") return "store";
+    if (path === "battle") return "battle";
+    if (path === "cards") return "cards";
+    if (path === "bossdisplay") return "boss-display";
 
     return "";
   }, []);
@@ -74,15 +63,15 @@ export default function App() {
   }, [view]);
 
   const goToView = (nextView: ViewMode) => {
-    const url = new URL(window.location.href);
+    const routes: Record<ViewMode, string> = {
+      "": "/",
+      store: "/store",
+      battle: "/battle",
+      cards: "/cards",
+      "boss-display": "/bossdisplay",
+    };
 
-    if (!nextView) {
-      url.searchParams.delete("view");
-    } else {
-      url.searchParams.set("view", nextView);
-    }
-
-    window.location.href = url.toString();
+    window.location.href = routes[nextView];
   };
 
   const [students, setStudents] = useState<Student[]>([]);
