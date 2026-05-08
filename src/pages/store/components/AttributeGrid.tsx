@@ -1,3 +1,5 @@
+// src/pages/store/components/AttributeGrid.tsx
+
 import type { AttrKey } from "../../../xpApi";
 import { ATTRS, innerCard, label } from "../storeTheme";
 
@@ -35,24 +37,64 @@ export default function AttributeGrid({
   guildTheme,
 }: Props) {
   return (
-    <div className={`${innerCard} px-4 py-4 sm:px-5`}>
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+    <div
+      className={[
+        innerCard,
+        "px-3 py-3 xl:px-5 xl:py-5 transition-all duration-500",
+
+        canSelectAttribute
+          ? [
+              "border-cyan-300/20",
+              "bg-[linear-gradient(180deg,rgba(10,18,30,0.96),rgba(6,10,18,0.98))]",
+              "shadow-[0_0_44px_rgba(34,211,238,0.12)]",
+              "ring-1 ring-cyan-300/10",
+            ].join(" ")
+          : ["bg-slate-950/40", "opacity-85"].join(" "),
+      ].join(" ")}
+    >
+      <div className="flex flex-col gap-2 xl:flex-row xl:items-end xl:justify-between">
         <div>
-          <div className={label}>Upgrade Preview</div>
-          <div className="mt-1 text-xl font-semibold tracking-tight text-white">
-            Select an attribute
+          <div className={`${label} flex items-center gap-2`}>
+            <span
+              className={`flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-black ${
+                canSelectAttribute
+                  ? "bg-cyan-300 text-slate-950 shadow-[0_0_18px_rgba(34,211,238,0.65)]"
+                  : "bg-white/10 text-white/40"
+              }`}
+            >
+              5
+            </span>
+
+            Pick Attribute
           </div>
-          <div className="mt-1 text-sm text-white/56">
-            Choose one core stat to preview a +1 upgrade.
+
+          <div
+            className={`mt-1 text-lg xl:text-xl font-semibold tracking-tight ${
+              canSelectAttribute ? "text-cyan-100" : "text-white"
+            }`}
+          >
+            {canSelectAttribute
+              ? "Store unlocked — pick one stat"
+              : "Pick one stat to upgrade"}
+          </div>
+
+          <div
+            className={`mt-1 text-xs xl:text-sm ${
+              canSelectAttribute ? "text-cyan-100/70" : "text-white/56"
+            }`}
+          >
+            {canSelectAttribute
+              ? "Choose a stat card below."
+              : "Select a card to preview the upgrade."}
           </div>
         </div>
 
-        <div className="rounded-full border border-white/[0.05] bg-white/[0.035] px-3 py-1.5 text-xs text-white/60">
+        <div className="self-start rounded-full border border-white/[0.05] bg-white/[0.035] px-3 py-1 text-[11px] text-white/60">
           Cost: {xpPerPoint} XP
         </div>
       </div>
 
-      <div className="mt-4 grid grid-cols-2 gap-3 xl:grid-cols-3">
+      <div className="mt-4 grid grid-cols-2 gap-2 xl:mt-5 xl:gap-3 xl:grid-cols-3">
         {ATTRS.map(({ key, title, icon, tint }) => {
           const current = displayAttr(key);
           const next = current + 1;
@@ -67,97 +109,88 @@ export default function AttributeGrid({
               key={key}
               type="button"
               className={[
-                "group relative overflow-hidden rounded-[26px] border px-4 py-5 text-left transition-all duration-300",
+                "group relative overflow-hidden rounded-[20px] xl:rounded-[24px] border px-3 py-3 xl:px-4 xl:py-4 text-left transition-all duration-300",
                 "shadow-[inset_0_1px_0_rgba(255,255,255,0.025)]",
+
                 isSelected
-                  ? `${guildTheme.border} ${guildTheme.softPanel} ${guildTheme.cardGlow} scale-[1.02] shadow-[0_16px_32px_rgba(0,0,0,0.32)]`
-                  : "border-white/[0.05] bg-[linear-gradient(180deg,rgba(18,22,31,0.62),rgba(8,10,16,0.78))] hover:-translate-y-[3px] hover:border-white/[0.08] hover:bg-[linear-gradient(180deg,rgba(22,27,38,0.72),rgba(10,13,19,0.84))]",
+                  ? `${guildTheme.border} ${guildTheme.softPanel} ${guildTheme.cardGlow} scale-[1.01] shadow-[0_12px_24px_rgba(0,0,0,0.26)]`
+                  : "border-white/[0.05] bg-[linear-gradient(180deg,rgba(18,22,31,0.62),rgba(8,10,16,0.78))] hover:border-white/[0.08]",
+
                 !canSelectAttribute ? "cursor-not-allowed opacity-75" : "",
               ].join(" ")}
               disabled={!canSelectAttribute}
               onClick={() => setPendingTarget(isSelected ? null : key)}
-              title={
-                canSelectAttribute
-                  ? isSelected
-                    ? "Selected (tap again to unselect)"
-                    : `Select ${title}`
-                  : "Need store open + PIN + confirm + enough XP"
-              }
             >
               <div
-                className={`pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b ${tint} opacity-80`}
+                className={`pointer-events-none absolute inset-x-0 top-0 h-16 xl:h-20 bg-gradient-to-b ${tint} opacity-80`}
               />
+
               <div
                 className={`pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r ${guildTheme.accent}`}
               />
 
-              <div className="relative flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-full border border-white/[0.06] bg-white/[0.04] text-lg">
-                    {icon}
-                  </div>
-                  <div className="text-base font-semibold text-white">
-                    {title}
-                  </div>
+              <div className="relative flex items-center gap-2">
+                <div className="shrink-0 text-lg xl:text-2xl leading-none">
+                  {icon}
                 </div>
 
-                <div
-                  className={`rounded-full border px-3 py-1 text-xs ${
-                    isSelected
-                      ? `${guildTheme.border} ${guildTheme.text} bg-white/[0.04]`
-                      : "border-white/[0.05] bg-white/[0.03] text-white/50"
-                  }`}
-                >
-                  +1
+                <div className="min-w-0 flex-1 text-xs xl:text-[13px] font-semibold leading-tight text-white">
+                  {title}
                 </div>
               </div>
 
-              <div className="mt-6 flex items-end justify-center gap-3">
-                <span className="text-5xl font-bold text-white/80">
+              <div className="mt-4 xl:mt-5 flex items-end justify-center gap-2">
+                <span className="text-3xl xl:text-4xl font-bold text-white/80">
                   {current}
                 </span>
 
                 {isSelected && (
                   <>
-                    <span className={`text-4xl ${guildTheme.text}`}>→</span>
-                    <span className={`text-5xl font-bold ${guildTheme.text}`}>
+                    <span className={`text-2xl xl:text-3xl ${guildTheme.text}`}>
+                      →
+                    </span>
+
+                    <span
+                      className={`text-3xl xl:text-4xl font-bold ${guildTheme.text}`}
+                    >
                       {next}
                     </span>
                   </>
                 )}
               </div>
 
-              <div className="mt-5">
-                <div className="relative h-2.5 rounded-full bg-black/40 ring-1 ring-white/[0.05]">
+              <div className="mt-3 xl:mt-4">
+                <div className="relative h-2 rounded-full bg-black/40 ring-1 ring-white/[0.05]">
                   <div
                     className="absolute left-0 top-0 h-full rounded-full bg-white/20"
                     style={{ width: `${currentPct}%` }}
                   />
+
                   {isSelected && (
                     <div
-                      className="absolute left-0 top-0 h-full rounded-full bg-cyan-400 transition-[width] duration-500"
+                      className={`absolute left-0 top-0 h-full rounded-full ${guildTheme.accent} shadow-[0_0_16px_rgba(34,211,238,0.45)] transition-[width] duration-500`}
                       style={{ width: `${nextPct}%` }}
                     />
                   )}
                 </div>
               </div>
 
-              <div className="mt-4 flex items-center justify-between text-xs">
-                <span className="text-white/46">
-                  {isSelected ? "Upgrade preview active" : "Tap to preview"}
-                </span>
-                <span
-                  className={isSelected ? guildTheme.text : "text-white/40"}
-                >
-                  {isSelected ? `${current} → ${next}` : `${current} current`}
-                </span>
-              </div>
+              <button
+                type="button"
+                className={`mt-3 xl:mt-4 h-10 xl:h-11 w-full rounded-xl text-xs xl:text-sm font-semibold transition ${
+                  isSelected
+                    ? "bg-cyan-400 text-slate-950 shadow-[0_0_20px_rgba(34,211,238,0.28)]"
+                    : "border border-white/[0.05] bg-white/[0.04] text-white/70 hover:bg-white/[0.07]"
+                }`}
+              >
+                {isSelected ? "Selected" : "Select"}
+              </button>
             </button>
           );
         })}
       </div>
 
-      <div className="mt-3 text-xs text-white/52">
+      <div className="mt-3 xl:mt-4 text-[11px] xl:text-xs text-white/52">
         {storeLocked
           ? "Store is closed."
           : !pin.trim()
@@ -169,7 +202,7 @@ export default function AttributeGrid({
           : !withinWindow
           ? "Purchases are limited right now."
           : pendingTarget
-          ? "Great — now review and confirm below."
+          ? "Great — now review and confirm purchase."
           : "Select an attribute to preview the purchase."}
       </div>
     </div>

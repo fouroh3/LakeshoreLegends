@@ -48,6 +48,7 @@ function makeBossAttackLockKey(args: {
     normalizeGuildKey(args.guild),
   ].join("::");
 }
+
 async function submitHpBatch(args: {
   sessionId: string;
   note?: string;
@@ -68,7 +69,19 @@ async function submitHpBatch(args: {
     }),
   });
 
-  const data = await res.json().catch(() => null);
+  const text = await res.text();
+
+  let data: any = null;
+
+  try {
+    data = text ? JSON.parse(text) : null;
+  } catch {
+    throw new Error(
+      `HP API returned non-JSON (${res.status}). ${text
+        .slice(0, 140)
+        .replace(/\s+/g, " ")}`
+    );
+  }
 
   if (!res.ok || !data?.ok) {
     throw new Error(data?.error || `HP batch submit failed: ${res.status}`);
@@ -76,8 +89,9 @@ async function submitHpBatch(args: {
 
   return data as {
     ok: true;
-    count: number;
-    results: Array<{
+    deduped?: boolean;
+    count?: number;
+    results?: Array<{
       studentId: string;
       baseHP: number;
       before: number;
@@ -86,6 +100,7 @@ async function submitHpBatch(args: {
     }>;
   };
 }
+
 
 export default function BattlePage({ onBack }: Props) {
   const pageActive = usePageActive();
@@ -354,7 +369,6 @@ export default function BattlePage({ onBack }: Props) {
       return;
     }
 
-    // ✅ LIMIT GUARD
     if (selectedIds.length > 15) {
       setBanner({
         type: "err",
@@ -389,7 +403,6 @@ export default function BattlePage({ onBack }: Props) {
     });
 
     try {
-      // optimistic update
       for (const row of snapshot) {
         applyOptimisticHp(row.studentId, {
           studentId: row.studentId,
@@ -398,7 +411,7 @@ export default function BattlePage({ onBack }: Props) {
         });
       }
 
-      await submitHpBatch({
+      const result = await submitHpBatch({
         sessionId: cleanSessionId,
         note: note.trim(),
         requestId: `${cleanSessionId}:batch:${submitNonce}`,
@@ -409,17 +422,32 @@ export default function BattlePage({ onBack }: Props) {
         })),
       });
 
+      const appliedCount = Array.isArray(result.results)
+        ? result.results.length
+        : result.count ?? snapshot.length;
+
+      if (Array.isArray(result.results)) {
+        for (const row of result.results) {
+          applyOptimisticHp(row.studentId, {
+            studentId: row.studentId,
+            baseHP: row.baseHP,
+            currentHP: row.after,
+          });
+        }
+      }
+
       setBanner({
         type: "ok",
-        msg: `Submitted ✅ (${snapshot.length} target${
-          snapshot.length === 1 ? "" : "s"
-        })`,
+        msg: result.deduped
+          ? "Already submitted ✅ No duplicate damage/heal was applied."
+          : `Applied ✅ (${appliedCount}/${snapshot.length} target${
+              snapshot.length === 1 ? "" : "s"
+            })`,
       });
 
       setSelectedIds([]);
       setNote("");
     } catch (e: any) {
-      // rollback
       for (const row of snapshot) {
         clearPending(row.studentId);
         applyOptimisticHp(row.studentId, {

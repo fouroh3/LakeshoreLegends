@@ -18,7 +18,7 @@ export const BOSS_PENDING_TTL_MS = 8_000;
 export const HP_POLL_MS = 15_000;
 export const HP_JITTER_MS = 4_000;
 
-export const BATTLE_CONTROL_POLL_MS_TEACHER = 10_000;
-export const BATTLE_CONTROL_POLL_MS_STUDENT = 5_000;
+export const BATTLE_CONTROL_POLL_MS_TEACHER = 6_000;
+export const BATTLE_CONTROL_POLL_MS_STUDENT = 8_000;
 
 export const BOSS_POLL_MS = 10_000;

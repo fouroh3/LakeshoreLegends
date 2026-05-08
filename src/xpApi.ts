@@ -19,6 +19,12 @@ export type StoreState = {
   xpLastWriteIso?: string;
 };
 
+export type ApiVersions = {
+  hpLastWriteIso: string;
+  xpLastWriteIso: string;
+  now?: string;
+};
+
 export type XpSummary = {
   studentId: string;
   earned: number;
@@ -72,6 +78,21 @@ async function fetchJsonStrict(url: string, init?: RequestInit) {
   }
 
   return json;
+}
+
+export async function getApiVersions(): Promise<ApiVersions> {
+  const url = `${XP_API_URL}?action=versions&_=${Date.now()}`;
+  const data = await fetchJsonStrict(url, { method: "GET" });
+
+  if (!data?.ok) {
+    throw new Error(data?.error || data?.message || "Failed to load versions");
+  }
+
+  return {
+    hpLastWriteIso: data.hpLastWriteIso ? String(data.hpLastWriteIso) : "",
+    xpLastWriteIso: data.xpLastWriteIso ? String(data.xpLastWriteIso) : "",
+    now: data.now ? String(data.now) : "",
+  };
 }
 
 export async function getStoreState(): Promise<StoreState> {

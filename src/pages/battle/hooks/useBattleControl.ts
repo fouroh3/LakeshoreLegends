@@ -33,6 +33,8 @@ type BattleControlApiResponse = {
 
 export function useBattleControl(pageActive: boolean, isTeacher: boolean) {
   const [battleRows, setBattleRows] = useState<BattleControlRow[]>([]);
+  const abortRef = useRef<AbortController | null>(null);
+  const runningRef = useRef(false);
   const aliveRef = useRef(true);
 
   const battleControlUrl = useCallback(
@@ -94,12 +96,26 @@ export function useBattleControl(pageActive: boolean, isTeacher: boolean) {
   );
 
   const refreshOnce = useCallback(async (): Promise<BattleControlRow[]> => {
+  if (runningRef.current) {
+    return battleRows;
+  }
+
+  runningRef.current = true;
+
+  abortRef.current?.abort();
+
+  const ctrl = new AbortController();
+  abortRef.current = ctrl;
+
+  try {
     const payload = (await fetch(battleControlUrl(), {
       cache: "no-store",
+      signal: ctrl.signal,
     }).then(async (r) => {
       if (!r.ok) {
         throw new Error(`Battle control fetch failed: ${r.status}`);
       }
+
       return (await r.json()) as BattleControlApiResponse;
     })) as BattleControlApiResponse;
 
@@ -108,9 +124,22 @@ export function useBattleControl(pageActive: boolean, isTeacher: boolean) {
     }
 
     const parsed = normalizeRows(payload.rows || []);
-    if (aliveRef.current) setBattleRows(parsed);
+
+    if (aliveRef.current) {
+      setBattleRows(parsed);
+    }
+
     return parsed;
-  }, [battleControlUrl, normalizeRows]);
+  } catch (e: any) {
+    if (e?.name === "AbortError") {
+      return battleRows;
+    }
+
+    throw e;
+  } finally {
+    runningRef.current = false;
+  }
+}, [battleControlUrl, normalizeRows, battleRows]);
 
   useEffect(() => {
     aliveRef.current = true;

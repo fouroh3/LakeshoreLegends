@@ -11,6 +11,7 @@ import { loadStudents } from "./data";
 import type { Student } from "./types";
 import "./index.css";
 import { fetchHpMap } from "./hpApi";
+import BossDisplayPage from "./pages/battle/BossDisplayPage";
 
 function normId(id: string | undefined | null) {
   return String(id ?? "")
@@ -21,13 +22,19 @@ function normId(id: string | undefined | null) {
     .toUpperCase();
 }
 
-type ViewMode = "" | "store" | "battle" | "cards";
+type ViewMode = "" | "store" | "battle" | "cards" | "boss-display";
 
 export default function App() {
   const view = useMemo<ViewMode>(() => {
-    const params = new URLSearchParams(window.location.search);
-    const raw = params.get("view") || "";
-    if (raw === "store" || raw === "battle" || raw === "cards") return raw;
+    const path = window.location.pathname
+      .replace(/^\/+|\/+$/g, "")
+      .toLowerCase();
+
+    if (path === "store") return "store";
+    if (path === "battle") return "battle";
+    if (path === "cards") return "cards";
+    if (path === "bossdisplay") return "boss-display";
+
     return "";
   }, []);
 
@@ -36,10 +43,17 @@ export default function App() {
       document.title = "Battle Mode";
       return;
     }
+
+    if (view === "boss-display") {
+      document.title = "Boss Display";
+      return;
+    }
+
     if (view === "store") {
       document.title = "Store";
       return;
     }
+
     if (view === "cards") {
       document.title = "Card Library";
       return;
@@ -49,15 +63,15 @@ export default function App() {
   }, [view]);
 
   const goToView = (nextView: ViewMode) => {
-    const url = new URL(window.location.href);
+    const routes: Record<ViewMode, string> = {
+      "": "/",
+      store: "/store",
+      battle: "/battle",
+      cards: "/cards",
+      "boss-display": "/bossdisplay",
+    };
 
-    if (!nextView) {
-      url.searchParams.delete("view");
-    } else {
-      url.searchParams.set("view", nextView);
-    }
-
-    window.location.href = url.toString();
+    window.location.href = routes[nextView];
   };
 
   const [students, setStudents] = useState<Student[]>([]);
@@ -333,9 +347,21 @@ export default function App() {
     attrFilterMin,
   ]);
 
-  if (view === "battle") return <BattlePage onBack={() => goToView("")} />;
-  if (view === "store") return <StorePage onBack={() => goToView("")} />;
-  if (view === "cards") return <CardLibraryPage onBack={() => goToView("")} />;
+  if (view === "battle") {
+    return <BattlePage onBack={() => goToView("")} />;
+  }
+
+  if (view === "boss-display") {
+    return <BossDisplayPage />;
+  }
+
+  if (view === "store") {
+    return <StorePage onBack={() => goToView("")} />;
+  }
+
+  if (view === "cards") {
+    return <CardLibraryPage onBack={() => goToView("")} />;
+  }
 
   return (
     <div className="min-h-screen w-full bg-[radial-gradient(circle_at_top,rgba(40,60,120,0.12),transparent_40%),#0a0a0a] text-zinc-100">
