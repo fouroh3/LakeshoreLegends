@@ -437,9 +437,14 @@ useEffect(() => {
             return;
           }
 
-          const url = new URL(window.location.href);
-          url.searchParams.set("view", next);
-          window.location.href = url.toString();
+          const routes: Record<string, string> = {
+            dashboard: "/",
+            store: "/store",
+            cards: "/cards",
+            battle: "/battle",
+          };
+
+          window.location.href = routes[next] || "/";
         }}
       />
 

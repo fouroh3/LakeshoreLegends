@@ -423,13 +423,14 @@ export default function CardLibraryPage({ onBack }: Props) {
               return;
             }
 
-            const url = new URL(window.location.href);
-            if (next === "cards") {
-              url.searchParams.set("view", "cards");
-            } else {
-              url.searchParams.set("view", next);
-            }
-            window.location.href = url.toString();
+            const routes: Record<string, string> = {
+              dashboard: "/",
+              store: "/store",
+              cards: "/cards",
+              battle: "/battle",
+            };
+
+            window.location.href = routes[next] || "/";
           }}
         />
 
