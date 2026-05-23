@@ -1,3 +1,5 @@
+// src/data.ts
+
 import type { Student } from "./types";
 
 // ✅ Lakeshore Legends Apps Script Web App (XP/HP API)
@@ -85,10 +87,6 @@ function headerIndex(headers: string[]) {
   return map;
 }
 
-/**
- * Strict header lookup:
- * exact normalized match only
- */
 function pickStrict(map: Map<string, number>, ...keys: string[]) {
   for (const key of keys) {
     const idx = map.get(normalizeHeader(key));
@@ -97,12 +95,6 @@ function pickStrict(map: Map<string, number>, ...keys: string[]) {
   return -1;
 }
 
-/**
- * Flexible header lookup:
- * 1) exact normalized match
- * 2) exact match after removing spaces/underscores
- * 3) contains match after removing spaces/underscores
- */
 function pickFlexible(map: Map<string, number>, ...keys: string[]) {
   const entries = Array.from(map.entries());
 
@@ -148,10 +140,6 @@ function splitInventory(raw: any): string[] {
     .filter(Boolean);
 }
 
-/**
- * ✅ Master sheet uses a single "Name" column (often "Last, First").
- * This parses it into { first, last }.
- */
 function splitName(nameRaw: any): { first: string; last: string } {
   const s = String(nameRaw ?? "").trim();
   if (!s) return { first: "", last: "" };
@@ -176,13 +164,13 @@ function rowsToStudents(rows: string[][]): Student[] {
   const headers = rows[0];
   const idx = headerIndex(headers);
 
-  // strict lookups for identity columns
   const iId = pickStrict(idx, "id", "student id", "studentid");
   const iName = pickStrict(idx, "name", "student name");
   const iFirst = pickStrict(idx, "first", "first name", "firstname");
   const iLast = pickStrict(idx, "last", "last name", "lastname");
   const iHomeroom = pickStrict(idx, "homeroom", "home room", "hr", "class");
   const iGuild = pickStrict(idx, "guild");
+
   const iPortrait = pickStrict(
     idx,
     "portraiturl",
@@ -191,10 +179,22 @@ function rowsToStudents(rows: string[][]): Student[] {
     "avatar",
     "avatarurl"
   );
+
+  const iCompanion = pickStrict(
+    idx,
+    "companionurl",
+    "companion url",
+    "companion",
+    "peturl",
+    "pet url"
+  );
+
+  console.log("HEADERS", headers);
+  console.log("iCompanion", iCompanion, headers[iCompanion]);
+
   const iSkills = pickStrict(idx, "skills", "skill");
   const iInventory = pickStrict(idx, "inventory");
 
-  // flexible lookups for stats/bonus columns
   const iStr = pickFlexible(idx, "str", "strength");
   const iDex = pickFlexible(idx, "dex", "dexterity");
   const iCon = pickFlexible(idx, "con", "constitution");
@@ -291,6 +291,9 @@ function rowsToStudents(rows: string[][]): Student[] {
     const portraitUrl =
       iPortrait >= 0 ? String(row[iPortrait] || "").trim() : "";
 
+    const companionUrl =
+      iCompanion >= 0 ? String(row[iCompanion] || "").trim() : "";
+
     const skillsRaw = iSkills >= 0 ? row[iSkills] : "";
     const skills = splitSkills(skillsRaw);
 
@@ -312,6 +315,7 @@ function rowsToStudents(rows: string[][]): Student[] {
       inventory,
       ...(guild ? ({ guild } as any) : {}),
       ...(portraitUrl ? { portraitUrl } : {}),
+      ...(companionUrl ? { companionUrl } : {}),
     };
 
     out.push(student);

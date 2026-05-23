@@ -29,6 +29,7 @@ export type Student = {
 
   // optional visuals / metadata
   portraitUrl?: string;
+  companionUrl?: string;
   guild?: Guild;
 
   // HP (from Apps Script)
