@@ -346,7 +346,24 @@ export default function AbilityCard({
             )}
           </div>
         </div>
-
+        {person.companionUrl && (
+          <div className="pointer-events-none absolute bottom-2 left-2 z-10">
+            <img
+              src={person.companionUrl}
+              alt={`${person.first}'s companion`}
+              className="
+                h-28
+                w-28
+                object-contain
+                drop-shadow-[0_10px_18px_rgba(0,0,0,0.7)]
+                transition-transform
+                duration-300
+                group-hover:scale-[1.03]
+              "
+            />
+          </div>
+        )}
+        
         {isDead && (
           <div className="pointer-events-none absolute inset-0 z-20 flex flex-col items-center justify-center">
             <div className="absolute inset-0 rounded-xl bg-zinc-950/35" />

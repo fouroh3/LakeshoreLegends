@@ -186,26 +186,58 @@ function getCompanionInfo(person: any): CompanionInfo {
     person?.familiar ??
     null;
 
-  if (!raw) return null;
+  if (raw) {
+    if (typeof raw === "string") {
+      const name = raw.trim();
 
-  if (typeof raw === "string") {
-    const name = raw.trim();
-    return name ? { name } : null;
+      return name
+        ? {
+            name,
+            imageUrl: person?.companionUrl || undefined,
+          }
+        : null;
+    }
+
+    const name = String(raw.name ?? raw.title ?? raw.id ?? "").trim();
+
+    if (!name) return null;
+
+    return {
+      name,
+      imageUrl:
+        raw.imageUrl ||
+        raw.image ||
+        raw.portraitUrl ||
+        raw.avatarUrl ||
+        person?.companionUrl ||
+        undefined,
+      effect: raw.effect || raw.description || undefined,
+    };
   }
 
-  const name = String(raw.name ?? raw.title ?? raw.id ?? "").trim();
-  if (!name) return null;
+  if (person?.companionUrl) {
+    const fileName = person.companionUrl
+      .split("/")
+      .pop()
+      ?.replace(/\.[^/.]+$/, "");
 
-  return {
-    name,
-    imageUrl:
-      raw.imageUrl ||
-      raw.image ||
-      raw.portraitUrl ||
-      raw.avatarUrl ||
-      undefined,
-    effect: raw.effect || raw.description || undefined,
-  };
+    const parts = fileName?.split("_") || [];
+
+    const derivedName =
+      parts.length >= 3
+        ? parts
+            .slice(2)
+            .join(" ")
+            .replace(/-/g, " ")
+        : "Companion";
+
+    return {
+      name: derivedName,
+      imageUrl: person.companionUrl,
+    };
+  }
+
+  return null;
 }
 
 function getGuildSigil(guild?: string) {
@@ -504,9 +536,11 @@ function ShimmerSweep({
 function CompanionPanel({
   companion,
   guildTheme,
+  setExpandedCompanionUrl,
 }: {
   companion: CompanionInfo;
   guildTheme: GuildTheme;
+  setExpandedCompanionUrl: (url: string | null) => void;
 }) {
   if (!companion) {
     return (
@@ -537,38 +571,51 @@ function CompanionPanel({
   }
 
   return (
-    <div className="rounded-[20px] border border-zinc-800 bg-zinc-950/35 p-3">
-      <SectionHeading icon="🐾" title="Companion" className="mb-2" />
-      <div className="flex items-center gap-3">
-        <div
-          className={`relative h-16 w-16 shrink-0 overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-950 ${guildTheme.accentGlowSoft}`}
-        >
-          <div
-            className={`absolute inset-0 ${guildTheme.portraitGlow} opacity-40`}
-          />
+    <div
+      className={`relative min-h-[142px] overflow-hidden rounded-[22px] border border-zinc-800/80 bg-[linear-gradient(180deg,rgba(24,24,27,0.74),rgba(9,9,11,0.92))] p-3 transition-all duration-300 hover:border-zinc-700 ${guildTheme.accentGlowSoft}`}
+    >
+      <div
+        className={`pointer-events-none absolute inset-0 ${guildTheme.portraitGlow} opacity-25`}
+      />
+
+      <SectionHeading icon="🐾" title="Companion" className="relative mb-2" />
+
+      <div className="relative flex items-center gap-3.5">
+        <div className="relative flex h-28 w-28 shrink-0 items-end justify-center overflow-visible rounded-2xl border border-zinc-800/80 bg-zinc-950/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_14px_26px_rgba(0,0,0,0.42)]">
+          <div className="pointer-events-none absolute inset-x-2 bottom-1 h-3 rounded-full bg-black/45 blur-md" />
+
           {companion.imageUrl ? (
-            <img
-              src={companion.imageUrl}
-              alt={companion.name}
-              className="relative h-full w-full object-cover"
-            />
+            <button
+              type="button"
+              onClick={() => setExpandedCompanionUrl(companion.imageUrl || null)}
+              className="relative z-10 cursor-zoom-in"
+              aria-label={`View ${companion.name} companion image`}
+            >
+              <img
+                src={companion.imageUrl}
+                alt={companion.name}
+                className="h-[124px] w-[124px] object-contain drop-shadow-[0_12px_18px_rgba(0,0,0,0.72)] transition-transform duration-300 hover:scale-105"
+              />
+            </button>
           ) : (
             <div className="relative flex h-full w-full items-center justify-center text-xl text-zinc-500">
               🐾
             </div>
           )}
         </div>
+
         <div className="min-w-0">
-          <div className="truncate text-sm font-semibold text-zinc-100">
+          <div className="truncate text-xs font-semibold tracking-wide text-zinc-100">
             {companion.name}
           </div>
+
           {companion.effect ? (
             <div className="mt-1 line-clamp-2 text-xs leading-5 text-zinc-400">
               {companion.effect}
             </div>
           ) : (
-            <div className="mt-1 text-xs text-zinc-500">
-              Companion is ready for adventure.
+            <div className="mt-1 text-xs leading-5 text-zinc-500">
+              Click companion to view full image.
             </div>
           )}
         </div>
@@ -1522,6 +1569,13 @@ export default function CharacterProfileModal({
 
   const companion = useMemo(() => getCompanionInfo(person), [person]);
 
+  const [expandedCompanionUrl, setExpandedCompanionUrl] = useState<string | null>(
+    null
+  );
+
+  console.log("PERSON", person);
+  console.log("COMPANION", companion);
+  
 const cohortStudents = useMemo(() => {
   if (!person) return [];
   return getCohortStudents(allStudents, person);
@@ -1715,10 +1769,11 @@ console.log({
                                 />
                             </div>
                             ) : null}
-                          <CompanionPanel
-                            companion={companion}
-                            guildTheme={guildTheme}
-                          />
+              <CompanionPanel
+                companion={companion}
+                guildTheme={guildTheme}
+                setExpandedCompanionUrl={setExpandedCompanionUrl}
+              />
                           
                         </div>
 
@@ -1767,6 +1822,28 @@ console.log({
           </div>
         </div>
       </div>
+
+      {expandedCompanionUrl && (
+        <button
+          type="button"
+          onClick={() => setExpandedCompanionUrl(null)}
+          className="fixed inset-0 z-[200] flex items-center justify-center bg-black/88 backdrop-blur-sm"
+        >
+          <div className="relative max-h-[90vh] max-w-[90vw] p-4">
+            <img
+              src={expandedCompanionUrl}
+              alt="Expanded companion"
+              className="max-h-[85vh] max-w-[85vw] object-contain drop-shadow-[0_25px_40px_rgba(0,0,0,0.7)]"
+            />
+
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/30 to-transparent" />
+
+            <div className="absolute right-2 top-2 rounded-full border border-white/10 bg-black/60 px-3 py-1 text-xs text-zinc-300">
+              Click anywhere to close
+            </div>
+          </div>
+        </button>
+      )}
     </div>
   );
 }
