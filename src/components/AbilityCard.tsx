@@ -25,6 +25,7 @@ const densityConfig: Record<
     nameSize: string;
     metaSize: string;
     headerGap: string;
+
   }
 > = {
   comfortable: {
@@ -32,7 +33,7 @@ const densityConfig: Record<
     gap: "gap-3",
     statGap: "space-y-2",
     avatarSize: 58,
-    nameSize: "text-[17px]",
+    nameSize: "text-[18px]",
     metaSize: "text-xs",
     headerGap: "gap-3",
   },
@@ -41,7 +42,7 @@ const densityConfig: Record<
     gap: "gap-2.5",
     statGap: "space-y-1.5",
     avatarSize: 54,
-    nameSize: "text-[16px]",
+    nameSize: "text-[15px]",
     metaSize: "text-[11px]",
     headerGap: "gap-3",
   },
@@ -50,7 +51,7 @@ const densityConfig: Record<
     gap: "gap-2",
     statGap: "space-y-1",
     avatarSize: 50,
-    nameSize: "text-[15px]",
+    nameSize: "text-[16px]",
     metaSize: "text-[10px]",
     headerGap: "gap-2.5",
   },
@@ -202,6 +203,7 @@ export default function AbilityCard({
       <div className="pointer-events-none absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent opacity-60" />
       <div className="pointer-events-none absolute -left-1/3 top-0 h-full w-1/3 rotate-[18deg] bg-gradient-to-r from-transparent via-white/10 to-transparent opacity-0 transition-all duration-500 group-hover:left-[120%] group-hover:opacity-100" />
 
+
       <div
         className={`relative flex items-start justify-between ${cfg.headerGap}`}
       >
@@ -218,12 +220,15 @@ export default function AbilityCard({
             <div
               className={[
                 cfg.nameSize,
-                "font-semibold leading-[1.08] tracking-tight text-zinc-100",
+                "max-w-[145px] overflow-hidden break-words font-semibold leading-[1.08] tracking-[-0.02em] text-zinc-100",
                 "drop-shadow-[0_0_6px_rgba(255,255,255,0.08)]",
               ].join(" ")}
             >
-              <span className="line-clamp-2 break-words">{fullName}</span>
+              <span className="line-clamp-2 leading-[1.08]">
+                {fullName}
+              </span>
             </div>
+
 
             <div
               className={`mt-1 ${cfg.metaSize} font-medium tracking-[0.02em] text-zinc-500`}
@@ -285,36 +290,12 @@ export default function AbilityCard({
 
           <div className={`mt-2 ${cfg.statGap}`}>
             <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">
-              <StatBar
-                label="Strength"
-                value={Number(str) || 0}
-                density="ultra"
-              />
-              <StatBar
-                label="Dexterity"
-                value={Number(dex) || 0}
-                density="ultra"
-              />
-              <StatBar
-                label="Constitution"
-                value={Number(con) || 0}
-                density="ultra"
-              />
-              <StatBar
-                label="Intelligence"
-                value={Number(int) || 0}
-                density="ultra"
-              />
-              <StatBar
-                label="Wisdom"
-                value={Number(wis) || 0}
-                density="ultra"
-              />
-              <StatBar
-                label="Charisma"
-                value={Number(cha) || 0}
-                density="ultra"
-              />
+              <StatBar label="Strength" value={Number(str) || 0} density="ultra" />
+              <StatBar label="Dexterity" value={Number(dex) || 0} density="ultra" />
+              <StatBar label="Constitution" value={Number(con) || 0} density="ultra" />
+              <StatBar label="Intelligence" value={Number(int) || 0} density="ultra" />
+              <StatBar label="Wisdom" value={Number(wis) || 0} density="ultra" />
+              <StatBar label="Charisma" value={Number(cha) || 0} density="ultra" />
             </div>
           </div>
 
@@ -346,24 +327,7 @@ export default function AbilityCard({
             )}
           </div>
         </div>
-        {person.companionUrl && (
-          <div className="pointer-events-none absolute bottom-2 left-2 z-10">
-            <img
-              src={person.companionUrl}
-              alt={`${person.first}'s companion`}
-              className="
-                h-28
-                w-28
-                object-contain
-                drop-shadow-[0_10px_18px_rgba(0,0,0,0.7)]
-                transition-transform
-                duration-300
-                group-hover:scale-[1.03]
-              "
-            />
-          </div>
-        )}
-        
+
         {isDead && (
           <div className="pointer-events-none absolute inset-0 z-20 flex flex-col items-center justify-center">
             <div className="absolute inset-0 rounded-xl bg-zinc-950/35" />
