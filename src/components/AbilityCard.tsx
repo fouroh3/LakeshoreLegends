@@ -15,6 +15,8 @@ interface AbilityCardProps {
   onClick?: () => void;
 }
 
+const COMPANION_SKILL = "Companion Skill";
+
 const densityConfig: Record<
   Density,
   {
@@ -25,7 +27,6 @@ const densityConfig: Record<
     nameSize: string;
     metaSize: string;
     headerGap: string;
-
   }
 > = {
   comfortable: {
@@ -133,7 +134,6 @@ export default function AbilityCard({
     int,
     wis,
     cha,
-    skills,
     portraitUrl,
     guild,
     baseHP,
@@ -141,6 +141,33 @@ export default function AbilityCard({
   } = person;
 
   const cfg = densityConfig[density];
+
+  const hasCompanion = !!String(
+    person.companionUrl || ""
+  ).trim();
+
+  const companionStatus = String(
+    person.companionStatus || ""
+  )
+    .trim()
+    .toLowerCase();
+
+  const companionIsActive =
+    hasCompanion &&
+    companionStatus === "active";
+
+  const baseSkills = Array.isArray(person.skills)
+    ? person.skills
+    : String(person.skills || "")
+        .split(/[;,|]/g)
+        .map((s: string) => s.trim())
+        .filter(Boolean);
+
+  const skills = [
+    ...baseSkills,
+    ...(hasCompanion && companionIsActive ? [COMPANION_SKILL] : []),
+  ];
+
   const fullName = `${first ?? ""} ${last ?? ""}`.trim() || "Unnamed Legend";
   const guildTint = getGuildTintClasses(guild);
 
@@ -163,14 +190,7 @@ export default function AbilityCard({
   }, [str, dex, con, int, wis, cha]);
 
   const skillList: string[] = useMemo(() => {
-    if (Array.isArray(skills)) return skills.filter(Boolean);
-    if (typeof skills === "string") {
-      return skills
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean);
-    }
-    return [];
+    return skills.filter(Boolean);
   }, [skills]);
 
   const hpBase = Math.max(1, Number(baseHP ?? 20));
@@ -203,7 +223,6 @@ export default function AbilityCard({
       <div className="pointer-events-none absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent opacity-60" />
       <div className="pointer-events-none absolute -left-1/3 top-0 h-full w-1/3 rotate-[18deg] bg-gradient-to-r from-transparent via-white/10 to-transparent opacity-0 transition-all duration-500 group-hover:left-[120%] group-hover:opacity-100" />
 
-
       <div
         className={`relative flex items-start justify-between ${cfg.headerGap}`}
       >
@@ -224,11 +243,8 @@ export default function AbilityCard({
                 "drop-shadow-[0_0_6px_rgba(255,255,255,0.08)]",
               ].join(" ")}
             >
-              <span className="line-clamp-2 leading-[1.08]">
-                {fullName}
-              </span>
+              <span className="line-clamp-2 leading-[1.08]">{fullName}</span>
             </div>
-
 
             <div
               className={`mt-1 ${cfg.metaSize} font-medium tracking-[0.02em] text-zinc-500`}
@@ -290,12 +306,36 @@ export default function AbilityCard({
 
           <div className={`mt-2 ${cfg.statGap}`}>
             <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">
-              <StatBar label="Strength" value={Number(str) || 0} density="ultra" />
-              <StatBar label="Dexterity" value={Number(dex) || 0} density="ultra" />
-              <StatBar label="Constitution" value={Number(con) || 0} density="ultra" />
-              <StatBar label="Intelligence" value={Number(int) || 0} density="ultra" />
-              <StatBar label="Wisdom" value={Number(wis) || 0} density="ultra" />
-              <StatBar label="Charisma" value={Number(cha) || 0} density="ultra" />
+              <StatBar
+                label="Strength"
+                value={Number(str) || 0}
+                density="ultra"
+              />
+              <StatBar
+                label="Dexterity"
+                value={Number(dex) || 0}
+                density="ultra"
+              />
+              <StatBar
+                label="Constitution"
+                value={Number(con) || 0}
+                density="ultra"
+              />
+              <StatBar
+                label="Intelligence"
+                value={Number(int) || 0}
+                density="ultra"
+              />
+              <StatBar
+                label="Wisdom"
+                value={Number(wis) || 0}
+                density="ultra"
+              />
+              <StatBar
+                label="Charisma"
+                value={Number(cha) || 0}
+                density="ultra"
+              />
             </div>
           </div>
 
@@ -310,14 +350,24 @@ export default function AbilityCard({
               </div>
             ) : (
               <div className="flex flex-wrap gap-1">
-                {skillList.slice(0, 4).map((skill) => (
-                  <span
-                    key={skill}
-                    className="inline-flex items-center rounded-full border border-zinc-700/80 bg-zinc-900/80 px-2 py-0.5 text-[10px] text-zinc-200 transition group-hover:border-zinc-600"
-                  >
-                    {skill}
-                  </span>
-                ))}
+                {skillList.slice(0, 4).map((skill) => {
+                  const isCompanionSkill = skill === COMPANION_SKILL;
+
+                  return (
+                    <span
+                      key={skill}
+                      className={[
+                        "inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] transition",
+                        isCompanionSkill
+                          ? "border-amber-400/30 bg-amber-400/10 text-amber-100 group-hover:border-amber-300/50"
+                          : "border-zinc-700/80 bg-zinc-900/80 text-zinc-200 group-hover:border-zinc-600",
+                      ].join(" ")}
+                    >
+                      {isCompanionSkill ? "✦ Companion Skill" : skill}
+                    </span>
+                  );
+                })}
+
                 {skillList.length > 4 ? (
                   <span className="inline-flex items-center rounded-full border border-zinc-800 bg-zinc-950/85 px-2 py-0.5 text-[10px] text-zinc-400">
                     +{skillList.length - 4}

@@ -49,24 +49,31 @@ function parseCSV(text: string): string[][] {
 
     if (ch === '"') {
       const next = text[i + 1];
+
       if (inQuotes && next === '"') {
         cur += '"';
         i++;
       } else {
         inQuotes = !inQuotes;
       }
+
       continue;
     }
 
     if (!inQuotes && (ch === "," || ch === "\n" || ch === "\r")) {
       if (ch === "\r" && text[i + 1] === "\n") i++;
+
       row.push(cur);
       cur = "";
 
       if (ch === "\n" || ch === "\r") {
-        if (row.some((c) => String(c).trim() !== "")) rows.push(row);
+        if (row.some((c) => String(c).trim() !== "")) {
+          rows.push(row);
+        }
+
         row = [];
       }
+
       continue;
     }
 
@@ -74,38 +81,47 @@ function parseCSV(text: string): string[][] {
   }
 
   row.push(cur);
-  if (row.some((c) => String(c).trim() !== "")) rows.push(row);
+
+  if (row.some((c) => String(c).trim() !== "")) {
+    rows.push(row);
+  }
 
   return rows;
 }
 
 function headerIndex(headers: string[]) {
   const map = new Map<string, number>();
+
   headers.forEach((h, i) => {
     map.set(normalizeHeader(h), i);
   });
+
   return map;
 }
 
 function pickStrict(map: Map<string, number>, ...keys: string[]) {
   for (const key of keys) {
     const idx = map.get(normalizeHeader(key));
+
     if (idx != null) return idx;
   }
+
   return -1;
 }
 
 function pickFlexible(map: Map<string, number>, ...keys: string[]) {
-  const entries = Array.from(map.entries());
+  const entries = [...map.entries()];
 
   for (const key of keys) {
     const nk = normalizeHeader(key);
     const exact = map.get(nk);
+
     if (exact != null) return exact;
   }
 
   for (const key of keys) {
     const sk = squashHeader(key);
+
     for (const [header, idx] of entries) {
       if (squashHeader(header) === sk) return idx;
     }
@@ -113,9 +129,13 @@ function pickFlexible(map: Map<string, number>, ...keys: string[]) {
 
   for (const key of keys) {
     const sk = squashHeader(key);
+
     for (const [header, idx] of entries) {
       const sh = squashHeader(header);
-      if (sh.includes(sk) || sk.includes(sh)) return idx;
+
+      if (sh.includes(sk) || sk.includes(sh)) {
+        return idx;
+      }
     }
   }
 
@@ -124,7 +144,9 @@ function pickFlexible(map: Map<string, number>, ...keys: string[]) {
 
 function splitSkills(raw: any): string[] {
   const s = String(raw ?? "").trim();
+
   if (!s) return [];
+
   return s
     .split(/[;,|]/g)
     .map((x) => x.trim())
@@ -133,7 +155,9 @@ function splitSkills(raw: any): string[] {
 
 function splitInventory(raw: any): string[] {
   const s = String(raw ?? "").trim();
+
   if (!s) return [];
+
   return s
     .split(/[;,|]/g)
     .map((x) => x.trim())
@@ -142,15 +166,28 @@ function splitInventory(raw: any): string[] {
 
 function splitName(nameRaw: any): { first: string; last: string } {
   const s = String(nameRaw ?? "").trim();
-  if (!s) return { first: "", last: "" };
+
+  if (!s) {
+    return { first: "", last: "" };
+  }
 
   if (s.includes(",")) {
     const [last, first] = s.split(",").map((x) => x.trim());
-    return { first: first || "", last: last || "" };
+
+    return {
+      first: first || "",
+      last: last || "",
+    };
   }
 
   const parts = s.split(/\s+/).filter(Boolean);
-  if (parts.length === 1) return { first: parts[0], last: "" };
+
+  if (parts.length === 1) {
+    return {
+      first: parts[0],
+      last: "",
+    };
+  }
 
   return {
     first: parts.slice(0, -1).join(" "),
@@ -165,10 +202,35 @@ function rowsToStudents(rows: string[][]): Student[] {
   const idx = headerIndex(headers);
 
   const iId = pickStrict(idx, "id", "student id", "studentid");
-  const iName = pickStrict(idx, "name", "student name");
-  const iFirst = pickStrict(idx, "first", "first name", "firstname");
-  const iLast = pickStrict(idx, "last", "last name", "lastname");
-  const iHomeroom = pickStrict(idx, "homeroom", "home room", "hr", "class");
+
+  const iName = pickStrict(
+    idx,
+    "name",
+    "student name"
+  );
+
+  const iFirst = pickStrict(
+    idx,
+    "first",
+    "first name",
+    "firstname"
+  );
+
+  const iLast = pickStrict(
+    idx,
+    "last",
+    "last name",
+    "lastname"
+  );
+
+  const iHomeroom = pickStrict(
+    idx,
+    "homeroom",
+    "home room",
+    "hr",
+    "class"
+  );
+
   const iGuild = pickStrict(idx, "guild");
 
   const iPortrait = pickStrict(
@@ -187,6 +249,13 @@ function rowsToStudents(rows: string[][]): Student[] {
     "companion",
     "peturl",
     "pet url"
+  );
+
+  const iCompanionStatus = pickStrict(
+    idx,
+    "companionstatus",
+    "companion status",
+    "companion_status"
   );
 
   console.log("HEADERS", headers);
@@ -209,6 +278,7 @@ function rowsToStudents(rows: string[][]): Student[] {
     "strength bonus",
     "strength_bonus"
   );
+
   const iDexB = pickFlexible(
     idx,
     "dex bonus",
@@ -216,6 +286,7 @@ function rowsToStudents(rows: string[][]): Student[] {
     "dexterity bonus",
     "dexterity_bonus"
   );
+
   const iConB = pickFlexible(
     idx,
     "con bonus",
@@ -223,6 +294,7 @@ function rowsToStudents(rows: string[][]): Student[] {
     "constitution bonus",
     "constitution_bonus"
   );
+
   const iIntB = pickFlexible(
     idx,
     "int bonus",
@@ -230,6 +302,7 @@ function rowsToStudents(rows: string[][]): Student[] {
     "intelligence bonus",
     "intelligence_bonus"
   );
+
   const iWisB = pickFlexible(
     idx,
     "wis bonus",
@@ -237,6 +310,7 @@ function rowsToStudents(rows: string[][]): Student[] {
     "wisdom bonus",
     "wisdom_bonus"
   );
+
   const iChaB = pickFlexible(
     idx,
     "cha bonus",
@@ -251,35 +325,77 @@ function rowsToStudents(rows: string[][]): Student[] {
     const row = rows[r];
 
     const idRaw = iId >= 0 ? row[iId] : "";
-    const id = String(idRaw || "").trim() || `row-${r}`;
 
-    const nameRaw = iName >= 0 ? String(row[iName] || "").trim() : "";
+    const id =
+      String(idRaw || "").trim() || `row-${r}`;
 
-    let first = iFirst >= 0 ? String(row[iFirst] || "").trim() : "";
-    let last = iLast >= 0 ? String(row[iLast] || "").trim() : "";
+    const nameRaw =
+      iName >= 0
+        ? String(row[iName] || "").trim()
+        : "";
+
+    let first =
+      iFirst >= 0
+        ? String(row[iFirst] || "").trim()
+        : "";
+
+    let last =
+      iLast >= 0
+        ? String(row[iLast] || "").trim()
+        : "";
 
     if (!first && !last) {
       const parsed = splitName(nameRaw);
+
       first = parsed.first;
       last = parsed.last;
     }
 
-    const homeroom = iHomeroom >= 0 ? String(row[iHomeroom] || "").trim() : "";
-    const guild = iGuild >= 0 ? String(row[iGuild] || "").trim() : "";
+    const homeroom =
+      iHomeroom >= 0
+        ? String(row[iHomeroom] || "").trim()
+        : "";
 
-    const baseStr = iStr >= 0 ? toNum(row[iStr], 0) : 0;
-    const baseDex = iDex >= 0 ? toNum(row[iDex], 0) : 0;
-    const baseCon = iCon >= 0 ? toNum(row[iCon], 0) : 0;
-    const baseInt = iInt >= 0 ? toNum(row[iInt], 0) : 0;
-    const baseWis = iWis >= 0 ? toNum(row[iWis], 0) : 0;
-    const baseCha = iCha >= 0 ? toNum(row[iCha], 0) : 0;
+    const guild =
+      iGuild >= 0
+        ? String(row[iGuild] || "").trim()
+        : "";
 
-    const bonusStr = iStrB >= 0 ? toNum(row[iStrB], 0) : 0;
-    const bonusDex = iDexB >= 0 ? toNum(row[iDexB], 0) : 0;
-    const bonusCon = iConB >= 0 ? toNum(row[iConB], 0) : 0;
-    const bonusInt = iIntB >= 0 ? toNum(row[iIntB], 0) : 0;
-    const bonusWis = iWisB >= 0 ? toNum(row[iWisB], 0) : 0;
-    const bonusCha = iChaB >= 0 ? toNum(row[iChaB], 0) : 0;
+    const baseStr =
+      iStr >= 0 ? toNum(row[iStr], 0) : 0;
+
+    const baseDex =
+      iDex >= 0 ? toNum(row[iDex], 0) : 0;
+
+    const baseCon =
+      iCon >= 0 ? toNum(row[iCon], 0) : 0;
+
+    const baseInt =
+      iInt >= 0 ? toNum(row[iInt], 0) : 0;
+
+    const baseWis =
+      iWis >= 0 ? toNum(row[iWis], 0) : 0;
+
+    const baseCha =
+      iCha >= 0 ? toNum(row[iCha], 0) : 0;
+
+    const bonusStr =
+      iStrB >= 0 ? toNum(row[iStrB], 0) : 0;
+
+    const bonusDex =
+      iDexB >= 0 ? toNum(row[iDexB], 0) : 0;
+
+    const bonusCon =
+      iConB >= 0 ? toNum(row[iConB], 0) : 0;
+
+    const bonusInt =
+      iIntB >= 0 ? toNum(row[iIntB], 0) : 0;
+
+    const bonusWis =
+      iWisB >= 0 ? toNum(row[iWisB], 0) : 0;
+
+    const bonusCha =
+      iChaB >= 0 ? toNum(row[iChaB], 0) : 0;
 
     const str = baseStr + bonusStr;
     const dex = baseDex + bonusDex;
@@ -289,15 +405,28 @@ function rowsToStudents(rows: string[][]): Student[] {
     const cha = baseCha + bonusCha;
 
     const portraitUrl =
-      iPortrait >= 0 ? String(row[iPortrait] || "").trim() : "";
+      iPortrait >= 0
+        ? String(row[iPortrait] || "").trim()
+        : "";
 
     const companionUrl =
-      iCompanion >= 0 ? String(row[iCompanion] || "").trim() : "";
+      iCompanion >= 0
+        ? String(row[iCompanion] || "").trim()
+        : "";
 
-    const skillsRaw = iSkills >= 0 ? row[iSkills] : "";
+    const companionStatus =
+      iCompanionStatus >= 0
+        ? String(row[iCompanionStatus] || "Active").trim()
+        : "Active";
+
+    const skillsRaw =
+      iSkills >= 0 ? row[iSkills] : "";
+
     const skills = splitSkills(skillsRaw);
 
-    const inventoryRaw = iInventory >= 0 ? row[iInventory] : "";
+    const inventoryRaw =
+      iInventory >= 0 ? row[iInventory] : "";
+
     const inventory = splitInventory(inventoryRaw);
 
     const student: Student = {
@@ -311,8 +440,16 @@ function rowsToStudents(rows: string[][]): Student[] {
       int,
       wis,
       cha,
-      skills: skills.length ? skills : skillsRaw ? String(skillsRaw) : [],
+
+      skills: skills.length
+        ? skills
+        : skillsRaw
+        ? String(skillsRaw)
+        : [],
+
       inventory,
+      companionStatus,
+
       ...(guild ? ({ guild } as any) : {}),
       ...(portraitUrl ? { portraitUrl } : {}),
       ...(companionUrl ? { companionUrl } : {}),
@@ -328,21 +465,35 @@ function rowsToStudents(rows: string[][]): Student[] {
 
 export async function loadStudents(): Promise<Student[]> {
   const now = Date.now();
-  if (cache && now - cache.at < CACHE_MS) return cache.students;
+
+  if (cache && now - cache.at < CACHE_MS) {
+    return cache.students;
+  }
 
   const url = `${SHEET_CSV_URL}${
     SHEET_CSV_URL.includes("?") ? "&" : "?"
   }t=${now}`;
 
-  const res = await fetch(url, { cache: "no-store" });
+  const res = await fetch(url, {
+    cache: "no-store",
+  });
+
   if (!res.ok) {
-    throw new Error(`Failed to fetch roster CSV: HTTP ${res.status}`);
+    throw new Error(
+      `Failed to fetch roster CSV: HTTP ${res.status}`
+    );
   }
 
   const text = await res.text();
   const rows = parseCSV(text);
   const students = rowsToStudents(rows);
 
-  cache = { at: now, students };
+  console.log("FIRST STUDENT", students[0]);
+
+  cache = {
+    at: now,
+    students,
+  };
+
   return students;
 }
