@@ -67,19 +67,33 @@ function StatPill({
 }
 
 function TileSkills({ student, muted }: { student: Student; muted?: boolean }) {
-  const skills = useMemo(() => skillsToArray(student.skills), [student.skills]);
+  const skills = useMemo(() => {
+  const baseSkills = skillsToArray(student.skills);
+
+  const hasCompanion = !!String(student.companionUrl || "").trim();
+  const companionStatus = String(student.companionStatus || "")
+    .trim()
+    .toLowerCase();
+
+  const companionIsActive = hasCompanion && companionStatus === "active";
+
+  return [
+    ...baseSkills,
+    ...(companionIsActive ? ["Companion Bond"] : []),
+  ];
+}, [student.skills, student.companionUrl, student.companionStatus]);
   if (skills.length === 0) return null;
 
-  const top = skills.slice(0, 3);
+  const top = skills.slice(0, 5);
   const extra = skills.length - top.length;
 
   return (
-    <div className="mt-2 flex flex-wrap gap-1 min-h-[20px]">
+    <div className="mt-2 flex flex-wrap gap-1.5 min-h-[42px]">
       {top.map((sk) => (
         <span
           key={sk}
           className={[
-            "rounded-full border px-2 py-0.5 text-[10px] whitespace-nowrap",
+            "rounded-full border px-1.5 py-0.5 text-[9px] whitespace-nowrap",
             muted
               ? "border-zinc-900 bg-zinc-950/10 text-zinc-600"
               : "border-zinc-800/70 bg-zinc-950/35 text-zinc-200",
@@ -93,7 +107,7 @@ function TileSkills({ student, muted }: { student: Student; muted?: boolean }) {
       {extra > 0 && (
         <span
           className={[
-            "rounded-full border px-2 py-0.5 text-[10px] whitespace-nowrap",
+            "rounded-full border px-1.5 py-0.5 text-[9px] whitespace-nowrap",
             muted
               ? "border-zinc-900 bg-zinc-950/10 text-zinc-700"
               : "border-zinc-800/70 bg-zinc-950/35 text-zinc-400",
