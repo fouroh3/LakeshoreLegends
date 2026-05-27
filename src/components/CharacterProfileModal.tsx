@@ -536,18 +536,28 @@ function ShimmerSweep({
 function CompanionPanel({
   companion,
   guildTheme,
+  companionStatus,
   setExpandedCompanionUrl,
 }: {
   companion: CompanionInfo;
   guildTheme: GuildTheme;
+  companionStatus?: string;
   setExpandedCompanionUrl: (url: string | null) => void;
 }) {
+  const normalizedCompanionStatus = String(companionStatus || "")
+    .trim()
+    .toLowerCase();
+
+  const companionIsFallen =
+    normalizedCompanionStatus === "fallen";
+
   if (!companion) {
     return (
       <div
         className={`rounded-[20px] border border-dashed border-zinc-800 bg-zinc-950/25 p-3 ${guildTheme.accentGlowSoft}`}
       >
         <SectionHeading icon="🐾" title="Companion" className="mb-2" />
+
         <div className="flex items-center gap-3">
           <div
             className={`relative flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-zinc-800 bg-zinc-900 ${guildTheme.accentBgSoft}`}
@@ -555,12 +565,15 @@ function CompanionPanel({
             <div
               className={`absolute inset-0 rounded-2xl ${guildTheme.portraitGlow} opacity-60`}
             />
+
             <div className="relative text-xl text-zinc-500">✦</div>
           </div>
+
           <div className="min-w-0">
             <div className="text-sm font-medium text-zinc-200">
               No companion equipped
             </div>
+
             <div className="mt-1 text-xs leading-5 text-zinc-500">
               This slot is empty. A bonded pet or companion will appear here.
             </div>
@@ -581,20 +594,22 @@ function CompanionPanel({
       <SectionHeading icon="🐾" title="Companion" className="relative mb-2" />
 
       <div className="relative flex items-center gap-3.5">
-        <div className="relative flex h-28 w-28 shrink-0 items-end justify-center overflow-visible rounded-2xl border border-zinc-800/80 bg-zinc-950/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_14px_26px_rgba(0,0,0,0.42)]">
+        <div className="relative flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-zinc-800/80 bg-zinc-950/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_14px_26px_rgba(0,0,0,0.42)]">
           <div className="pointer-events-none absolute inset-x-2 bottom-1 h-3 rounded-full bg-black/45 blur-md" />
 
           {companion.imageUrl ? (
             <button
               type="button"
-              onClick={() => setExpandedCompanionUrl(companion.imageUrl || null)}
+              onClick={() =>
+                setExpandedCompanionUrl(companion.imageUrl || null)
+              }
               className="relative z-10 cursor-zoom-in"
               aria-label={`View ${companion.name} companion image`}
             >
               <img
                 src={companion.imageUrl}
                 alt={companion.name}
-                className="h-[124px] w-[124px] object-contain drop-shadow-[0_12px_18px_rgba(0,0,0,0.72)] transition-transform duration-300 hover:scale-105"
+                className="h-full w-full object-contain p-1 drop-shadow-[0_12px_18px_rgba(0,0,0,0.72)] transition-transform duration-300 hover:scale-105"
               />
             </button>
           ) : (
@@ -608,6 +623,24 @@ function CompanionPanel({
           <div className="truncate text-xs font-semibold tracking-wide text-zinc-100">
             {companion.name}
           </div>
+
+<div className="mt-1">
+  {companionIsFallen ? (
+    <>
+      <span className="inline-flex items-center gap-1 rounded-full border border-red-500/50 bg-[linear-gradient(180deg,rgba(127,29,29,0.92),rgba(69,10,10,0.96))] px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.22em] text-red-100 shadow-[0_0_14px_rgba(239,68,68,0.38)]">
+        ☠ Fallen
+      </span>
+
+<div className="mt-1 max-w-[130px] text-[10px] italic leading-4 tracking-[0.04em] text-red-300/90">
+  Lost within the Plagueborn Woods.
+</div>
+    </>
+  ) : (
+    <span className="inline-flex rounded-full border border-emerald-400/40 bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-emerald-200">
+      Active
+    </span>
+  )}
+</div>
 
           {companion.effect ? (
             <div className="mt-1 line-clamp-2 text-xs leading-5 text-zinc-400">
@@ -1309,16 +1342,27 @@ function SkillsSection({ skillList }: { skillList: string[] }) {
           No skills unlocked yet.
         </div>
       ) : (
-        <div className="flex flex-wrap gap-2">
-          {skillList.map((skill) => (
+      <div className="flex flex-wrap gap-2">
+        {skillList.map((skill) => {
+          const isCompanionSkill =
+            skill === "Companion Skill";
+
+          return (
             <span
               key={skill}
-              className="rounded-full border border-zinc-700 bg-zinc-900 px-3 py-1.5 text-[11px] text-zinc-200 transition hover:-translate-y-[1px] hover:border-zinc-500 hover:text-white"
+              className={
+                isCompanionSkill
+                  ? "rounded-full border border-amber-300/45 bg-gradient-to-br from-amber-400/18 to-amber-500/10 px-3 py-1.5 text-[11px] text-amber-50 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] transition hover:-translate-y-[1px] hover:border-amber-200/60"
+                  : "rounded-full border border-zinc-700 bg-zinc-900 px-3 py-1.5 text-[11px] text-zinc-200 transition hover:-translate-y-[1px] hover:border-zinc-500 hover:text-white"
+              }
             >
-              {skill}
+              {isCompanionSkill
+                ? "🐾 Companion Bond"
+                : skill}
             </span>
-          ))}
-        </div>
+          );
+        })}
+      </div>
       )}
     </Surface>
   );
@@ -1557,10 +1601,23 @@ export default function CharacterProfileModal({
     };
   }, [open, onClose]);
 
-  const skillList = useMemo(
-    () => skillsToArray(person?.skills),
-    [person?.skills]
-  );
+const skillList = useMemo(() => {
+  const baseSkills = skillsToArray(person?.skills);
+
+  const hasLivingCompanion =
+    !!String(person?.companionUrl || "").trim() &&
+    String(person?.companionStatus || "")
+      .trim()
+      .toLowerCase() === "active";
+
+  return hasLivingCompanion
+    ? ["Companion Skill", ...baseSkills]
+    : baseSkills;
+}, [
+  person?.skills,
+  person?.companionUrl,
+  person?.companionStatus,
+]);
 
   const inventory = useMemo(
     () => normalizeInventory(person?.inventory),
@@ -1769,11 +1826,12 @@ console.log({
                                 />
                             </div>
                             ) : null}
-              <CompanionPanel
-                companion={companion}
-                guildTheme={guildTheme}
-                setExpandedCompanionUrl={setExpandedCompanionUrl}
-              />
+        <CompanionPanel
+          companion={companion}
+          guildTheme={guildTheme}
+          companionStatus={person?.companionStatus}
+          setExpandedCompanionUrl={setExpandedCompanionUrl}
+        />
                           
                         </div>
 
