@@ -6,18 +6,9 @@ import { usePageActive } from "./hooks/usePageActive";
 import { getBossMeta } from "./battleBossMeta";
 
 function hpBarClass(pct: number, defeated: boolean) {
-  if (defeated) {
-    return "bg-[#ef4444] shadow-[0_0_28px_rgba(239,68,68,0.55)]";
-  }
-
-  if (pct <= 20) {
-    return "bg-[#ef4444] shadow-[0_0_30px_rgba(239,68,68,0.55)]";
-  }
-
-  if (pct <= 60) {
-    return "bg-[#eab308] shadow-[0_0_26px_rgba(234,179,8,0.42)]";
-  }
-
+  if (defeated) return "bg-[#ef4444] shadow-[0_0_28px_rgba(239,68,68,0.55)]";
+  if (pct <= 20) return "bg-[#ef4444] shadow-[0_0_30px_rgba(239,68,68,0.55)]";
+  if (pct <= 60) return "bg-[#eab308] shadow-[0_0_26px_rgba(234,179,8,0.42)]";
   return "bg-[#4ade80] shadow-[0_0_26px_rgba(74,222,128,0.38)]";
 }
 
@@ -34,14 +25,8 @@ function cardGlowClass(pct: number, defeated: boolean) {
 }
 
 function ambientClass(pct: number, defeated: boolean) {
-  if (defeated || pct <= 20) {
-    return "bg-red-500/[0.055]";
-  }
-
-  if (pct <= 60) {
-    return "bg-amber-500/[0.05]";
-  }
-
+  if (defeated || pct <= 20) return "bg-red-500/[0.055]";
+  if (pct <= 60) return "bg-amber-500/[0.05]";
   return "bg-cyan-500/[0.045]";
 }
 
@@ -125,9 +110,7 @@ export default function BossDisplayPage() {
 
   const { boss } = useBossState(pageActive, bossKey, bossInstanceId);
 
-  const meta = getBossMeta(
-    boss?.bossKey || boss?.bossName || bossKey || ""
-  );
+  const meta = getBossMeta(boss?.bossKey || boss?.bossName || bossKey || "");
 
   const currentHP = Math.max(0, boss?.currentHP || 0);
   const maxHP = Math.max(1, boss?.maxHP || 1);
@@ -135,13 +118,11 @@ export default function BossDisplayPage() {
   const defeated = currentHP <= 0;
   const critical = !defeated && pct <= 20;
 
-  const homeroomLabel =
-    selectedOption?.homerooms?.length
-      ? selectedOption.homerooms.join(" + ")
-      : primaryBattle?.homeroom || "—";
+  const homeroomLabel = selectedOption?.homerooms?.length
+    ? selectedOption.homerooms.join(" + ")
+    : primaryBattle?.homeroom || "—";
 
   const turnLabel = String(primaryBattle?.turn || "BOSS").toUpperCase();
-
 
   return (
     <div className="min-h-screen bg-[#05070d] text-zinc-100">
@@ -176,7 +157,6 @@ export default function BossDisplayPage() {
             </div>
 
             <div className="flex-1" />
-
           </div>
         </header>
 
@@ -194,10 +174,7 @@ export default function BossDisplayPage() {
                   className="w-full rounded-2xl border border-zinc-800/70 bg-black/50 px-4 py-3 text-sm font-semibold text-zinc-100 outline-none focus:border-cyan-300/50"
                 >
                   {battleOptions.map((option) => (
-                    <option
-                      key={option.sessionKey}
-                      value={option.sessionKey}
-                    >
+                    <option key={option.sessionKey} value={option.sessionKey}>
                       {option.label}
                     </option>
                   ))}
@@ -304,9 +281,8 @@ export default function BossDisplayPage() {
                         <div
                           className={[
                             "rounded-2xl border px-3 py-2",
-                            String(
-                              primaryBattle.guildAttacks || ""
-                            ).toUpperCase() === "OPEN"
+                            String(primaryBattle.guildAttacks || "").toUpperCase() ===
+                            "OPEN"
                               ? "border-emerald-400/25 bg-emerald-500/10"
                               : "border-red-400/25 bg-red-500/10",
                           ].join(" ")}
@@ -317,9 +293,8 @@ export default function BossDisplayPage() {
                           <div
                             className={[
                               "mt-1 text-[15px] font-black",
-                              String(
-                                primaryBattle.guildAttacks || ""
-                              ).toUpperCase() === "OPEN"
+                              String(primaryBattle.guildAttacks || "").toUpperCase() ===
+                              "OPEN"
                                 ? "text-emerald-200"
                                 : "text-red-200",
                             ].join(" ")}
@@ -328,6 +303,89 @@ export default function BossDisplayPage() {
                               primaryBattle.guildAttacks || "CLOSED"
                             ).toUpperCase()}
                           </div>
+                        </div>
+                      </div>
+
+                      <div className="mt-5 rounded-[24px] border border-zinc-700/60 bg-black/25 p-4">
+                        <div className="mb-3 text-center text-[10px] font-black uppercase tracking-[0.3em] text-zinc-400">
+                          Guild Actions
+                        </div>
+
+                        <div
+                          className={[
+                            "grid gap-3",
+                            selectedOption?.homerooms?.length > 1
+                              ? "grid-cols-2"
+                              : "grid-cols-1",
+                          ].join(" ")}
+                        >
+                          {selectedOption?.homerooms?.map((hr: string) => {
+                            const classRows = activeRows.filter((r: any) => {
+                              const rowSessionKey =
+                                String(
+                                  (r as any).activeBattleSessionId || ""
+                                ).trim() ||
+                                String(r.sessionId || "").trim() ||
+                                String(r.bossInstanceId || "").trim();
+
+                              return (
+                                String(r.homeroom || "").trim() === hr &&
+                                rowSessionKey === selectedSessionKey
+                              );
+                            });
+
+                            return (
+                              <div
+                                key={hr}
+                                className="rounded-2xl border border-zinc-800/70 bg-zinc-950/50 p-3"
+                              >
+                                <div className="mb-3 text-center text-[13px] font-black text-cyan-300">
+                                  {hr}
+                                </div>
+
+                                <div className="space-y-2">
+                                  {classRows.map((row: any) => {
+                                    const guild = String(row.guild || "Guild");
+
+                                    const action = String(
+                                      row.guildAction || ""
+                                    ).toUpperCase();
+
+                                    const completed =
+                                      action === "ATTACK" || action === "HEAL";
+
+                                    return (
+                                      <div
+                                        key={`${hr}-${guild}`}
+                                        className="flex items-center justify-between rounded-xl border border-zinc-800/70 bg-black/30 px-3 py-2"
+                                      >
+                                        <div className="truncate text-sm font-bold text-zinc-100">
+                                          {guild}
+                                        </div>
+
+                                        <div
+                                          className={[
+                                            "text-xs font-black uppercase tracking-[0.12em]",
+                                            completed
+                                              ? action === "HEAL"
+                                                ? "text-emerald-300"
+                                                : "text-red-300"
+                                              : "text-zinc-500",
+                                          ].join(" ")}
+                                        >
+                                          {completed
+                                            ? action === "HEAL"
+                                              ? "💚 Heal"
+                                              : "⚔️ Attack"
+                                            : "⏳ Waiting"}
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            );
+                          })}
                         </div>
                       </div>
                     </div>
