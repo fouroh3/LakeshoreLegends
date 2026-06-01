@@ -332,9 +332,18 @@ function compareBySort(a: Student, b: Student, sortKey: string) {
     case "guild":
       return aGuild.localeCompare(bGuild) || compareName();
     case "hp-desc":
-      return num(bRow.hp) - num(aRow.hp) || compareName();
+      return (
+        num(bRow.currentHP ?? bRow.hp) -
+          num(aRow.currentHP ?? aRow.hp) ||
+        compareName()
+      );
+
     case "hp-asc":
-      return num(aRow.hp) - num(bRow.hp) || compareName();
+      return (
+        num(aRow.currentHP ?? aRow.hp) -
+          num(bRow.currentHP ?? bRow.hp) ||
+        compareName()
+      );
     case "strength":
     case "dexterity":
     case "constitution":

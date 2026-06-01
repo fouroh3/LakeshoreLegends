@@ -2,29 +2,22 @@
 import { useEffect, useState } from "react";
 
 export function usePageActive() {
-  const [active, setActive] = useState(() => {
-    const visible = document.visibilityState === "visible";
-    const focused =
-      typeof document.hasFocus === "function" ? document.hasFocus() : true;
-    return visible && focused;
-  });
+  const [active, setActive] = useState(true);
 
   useEffect(() => {
     const recompute = () => {
       const visible = document.visibilityState === "visible";
-      const focused =
-        typeof document.hasFocus === "function" ? document.hasFocus() : true;
-      setActive(visible && focused);
+
+      // Ignore window focus entirely.
+      // Only pause polling if the tab itself is hidden.
+      setActive(visible);
     };
 
     recompute();
-    window.addEventListener("focus", recompute);
-    window.addEventListener("blur", recompute);
+
     document.addEventListener("visibilitychange", recompute);
 
     return () => {
-      window.removeEventListener("focus", recompute);
-      window.removeEventListener("blur", recompute);
       document.removeEventListener("visibilitychange", recompute);
     };
   }, []);
