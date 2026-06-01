@@ -349,31 +349,31 @@ export default function AbilityCard({
                 No skills yet
               </div>
             ) : (
-              <div className="flex flex-wrap gap-1">
-                {skillList.slice(0, 4).map((skill) => {
-                  const isCompanionSkill = skill === COMPANION_SKILL;
+              <div className="flex flex-wrap gap-1.5">
+  {skillList.slice(0, 6).map((skill) => {
+    const isCompanionSkill = skill === COMPANION_SKILL;
 
-                  return (
-                    <span
-                      key={skill}
-                      className={[
-                        "inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] transition",
-                        isCompanionSkill
-                          ? "border-amber-400/30 bg-amber-400/10 text-amber-100 group-hover:border-amber-300/50"
-                          : "border-zinc-700/80 bg-zinc-900/80 text-zinc-200 group-hover:border-zinc-600",
-                      ].join(" ")}
-                    >
-                      {isCompanionSkill ? "✦ Companion Skill" : skill}
-                    </span>
-                  );
-                })}
+    return (
+      <span
+        key={skill}
+        className={[
+          "inline-flex items-center rounded-full border px-1.5 py-0.5 text-[9px] transition",
+          isCompanionSkill
+            ? "border-amber-400/30 bg-amber-400/10 text-amber-100 group-hover:border-amber-300/50"
+            : "border-zinc-700/80 bg-zinc-900/80 text-zinc-200 group-hover:border-zinc-600",
+        ].join(" ")}
+      >
+        {isCompanionSkill ? "✦ Companion Skill" : skill}
+      </span>
+    );
+  })}
 
-                {skillList.length > 4 ? (
-                  <span className="inline-flex items-center rounded-full border border-zinc-800 bg-zinc-950/85 px-2 py-0.5 text-[10px] text-zinc-400">
-                    +{skillList.length - 4}
-                  </span>
-                ) : null}
-              </div>
+  {skillList.length > 6 ? (
+    <span className="inline-flex items-center rounded-full border border-zinc-800 bg-zinc-950/85 px-2 py-0.5 text-[10px] text-zinc-400">
+      +{skillList.length - 6}
+    </span>
+  ) : null}
+</div>
             )}
           </div>
         </div>
