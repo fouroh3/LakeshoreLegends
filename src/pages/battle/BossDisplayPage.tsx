@@ -1,5 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
+import {
+  collection,
+  onSnapshot,
+  query,
+} from "firebase/firestore";
+
 import logoUrl from "../../assets/Lakeshore Legends Logo.png";
+import { db } from "../../firebase";
 import { useBattleControl } from "./hooks/useBattleControl";
 import { useBossState } from "./hooks/useBossState";
 import { usePageActive } from "./hooks/usePageActive";
@@ -62,27 +69,17 @@ function getRowSessionKey(row: any) {
   );
 }
 
-function getSubmittedAction(row: any) {
-  return String(
-    row?.guildAction ||
-      row?.action ||
-      row?.lastAction ||
-      row?.submittedAction ||
-      row?.battleAction ||
-      row?.turnAction ||
-      ""
-  ).toUpperCase();
-}
-
 function getActionDisplay(action: string) {
-  if (action === "HEAL") {
+  const a = String(action || "").toUpperCase();
+
+  if (a === "HEAL") {
     return {
       label: "💚 HEAL",
       className: "text-emerald-300",
     };
   }
 
-  if (action === "ATTACK" || action === "STRIKE") {
+  if (a === "ATTACK" || a === "STRIKE") {
     return {
       label: "⚔️ ATTACK",
       className: "text-red-300",
@@ -99,6 +96,11 @@ export default function BossDisplayPage() {
   const pageActive = usePageActive();
   const { battleRows } = useBattleControl(pageActive, true);
 
+  const [selectedSessionKey, setSelectedSessionKey] = useState("");
+  const [guildActionsMap, setGuildActionsMap] = useState<Record<string, string>>(
+    {}
+  );
+
   const activeRows = useMemo(() => {
     return battleRows.filter(
       (r: any) =>
@@ -112,6 +114,7 @@ export default function BossDisplayPage() {
 
     for (const row of activeRows) {
       const key = getRowSessionKey(row);
+
       if (!key) continue;
 
       if (!bySession.has(key)) {
@@ -149,8 +152,6 @@ export default function BossDisplayPage() {
     });
   }, [activeRows]);
 
-  const [selectedSessionKey, setSelectedSessionKey] = useState("");
-
   useEffect(() => {
     if (!battleOptions.length) {
       setSelectedSessionKey("");
@@ -172,6 +173,47 @@ export default function BossDisplayPage() {
     null;
 
   const primaryBattle = selectedOption?.leader || null;
+
+  useEffect(() => {
+  if (!selectedSessionKey || !primaryBattle?.round) {
+    setGuildActionsMap({});
+    return;
+  }
+
+  const currentRound = Number(primaryBattle.round);
+
+  const q = query(collection(db, "guildActions"));
+
+  const unsubscribe = onSnapshot(q, (snapshot) => {
+    const next: Record<string, string> = {};
+
+    snapshot.forEach((docSnap) => {
+      const data = docSnap.data();
+
+      if (String(data.sessionId || "") !== String(selectedSessionKey)) {
+        return;
+      }
+
+      if (Number(data.round) !== currentRound) {
+        return;
+      }
+
+      const homeroom = String(data.homeroom || "").trim();
+      const guild = String(data.guild || "").trim();
+      const action = String(data.action || "").trim().toUpperCase();
+
+      if (!homeroom || !guild || !action) {
+        return;
+      }
+
+      next[`${homeroom}_${guild}`] = action;
+    });
+
+    setGuildActionsMap(next);
+  });
+
+  return () => unsubscribe();
+}, [selectedSessionKey, primaryBattle?.round]);
 
   const bossKey = primaryBattle?.bossKey || "";
   const bossInstanceId = primaryBattle?.bossInstanceId || "";
@@ -208,11 +250,11 @@ export default function BossDisplayPage() {
 
       <div className="relative z-[1] flex min-h-screen flex-col">
         <header className="shrink-0 border-b border-zinc-900/80 bg-black/55 px-3 py-1.5 backdrop-blur">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-4">
             <img
               src={logoUrl}
               alt="Lakeshore Legends"
-              className="h-7 w-auto"
+              className="h-11 w-auto object-contain shrink-0"
               draggable={false}
             />
 
@@ -231,7 +273,7 @@ export default function BossDisplayPage() {
         </header>
 
         <main className="flex flex-1 flex-col px-1 py-1">
-          <div className="flex w-full flex-col gap-1.5">
+          <div className="mx-auto flex w-full max-w-[920px] flex-col gap-1.5">
             {battleOptions.length > 1 && (
               <div className="shrink-0 rounded-[18px] border border-zinc-800/70 bg-zinc-950/35 p-2">
                 <div className="mb-1 text-[8px] uppercase tracking-[0.24em] text-zinc-500">
@@ -289,7 +331,7 @@ export default function BossDisplayPage() {
                         {meta?.questName || "Active Encounter"}
                       </div>
 
-                      <div className="mt-0.5 truncate text-[34px] font-black leading-[1.02] text-zinc-100">
+                      <div className="mt-0.5 truncate pb-1 text-[34px] font-black leading-[1.14] text-zinc-100">
                         {boss.bossName}
                       </div>
 
@@ -299,7 +341,7 @@ export default function BossDisplayPage() {
                             "mt-1 inline-flex w-fit rounded-full border px-3 py-1 text-[11px] font-black uppercase tracking-[0.16em]",
                             defeated
                               ? "border-red-400/35 bg-red-500/15 text-red-200"
-                              : "border-red-400/30 bg-red-500/10 text-red-200 animate-pulse",
+                              : "animate-pulse border-red-400/30 bg-red-500/10 text-red-200",
                           ].join(" ")}
                         >
                           {defeated ? "Defeated" : "Critical HP"}
@@ -392,13 +434,6 @@ export default function BossDisplayPage() {
                           ].join(" ")}
                         >
                           {selectedOption?.homerooms?.map((hr: string) => {
-                            const classRows = activeRows.filter((r: any) => {
-                              return (
-                                String(r.homeroom || "").trim() === hr &&
-                                getRowSessionKey(r) === selectedSessionKey
-                              );
-                            });
-
                             return (
                               <div
                                 key={hr}
@@ -410,15 +445,10 @@ export default function BossDisplayPage() {
 
                                 <div className="grid h-full grid-rows-6 gap-2 pb-4">
                                   {GUILDS.map((guild) => {
-                                    const row = classRows.find((r: any) => {
-                                      return (
-                                        String(r.guild || "")
-                                          .trim()
-                                          .toLowerCase() === guild.toLowerCase()
-                                      );
-                                    });
+                                    const action =
+                                      guildActionsMap[`${hr}_${guild}`] ||
+                                      "WAITING";
 
-                                    const action = getSubmittedAction(row);
                                     const display = getActionDisplay(action);
 
                                     const hasSubmitted =
@@ -487,7 +517,7 @@ export default function BossDisplayPage() {
                         <div className="relative overflow-hidden rounded-full border border-zinc-700/70 bg-black/35 p-1">
                           <div
                             className={[
-                              "relative h-6 overflow-hidden rounded-full transition-all duration-700 animate-pulse",
+                              "relative h-6 animate-pulse overflow-hidden rounded-full transition-all duration-700",
                               hpBarClass(pct, defeated),
                             ].join(" ")}
                             style={{ width: `${pct}%` }}

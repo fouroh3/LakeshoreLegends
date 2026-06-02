@@ -46,6 +46,7 @@ type Props = {
 
   groupAction: "ATTACK" | "HEAL";
   setGroupAction: (v: "ATTACK" | "HEAL") => void;
+  completedGuildAction: string;
 };
 
 const card =
@@ -120,6 +121,7 @@ export default function RightRail({
   onSubmit,
   banner,
   groupAction,
+  completedGuildAction,
   setGroupAction,
 }: Props) {
   const [now, setNow] = useState(() => Date.now());
@@ -144,6 +146,10 @@ export default function RightRail({
       window.clearTimeout(timeoutId);
     };
   }, [bossCooldownUntil]);
+
+    const guildActionLocked =
+    completedGuildAction === "ATTACK" ||
+    completedGuildAction === "HEAL";
 
   const bossPct = useMemo(() => {
     if (!boss) return 0;
@@ -358,28 +364,37 @@ export default function RightRail({
             <button
               type="button"
               className={[
-                "rounded-xl border px-3 py-2 text-sm font-semibold transition",
+                "rounded-xl border px-3 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50",
                 groupAction === "ATTACK"
                   ? "border-red-400/45 bg-red-500/10 text-white"
                   : "border-zinc-800/70 bg-zinc-950/25 hover:bg-zinc-950/35 text-zinc-300",
               ].join(" ")}
               onClick={() => setGroupAction("ATTACK")}
+              disabled={guildActionLocked}
             >
               Attack
             </button>
+
             <button
               type="button"
               className={[
-                "rounded-xl border px-3 py-2 text-sm font-semibold transition",
+                "rounded-xl border px-3 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50",
                 groupAction === "HEAL"
                   ? "border-cyan-300/50 bg-cyan-500/15 text-white"
                   : "border-zinc-800/70 bg-zinc-950/25 hover:bg-zinc-950/35 text-zinc-300",
               ].join(" ")}
               onClick={() => setGroupAction("HEAL")}
+              disabled={guildActionLocked}
             >
               Heal / Damage
             </button>
           </div>
+
+          {guildActionLocked && (
+            <div className="mt-2 rounded-lg border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-[11px] font-semibold text-amber-200">
+              Guild strike submitted successfully — healing locked until next round.
+            </div>
+          )}
         </div>
       )}
 
