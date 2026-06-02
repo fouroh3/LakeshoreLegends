@@ -1,11 +1,13 @@
 // src/pages/battle/BattlePage.tsx
 
+
 import { useEffect, useMemo, useState, useCallback } from "react";
 import AppTopBar from "../../components/AppTopBar";
 import CharacterProfileModal from "../../components/CharacterProfileModal";
 import type { Student, Guild } from "../../types";
 import { loadStudents } from "../../data";
 import { submitBossDelta } from "../../bossApi";
+import { submitGuildAction, subscribeGuildActions } from "./firebaseBattle";
 
 import { usePageActive } from "./hooks/usePageActive";
 import { useBattleControl } from "./hooks/useBattleControl";
@@ -190,10 +192,7 @@ export default function BattlePage({ onBack }: Props) {
     }
   }, [activeHomeroom]);
 
-  useEffect(() => {
-    if (!activeHomeroom) return;
-    localStorage.setItem(`${GROUP_ACTION_KEY}:${activeHomeroom}`, groupAction);
-  }, [activeHomeroom, groupAction]);
+
 
   useEffect(() => {
     if (activeOptions.length === 0) {
@@ -220,6 +219,8 @@ export default function BattlePage({ onBack }: Props) {
       ) ?? null,
     [battleRows, activeHomeroom, activeSessionId]
   );
+
+
 
   const currentBossKey = useMemo(() => {
     return String((currentBattleRow as any)?.bossKey ?? "").trim();
@@ -249,6 +250,8 @@ export default function BattlePage({ onBack }: Props) {
     return Number.isFinite(n) && n > 0 ? Math.floor(n) : 1;
   }, [currentBattleRow]);
 
+
+
   const activeGuild = useMemo(() => {
     if (guildFilter !== "ALL") return String(guildFilter);
 
@@ -268,6 +271,7 @@ export default function BattlePage({ onBack }: Props) {
 
     return "";
   }, [guildFilter, selectedIds, students, activeHomeroom]);
+
 
   const hasBossConfigured = Boolean(bossInstanceId);
   const guildAttacksOpen = guildAttacks === "OPEN";
@@ -342,6 +346,42 @@ export default function BattlePage({ onBack }: Props) {
     return studentsInActiveHomeroom.filter((s) => selected.has(normId(s.id)));
   }, [studentsInActiveHomeroom, selectedIds]);
 
+  const [guildActionsMap, setGuildActionsMap] = useState<Record<string, string>>(
+  {}
+);
+
+useEffect(() => {
+  if (!activeSessionId) {
+    setGuildActionsMap({});
+    return;
+  }
+
+  return subscribeGuildActions(activeSessionId, (rows) => {
+    const next: Record<string, string> = {};
+
+    for (const row of rows) {
+      const key = `${row.round}_${row.homeroom}_${row.guild}`;
+      next[key] = String(row.action || "").toUpperCase();
+    }
+
+    setGuildActionsMap(next);
+  });
+}, [activeSessionId]);
+
+const completedGuildAction = useMemo(() => {
+  if (!activeHomeroom || !activeGuild || !activeRound) return "";
+
+  return (
+    guildActionsMap[`${activeRound}_${activeHomeroom}_${activeGuild}`] || ""
+  );
+}, [guildActionsMap, activeRound, activeHomeroom, activeGuild]);
+
+useEffect(() => {
+  if (completedGuildAction === "ATTACK" || completedGuildAction === "HEAL") {
+    setGroupAction(completedGuildAction);
+  }
+}, [completedGuildAction]);
+
   const selectedSkills = useMemo(() => {
     if (selectedStudents.length !== 1) return [];
     return skillsToArray(selectedStudents[0].skills);
@@ -356,10 +396,13 @@ export default function BattlePage({ onBack }: Props) {
       return;
     }
 
-    if (studentAttackMode) {
+    if (
+      completedGuildAction === "ATTACK" ||
+      groupAction === "ATTACK"
+    ) {
       setBanner({
         type: "err",
-        msg: "Group Action is ATTACK. Student heal/damage is disabled.",
+        msg: "This guild already chose ATTACK this round.",
       });
       return;
     }
@@ -443,6 +486,14 @@ export default function BattlePage({ onBack }: Props) {
           : `Applied ✅ (${appliedCount}/${snapshot.length} target${
               snapshot.length === 1 ? "" : "s"
             })`,
+      });
+
+      await submitGuildAction({
+        sessionId: cleanSessionId,
+        homeroom: activeHomeroom,
+        guild: activeGuild,
+        action: "HEAL",
+        round: activeRound,
       });
 
       setSelectedIds([]);
@@ -623,6 +674,13 @@ export default function BattlePage({ onBack }: Props) {
         );
 
         setBossBanner({ type: "ok", msg: "Boss hit submitted ✅" });
+        await submitGuildAction({
+          sessionId: activeSessionId,
+          homeroom: activeHomeroom,
+          guild: cleanGuild,
+          action: "ATTACK",
+          round,
+        });
         setBossCooldownUntil(Date.now() + BOSS_COOLDOWN_MS);
         setBossNote("");
         setBossDamage("");
@@ -668,6 +726,7 @@ export default function BattlePage({ onBack }: Props) {
   const bossName =
     boss?.bossName?.trim() || currentQuestName || currentBossKey || "Boss";
 
+  
   return (
     <div className="w-full min-h-[100dvh] overflow-hidden bg-[#05070d] text-zinc-100">
       <AppTopBar
@@ -765,7 +824,11 @@ export default function BattlePage({ onBack }: Props) {
                   onSubmit={onSubmit}
                   banner={banner}
                   groupAction={groupAction}
-                  setGroupAction={setGroupAction}
+                  setGroupAction={(next) => {
+                    if (completedGuildAction) return;
+                    setGroupAction(next);
+                  }}
+                  completedGuildAction={completedGuildAction}
                 />
               </div>
             </div>
