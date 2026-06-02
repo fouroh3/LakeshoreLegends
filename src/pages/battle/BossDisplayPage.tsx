@@ -1,9 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import {
-  collection,
-  onSnapshot,
-  query,
-} from "firebase/firestore";
+import { collection, onSnapshot, query } from "firebase/firestore";
 
 import logoUrl from "../../assets/Lakeshore Legends Logo.png";
 import { db } from "../../firebase";
@@ -104,8 +100,7 @@ export default function BossDisplayPage() {
   const activeRows = useMemo(() => {
     return battleRows.filter(
       (r: any) =>
-        String(r.status || "").toUpperCase() === "ACTIVE" &&
-        r.bossInstanceId
+        String(r.status || "").toUpperCase() === "ACTIVE" && r.bossInstanceId
     );
   }, [battleRows]);
 
@@ -175,45 +170,44 @@ export default function BossDisplayPage() {
   const primaryBattle = selectedOption?.leader || null;
 
   useEffect(() => {
-  if (!selectedSessionKey || !primaryBattle?.round) {
-    setGuildActionsMap({});
-    return;
-  }
+    if (!selectedSessionKey || !primaryBattle?.round) {
+      setGuildActionsMap({});
+      return;
+    }
 
-  const currentRound = Number(primaryBattle.round);
+    const currentRound = Number(primaryBattle.round);
+    const q = query(collection(db, "guildActions"));
 
-  const q = query(collection(db, "guildActions"));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const next: Record<string, string> = {};
 
-  const unsubscribe = onSnapshot(q, (snapshot) => {
-    const next: Record<string, string> = {};
+      snapshot.forEach((docSnap) => {
+        const data = docSnap.data();
 
-    snapshot.forEach((docSnap) => {
-      const data = docSnap.data();
+        if (String(data.sessionId || "") !== String(selectedSessionKey)) {
+          return;
+        }
 
-      if (String(data.sessionId || "") !== String(selectedSessionKey)) {
-        return;
-      }
+        if (Number(data.round) !== currentRound) {
+          return;
+        }
 
-      if (Number(data.round) !== currentRound) {
-        return;
-      }
+        const homeroom = String(data.homeroom || "").trim();
+        const guild = String(data.guild || "").trim();
+        const action = String(data.action || "").trim().toUpperCase();
 
-      const homeroom = String(data.homeroom || "").trim();
-      const guild = String(data.guild || "").trim();
-      const action = String(data.action || "").trim().toUpperCase();
+        if (!homeroom || !guild || !action) {
+          return;
+        }
 
-      if (!homeroom || !guild || !action) {
-        return;
-      }
+        next[`${homeroom}_${guild}`] = action;
+      });
 
-      next[`${homeroom}_${guild}`] = action;
+      setGuildActionsMap(next);
     });
 
-    setGuildActionsMap(next);
-  });
-
-  return () => unsubscribe();
-}, [selectedSessionKey, primaryBattle?.round]);
+    return () => unsubscribe();
+  }, [selectedSessionKey, primaryBattle?.round]);
 
   const bossKey = primaryBattle?.bossKey || "";
   const bossInstanceId = primaryBattle?.bossInstanceId || "";
@@ -254,7 +248,7 @@ export default function BossDisplayPage() {
             <img
               src={logoUrl}
               alt="Lakeshore Legends"
-              className="h-11 w-auto object-contain shrink-0"
+              className="h-11 w-auto shrink-0 object-contain"
               draggable={false}
             />
 
@@ -312,21 +306,21 @@ export default function BossDisplayPage() {
                 ].join(" ")}
               >
                 <div className="flex h-full flex-col bg-[radial-gradient(circle_at_top_left,rgba(251,191,36,0.20),transparent_55%)] px-5 py-4">
-                  <div className="flex flex-1 items-start gap-5">
+                  <div className="flex items-start gap-4 pb-3">
                     {meta?.logo ? (
                       <img
                         src={meta.logo}
                         alt={boss.bossName}
-                        className="h-16 w-16 shrink-0 object-cover drop-shadow-[0_12px_26px_rgba(0,0,0,0.42)]"
+                        className="mt-2 h-14 w-14 shrink-0 object-cover drop-shadow-[0_12px_26px_rgba(0,0,0,0.42)]"
                         draggable={false}
                       />
                     ) : (
-                      <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-[18px] border border-zinc-700/70 bg-black/30 text-2xl font-black text-zinc-500">
+                      <div className="mt-2 flex h-14 w-14 shrink-0 items-center justify-center rounded-[18px] border border-zinc-700/70 bg-black/30 text-2xl font-black text-zinc-500">
                         B
                       </div>
                     )}
 
-                    <div className="flex h-full flex-1 flex-col">
+                    <div className="flex min-w-0 flex-1 flex-col justify-center">
                       <div className="truncate text-[10px] uppercase tracking-[0.28em] text-amber-300/90">
                         {meta?.questName || "Active Encounter"}
                       </div>
@@ -347,191 +341,191 @@ export default function BossDisplayPage() {
                           {defeated ? "Defeated" : "Critical HP"}
                         </div>
                       )}
+                    </div>
+                  </div>
 
-                      <div className="mt-2 grid grid-cols-2 gap-2">
-                        <div className="rounded-xl border border-zinc-700/70 bg-black/25 px-3 py-2">
-                          <div className="text-[8px] uppercase tracking-[0.2em] text-zinc-500">
-                            Homeroom
-                          </div>
-
-                          <div className="mt-0.5 truncate text-[16px] font-black text-zinc-100">
-                            {homeroomLabel}
-                          </div>
-                        </div>
-
-                        <div className="rounded-xl border border-zinc-700/70 bg-black/25 px-3 py-2">
-                          <div className="text-[8px] uppercase tracking-[0.2em] text-zinc-500">
-                            Round
-                          </div>
-
-                          <div className="mt-0.5 text-[16px] font-black text-zinc-100">
-                            {primaryBattle.round || 1}
-                          </div>
-                        </div>
-
-                        <div
-                          className={[
-                            "rounded-xl border px-3 py-2",
-                            turnLabel === "GUILD"
-                              ? "border-cyan-400/25 bg-cyan-500/10"
-                              : "border-amber-400/25 bg-amber-500/10",
-                          ].join(" ")}
-                        >
-                          <div className="text-[8px] uppercase tracking-[0.2em] text-zinc-500">
-                            Turn
-                          </div>
-
-                          <div
-                            className={[
-                              "mt-0.5 text-[16px] font-black",
-                              turnLabel === "GUILD"
-                                ? "text-cyan-200"
-                                : "text-amber-200",
-                            ].join(" ")}
-                          >
-                            {turnLabel}
-                          </div>
-                        </div>
-
-                        <div
-                          className={[
-                            "rounded-xl border px-3 py-2",
-                            String(primaryBattle.guildAttacks || "").toUpperCase() ===
-                            "OPEN"
-                              ? "border-emerald-400/25 bg-emerald-500/10"
-                              : "border-red-400/25 bg-red-500/10",
-                          ].join(" ")}
-                        >
-                          <div className="text-[8px] uppercase tracking-[0.2em] text-zinc-500">
-                            Guild Attacks
-                          </div>
-
-                          <div
-                            className={[
-                              "mt-0.5 text-[16px] font-black",
-                              String(primaryBattle.guildAttacks || "").toUpperCase() ===
-                              "OPEN"
-                                ? "text-emerald-200"
-                                : "text-red-200",
-                            ].join(" ")}
-                          >
-                            {String(primaryBattle.guildAttacks || "CLOSED").toUpperCase()}
-                          </div>
-                        </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="rounded-xl border border-zinc-700/70 bg-black/25 px-3 py-2">
+                      <div className="text-[8px] uppercase tracking-[0.2em] text-zinc-500">
+                        Homeroom
                       </div>
 
-                      <div className="mt-3 flex-1 rounded-[16px] border border-zinc-700/60 bg-black/25 p-3">
-                        <div className="mb-2 text-center text-[9px] font-black uppercase tracking-[0.24em] text-zinc-400">
-                          Guild Actions
-                        </div>
+                      <div className="mt-0.5 truncate text-[16px] font-black text-zinc-100">
+                        {homeroomLabel}
+                      </div>
+                    </div>
 
-                        <div
-                          className={[
-                            "grid h-[calc(100%-20px)] gap-3",
-                            selectedOption?.homerooms?.length > 1
-                              ? "grid-cols-2"
-                              : "grid-cols-1",
-                          ].join(" ")}
-                        >
-                          {selectedOption?.homerooms?.map((hr: string) => {
-                            return (
-                              <div
-                                key={hr}
-                                className="rounded-xl border border-zinc-800/70 bg-zinc-950/50 p-2"
-                              >
-                                <div className="mb-2 text-center text-[13px] font-black leading-none text-cyan-300">
-                                  {hr}
-                                </div>
-
-                                <div className="grid h-full grid-rows-6 gap-2 pb-4">
-                                  {GUILDS.map((guild) => {
-                                    const action =
-                                      guildActionsMap[`${hr}_${guild}`] ||
-                                      "WAITING";
-
-                                    const display = getActionDisplay(action);
-
-                                    const hasSubmitted =
-                                      action === "HEAL" ||
-                                      action === "ATTACK" ||
-                                      action === "STRIKE";
-
-                                    return (
-                                      <div
-                                        key={`${hr}-${guild}`}
-                                        className={[
-                                          "flex items-center justify-between rounded-lg border px-2 py-1",
-                                          hasSubmitted
-                                            ? "border-cyan-400/25 bg-cyan-500/10"
-                                            : "border-zinc-800/70 bg-black/30",
-                                        ].join(" ")}
-                                      >
-                                        <div className="truncate pr-1 text-[12px] font-bold leading-none text-zinc-100">
-                                          {guild}
-                                        </div>
-
-                                        <div
-                                          className={[
-                                            "shrink-0 text-[10px] font-black uppercase leading-none tracking-[0.07em]",
-                                            display.className,
-                                          ].join(" ")}
-                                        >
-                                          {display.label}
-                                        </div>
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
+                    <div className="rounded-xl border border-zinc-700/70 bg-black/25 px-3 py-2">
+                      <div className="text-[8px] uppercase tracking-[0.2em] text-zinc-500">
+                        Round
                       </div>
 
-                      {defeated && (
-                        <div className="mt-3 rounded-[20px] border border-red-500/25 bg-red-950/30 px-4 py-3 text-center shadow-[0_0_32px_rgba(239,68,68,0.18)]">
-                          <div className="text-[10px] uppercase tracking-[0.32em] text-red-300/70">
-                            Encounter Status
-                          </div>
+                      <div className="mt-0.5 text-[16px] font-black text-zinc-100">
+                        {primaryBattle.round || 1}
+                      </div>
+                    </div>
 
-                          <div className="mt-1 text-3xl font-black tracking-wide text-red-200">
-                            BOSS DEFEATED
-                          </div>
-                        </div>
-                      )}
+                    <div
+                      className={[
+                        "rounded-xl border px-3 py-2",
+                        turnLabel === "GUILD"
+                          ? "border-cyan-400/25 bg-cyan-500/10"
+                          : "border-amber-400/25 bg-amber-500/10",
+                      ].join(" ")}
+                    >
+                      <div className="text-[8px] uppercase tracking-[0.2em] text-zinc-500">
+                        Turn
+                      </div>
 
-                      <div className="mt-3">
-                        <div className="mb-1 flex items-end justify-between gap-3">
-                          <div className="text-[14px] font-medium text-zinc-300">
-                            Boss HP
-                          </div>
+                      <div
+                        className={[
+                          "mt-0.5 text-[16px] font-black",
+                          turnLabel === "GUILD"
+                            ? "text-cyan-200"
+                            : "text-amber-200",
+                        ].join(" ")}
+                      >
+                        {turnLabel}
+                      </div>
+                    </div>
 
-                          <div className="tabular-nums text-[22px] font-black text-zinc-100">
-                            {Math.round(currentHP)}
-                            <span className="text-zinc-500">
-                              /{Math.round(maxHP)}
-                            </span>
-                          </div>
-                        </div>
+                    <div
+                      className={[
+                        "rounded-xl border px-3 py-2",
+                        String(primaryBattle.guildAttacks || "").toUpperCase() ===
+                        "OPEN"
+                          ? "border-emerald-400/25 bg-emerald-500/10"
+                          : "border-red-400/25 bg-red-500/10",
+                      ].join(" ")}
+                    >
+                      <div className="text-[8px] uppercase tracking-[0.2em] text-zinc-500">
+                        Guild Attacks
+                      </div>
 
-                        <div className="relative overflow-hidden rounded-full border border-zinc-700/70 bg-black/35 p-1">
+                      <div
+                        className={[
+                          "mt-0.5 text-[16px] font-black",
+                          String(primaryBattle.guildAttacks || "").toUpperCase() ===
+                          "OPEN"
+                            ? "text-emerald-200"
+                            : "text-red-200",
+                        ].join(" ")}
+                      >
+                        {String(primaryBattle.guildAttacks || "CLOSED").toUpperCase()}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 flex-1 rounded-[16px] border border-zinc-700/60 bg-black/25 p-3">
+                    <div className="mb-2 text-center text-[9px] font-black uppercase tracking-[0.24em] text-zinc-400">
+                      Guild Actions
+                    </div>
+
+                    <div
+                      className={[
+                        "grid h-[calc(100%-20px)] gap-3",
+                        selectedOption?.homerooms?.length > 1
+                          ? "grid-cols-2"
+                          : "grid-cols-1",
+                      ].join(" ")}
+                    >
+                      {selectedOption?.homerooms?.map((hr: string) => {
+                        return (
                           <div
-                            className={[
-                              "relative h-6 animate-pulse overflow-hidden rounded-full transition-all duration-700",
-                              hpBarClass(pct, defeated),
-                            ].join(" ")}
-                            style={{ width: `${pct}%` }}
+                            key={hr}
+                            className="rounded-xl border border-zinc-800/70 bg-zinc-950/50 p-2"
                           >
-                            <div className="absolute inset-0 bg-[linear-gradient(110deg,transparent_0%,rgba(255,255,255,0.18)_42%,transparent_70%)] opacity-60" />
-                          </div>
-                        </div>
+                            <div className="mb-2 text-center text-[13px] font-black leading-none text-cyan-300">
+                              {hr}
+                            </div>
 
-                        <div className="mt-1 flex justify-between text-[8px] uppercase tracking-[0.18em] text-zinc-600">
-                          <span>0</span>
-                          <span>{Math.round(pct)}% remaining</span>
-                          <span>{Math.round(maxHP)}</span>
-                        </div>
+                            <div className="grid h-full grid-rows-6 gap-2 pb-4">
+                              {GUILDS.map((guild) => {
+                                const action =
+                                  guildActionsMap[`${hr}_${guild}`] ||
+                                  "WAITING";
+
+                                const display = getActionDisplay(action);
+
+                                const hasSubmitted =
+                                  action === "HEAL" ||
+                                  action === "ATTACK" ||
+                                  action === "STRIKE";
+
+                                return (
+                                  <div
+                                    key={`${hr}-${guild}`}
+                                    className={[
+                                      "flex items-center justify-between rounded-lg border px-2 py-1",
+                                      hasSubmitted
+                                        ? "border-cyan-400/25 bg-cyan-500/10"
+                                        : "border-zinc-800/70 bg-black/30",
+                                    ].join(" ")}
+                                  >
+                                    <div className="truncate pr-1 text-[12px] font-bold leading-none text-zinc-100">
+                                      {guild}
+                                    </div>
+
+                                    <div
+                                      className={[
+                                        "shrink-0 text-[10px] font-black uppercase leading-none tracking-[0.07em]",
+                                        display.className,
+                                      ].join(" ")}
+                                    >
+                                      {display.label}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {defeated && (
+                    <div className="mt-3 rounded-[20px] border border-red-500/25 bg-red-950/30 px-4 py-3 text-center shadow-[0_0_32px_rgba(239,68,68,0.18)]">
+                      <div className="text-[10px] uppercase tracking-[0.32em] text-red-300/70">
+                        Encounter Status
                       </div>
+
+                      <div className="mt-1 text-3xl font-black tracking-wide text-red-200">
+                        BOSS DEFEATED
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="mt-3">
+                    <div className="mb-1 flex items-end justify-between gap-3">
+                      <div className="text-[14px] font-medium text-zinc-300">
+                        Boss HP
+                      </div>
+
+                      <div className="tabular-nums text-[22px] font-black text-zinc-100">
+                        {Math.round(currentHP)}
+                        <span className="text-zinc-500">
+                          /{Math.round(maxHP)}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="relative overflow-hidden rounded-full border border-zinc-700/70 bg-black/35 p-1">
+                      <div
+                        className={[
+                          "relative h-6 animate-pulse overflow-hidden rounded-full transition-all duration-700",
+                          hpBarClass(pct, defeated),
+                        ].join(" ")}
+                        style={{ width: `${pct}%` }}
+                      >
+                        <div className="absolute inset-0 bg-[linear-gradient(110deg,transparent_0%,rgba(255,255,255,0.18)_42%,transparent_70%)] opacity-60" />
+                      </div>
+                    </div>
+
+                    <div className="mt-1 flex justify-between text-[8px] uppercase tracking-[0.18em] text-zinc-600">
+                      <span>0</span>
+                      <span>{Math.round(pct)}% remaining</span>
+                      <span>{Math.round(maxHP)}</span>
                     </div>
                   </div>
                 </div>
