@@ -1,5 +1,5 @@
 // src/pages/battle/components/RightRail.tsx
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import type { Student } from "../../../types";
 import type { BossState } from "../../../bossApi";
 import { hpBarColorFromPct } from "../../../utils/hpColor";
@@ -102,7 +102,6 @@ export default function RightRail({
   onSubmitBossAttack,
   bossSubmitErr,
   bossBanner,
-  bossCooldownUntil,
   activeRound,
   activeGuild,
   studentHealMode,
@@ -121,35 +120,9 @@ export default function RightRail({
   onSubmit,
   banner,
   groupAction,
-  completedGuildAction,
   setGroupAction,
 }: Props) {
-  const [now, setNow] = useState(() => Date.now());
-
-  useEffect(() => {
-    if (!bossCooldownUntil || bossCooldownUntil <= Date.now()) {
-      setNow(Date.now());
-      return;
-    }
-
-    const intervalId = window.setInterval(() => {
-      setNow(Date.now());
-    }, 100);
-
-    const timeoutMs = Math.max(0, bossCooldownUntil - Date.now());
-    const timeoutId = window.setTimeout(() => {
-      setNow(Date.now());
-    }, timeoutMs + 25);
-
-    return () => {
-      window.clearInterval(intervalId);
-      window.clearTimeout(timeoutId);
-    };
-  }, [bossCooldownUntil]);
-
-    const guildActionLocked =
-    completedGuildAction === "ATTACK" ||
-    completedGuildAction === "HEAL";
+  const guildActionLocked = false;
 
   const bossPct = useMemo(() => {
     if (!boss) return 0;
@@ -162,31 +135,16 @@ export default function RightRail({
 
   const bossBarColor = useMemo(() => hpBarColorFromPct(bossPct), [bossPct]);
 
-  const cooldownMs = useMemo(() => {
-    const ms = bossCooldownUntil - now;
-    return ms > 0 ? ms : 0;
-  }, [bossCooldownUntil, now]);
-
   const showAttackUi = isTeacher ? true : groupAction === "ATTACK";
   const showHealUi = isTeacher ? true : groupAction === "HEAL";
 
   const attackDisabledReason = useMemo(() => {
     if (!hasBossConfigured) return "No boss configured";
     if (bossDefeated) return "Boss defeated";
-    if (studentHealMode) return "Switch Group Action to ATTACK";
-    if (!isTeacher && !guildAttacksOpen) return "Guild attacks are CLOSED";
     if (!activeRound || activeRound <= 0) return "Missing round";
     if (!activeGuild) return "Choose a guild first";
     return "";
-  }, [
-    hasBossConfigured,
-    bossDefeated,
-    studentHealMode,
-    isTeacher,
-    guildAttacksOpen,
-    activeRound,
-    activeGuild,
-  ]);
+  }, [hasBossConfigured, bossDefeated, activeRound, activeGuild]);
 
   const bossLookupValue = useMemo(() => {
     return (
@@ -389,12 +347,6 @@ export default function RightRail({
               Heal / Damage
             </button>
           </div>
-
-          {guildActionLocked && (
-            <div className="mt-2 rounded-lg border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-[11px] font-semibold text-amber-200">
-              Guild strike submitted successfully — healing locked until next round.
-            </div>
-          )}
         </div>
       )}
 
@@ -409,7 +361,7 @@ export default function RightRail({
               value={bossDamage}
               onChange={(e) => setBossDamage(e.target.value)}
               inputMode="numeric"
-              placeholder="e.g. 250"
+              placeholder="e.g. 600"
               disabled={Boolean(
                 !hasBossConfigured || bossSubmitting || bossDefeated
               )}
@@ -457,15 +409,11 @@ export default function RightRail({
               onClick={() =>
                 onSubmitBossAttack({ round: activeRound, guild: activeGuild })
               }
-              disabled={Boolean(
-                bossSubmitting || cooldownMs > 0 || !!attackDisabledReason
-              )}
+              disabled={Boolean(bossSubmitting || !!attackDisabledReason)}
               title={attackDisabledReason || undefined}
             >
               {bossDefeated
                 ? "Boss Defeated"
-                : cooldownMs > 0
-                ? `Cooldown… ${(cooldownMs / 1000).toFixed(1)}s`
                 : bossSubmitting
                 ? "Submitting…"
                 : "Submit Boss Hit"}

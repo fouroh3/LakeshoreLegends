@@ -1,13 +1,11 @@
 // src/pages/battle/BattlePage.tsx
 
-
 import { useEffect, useMemo, useState, useCallback } from "react";
 import AppTopBar from "../../components/AppTopBar";
 import CharacterProfileModal from "../../components/CharacterProfileModal";
 import type { Student, Guild } from "../../types";
 import { loadStudents } from "../../data";
 import { submitBossDelta } from "../../bossApi";
-import { submitGuildAction, subscribeGuildActions } from "./firebaseBattle";
 
 import { usePageActive } from "./hooks/usePageActive";
 import { useBattleControl } from "./hooks/useBattleControl";
@@ -30,26 +28,6 @@ import StudentGrid from "./components/BattleStudentGrid";
 import RightRail from "./components/RightRail";
 
 type Props = { onBack: () => void };
-
-const BOSS_COOLDOWN_MS = 3000;
-
-function normalizeGuildKey(v: string) {
-  return String(v || "")
-    .trim()
-    .toUpperCase();
-}
-
-function makeBossAttackLockKey(args: {
-  bossInstanceId: string;
-  round: number;
-  guild: string;
-}) {
-  return [
-    String(args.bossInstanceId || "").trim(),
-    String(args.round || 0).trim(),
-    normalizeGuildKey(args.guild),
-  ].join("::");
-}
 
 async function submitHpBatch(args: {
   sessionId: string;
@@ -103,7 +81,6 @@ async function submitHpBatch(args: {
   };
 }
 
-
 export default function BattlePage({ onBack }: Props) {
   const pageActive = usePageActive();
 
@@ -112,8 +89,7 @@ export default function BattlePage({ onBack }: Props) {
     return sp.get("teacher") === "1";
   }, []);
 
-  const { battleRows, refreshOnce: refreshBattleControlOnce } =
-    useBattleControl(pageActive, isTeacher);
+  const { battleRows } = useBattleControl(pageActive, isTeacher);
 
   const { getDisplayHp, applyOptimisticHp, clearPending } =
     useHpState(pageActive);
@@ -152,10 +128,6 @@ export default function BattlePage({ onBack }: Props) {
   } | null>(null);
   const [bossCooldownUntil, setBossCooldownUntil] = useState<number>(0);
 
-  const [bossAttackLocks, setBossAttackLocks] = useState<Record<string, true>>(
-    {}
-  );
-
   const activeOptions = useMemo(() => {
     return battleRows
       .filter((r: any) => String(r.status).toUpperCase() === "ACTIVE")
@@ -192,8 +164,6 @@ export default function BattlePage({ onBack }: Props) {
     }
   }, [activeHomeroom]);
 
-
-
   useEffect(() => {
     if (activeOptions.length === 0) {
       setActiveHomeroom("");
@@ -219,8 +189,6 @@ export default function BattlePage({ onBack }: Props) {
       ) ?? null,
     [battleRows, activeHomeroom, activeSessionId]
   );
-
-
 
   const currentBossKey = useMemo(() => {
     return String((currentBattleRow as any)?.bossKey ?? "").trim();
@@ -250,8 +218,6 @@ export default function BattlePage({ onBack }: Props) {
     return Number.isFinite(n) && n > 0 ? Math.floor(n) : 1;
   }, [currentBattleRow]);
 
-
-
   const activeGuild = useMemo(() => {
     if (guildFilter !== "ALL") return String(guildFilter);
 
@@ -272,16 +238,15 @@ export default function BattlePage({ onBack }: Props) {
     return "";
   }, [guildFilter, selectedIds, students, activeHomeroom]);
 
-
   const hasBossConfigured = Boolean(bossInstanceId);
   const guildAttacksOpen = guildAttacks === "OPEN";
+
   const studentAttackMode = !isTeacher && groupAction === "ATTACK";
   const studentHealMode = !isTeacher && groupAction === "HEAL";
-  const studentControlsDisabled = studentAttackMode;
 
-  useEffect(() => {
-    setBossAttackLocks({});
-  }, [bossInstanceId, activeRound, activeSessionId]);
+  // Restrictions removed:
+  // Student controls are no longer disabled just because the group is in ATTACK mode.
+  const studentControlsDisabled = false;
 
   const studentsInActiveHomeroom = useMemo(() => {
     if (!activeHomeroom) return [];
@@ -346,41 +311,9 @@ export default function BattlePage({ onBack }: Props) {
     return studentsInActiveHomeroom.filter((s) => selected.has(normId(s.id)));
   }, [studentsInActiveHomeroom, selectedIds]);
 
-  const [guildActionsMap, setGuildActionsMap] = useState<Record<string, string>>(
-  {}
-);
-
-useEffect(() => {
-  if (!activeSessionId) {
-    setGuildActionsMap({});
-    return;
-  }
-
-  return subscribeGuildActions(activeSessionId, (rows) => {
-    const next: Record<string, string> = {};
-
-    for (const row of rows) {
-      const key = `${row.round}_${row.homeroom}_${row.guild}`;
-      next[key] = String(row.action || "").toUpperCase();
-    }
-
-    setGuildActionsMap(next);
-  });
-}, [activeSessionId]);
-
-const completedGuildAction = useMemo(() => {
-  if (!activeHomeroom || !activeGuild || !activeRound) return "";
-
-  return (
-    guildActionsMap[`${activeRound}_${activeHomeroom}_${activeGuild}`] || ""
-  );
-}, [guildActionsMap, activeRound, activeHomeroom, activeGuild]);
-
-useEffect(() => {
-  if (completedGuildAction === "ATTACK" || completedGuildAction === "HEAL") {
-    setGroupAction(completedGuildAction);
-  }
-}, [completedGuildAction]);
+  // Restrictions removed:
+  // We no longer subscribe to or enforce completed guild actions.
+  const completedGuildAction = "";
 
   const selectedSkills = useMemo(() => {
     if (selectedStudents.length !== 1) return [];
@@ -393,17 +326,6 @@ useEffect(() => {
 
     if (!activeHomeroom || !activeSessionId) {
       setBanner({ type: "err", msg: "Pick an ACTIVE homeroom." });
-      return;
-    }
-
-    if (
-      completedGuildAction === "ATTACK" ||
-      groupAction === "ATTACK"
-    ) {
-      setBanner({
-        type: "err",
-        msg: "This guild already chose ATTACK this round.",
-      });
       return;
     }
 
@@ -488,13 +410,8 @@ useEffect(() => {
             })`,
       });
 
-      await submitGuildAction({
-        sessionId: cleanSessionId,
-        homeroom: activeHomeroom,
-        guild: activeGuild,
-        action: "HEAL",
-        round: activeRound,
-      });
+      // Restrictions removed:
+      // No longer marks the guild as having completed HEAL for the round.
 
       setSelectedIds([]);
       setNote("");
@@ -519,7 +436,6 @@ useEffect(() => {
     submitting,
     activeHomeroom,
     activeSessionId,
-    studentAttackMode,
     selectedIds,
     delta,
     getDisplayHp,
@@ -539,28 +455,6 @@ useEffect(() => {
         return;
       }
 
-      const localKey = makeBossAttackLockKey({
-        bossInstanceId,
-        round,
-        guild: cleanGuild,
-      });
-
-      if (bossAttackLocks[localKey]) {
-        const msg = "This guild already attacked this round.";
-        setBossSubmitErr(msg);
-        setBossBanner({ type: "err", msg });
-        return;
-      }
-
-      const now = Date.now();
-      if (now < bossCooldownUntil) {
-        setBossBanner({
-          type: "err",
-          msg: "Hold up… attack already submitted.",
-        });
-        return;
-      }
-
       if (!bossInstanceId) {
         setBossSubmitErr("No boss configured for this battle yet.");
         return;
@@ -574,50 +468,15 @@ useEffect(() => {
         return;
       }
 
-      if (studentHealMode) {
-        setBossSubmitErr(
-          "Group Action is HEAL. Switch to ATTACK to damage the boss."
-        );
-        return;
-      }
-
       if (!round || round <= 0) {
         setBossSubmitErr("Missing round.");
         return;
-      }
-
-      if (!isTeacher && studentAttackMode && !guildAttacksOpen) {
-        try {
-          const fresh = await refreshBattleControlOnce();
-          const row =
-            fresh.find(
-              (r: any) =>
-                r.homeroom === activeHomeroom &&
-                r.activeBattleSessionId === activeSessionId
-            ) ?? currentBattleRow;
-
-          const reopened =
-            String((row as any)?.turn ?? "").toUpperCase() === "GUILD";
-
-          if (!reopened) {
-            setBossSubmitErr("Guild attacks are CLOSED");
-            return;
-          }
-        } catch {
-          setBossSubmitErr("Guild attacks are CLOSED");
-          return;
-        }
       }
 
       if (!boss) {
         setBossSubmitErr("Boss state is still loading. Please try again.");
         return;
       }
-
-      setBossAttackLocks((prev) => ({
-        ...prev,
-        [localKey]: true,
-      }));
 
       setBossSubmitting(true);
 
@@ -650,13 +509,11 @@ useEffect(() => {
           clearBossPending(boss.bossInstanceId);
           setBoss((prev) => (prev ? { ...prev, currentHP: previousHP } : prev));
           setBossSubmitErr(
-            (result as any)?.reason || "This guild already attacked this round."
+            (result as any)?.reason || "Attack was deduped by the backend."
           );
           setBossBanner({
             type: "err",
-            msg:
-              (result as any)?.reason ||
-              "This guild already attacked this round.",
+            msg: (result as any)?.reason || "Attack was deduped by the backend.",
           });
           return;
         }
@@ -674,25 +531,16 @@ useEffect(() => {
         );
 
         setBossBanner({ type: "ok", msg: "Boss hit submitted ✅" });
-        await submitGuildAction({
-          sessionId: activeSessionId,
-          homeroom: activeHomeroom,
-          guild: cleanGuild,
-          action: "ATTACK",
-          round,
-        });
-        setBossCooldownUntil(Date.now() + BOSS_COOLDOWN_MS);
+
+        // Restrictions removed:
+        // No longer marks the guild as having completed ATTACK for the round.
+        // No cooldown is applied.
+
         setBossNote("");
         setBossDamage("");
       } catch {
         clearBossPending(boss.bossInstanceId);
         setBoss((prev) => (prev ? { ...prev, currentHP: previousHP } : prev));
-
-        setBossAttackLocks((prev) => {
-          const next = { ...prev };
-          delete next[localKey];
-          return next;
-        });
 
         setBossSubmitErr("Boss submit failed. Please try again.");
         setBossBanner({ type: "err", msg: "Boss submit failed." });
@@ -701,19 +549,11 @@ useEffect(() => {
       }
     },
     [
-      bossCooldownUntil,
       bossInstanceId,
-      bossAttackLocks,
       bossSubmitting,
       bossDamage,
-      studentHealMode,
-      isTeacher,
-      studentAttackMode,
-      guildAttacksOpen,
-      refreshBattleControlOnce,
       activeHomeroom,
       activeSessionId,
-      currentBattleRow,
       boss,
       bossNote,
       currentBossKey,
@@ -726,7 +566,6 @@ useEffect(() => {
   const bossName =
     boss?.bossName?.trim() || currentQuestName || currentBossKey || "Boss";
 
-  
   return (
     <div className="w-full min-h-[100dvh] overflow-hidden bg-[#05070d] text-zinc-100">
       <AppTopBar
@@ -825,8 +664,13 @@ useEffect(() => {
                   banner={banner}
                   groupAction={groupAction}
                   setGroupAction={(next) => {
-                    if (completedGuildAction) return;
                     setGroupAction(next);
+                    if (activeHomeroom) {
+                      localStorage.setItem(
+                        `${GROUP_ACTION_KEY}:${activeHomeroom}`,
+                        next
+                      );
+                    }
                   }}
                   completedGuildAction={completedGuildAction}
                 />
