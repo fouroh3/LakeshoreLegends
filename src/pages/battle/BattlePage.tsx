@@ -29,6 +29,11 @@ import RightRail from "./components/RightRail";
 
 type Props = { onBack: () => void };
 
+const NO_STRIKE_BOSS_KEYS = new Set([
+  "HOTEL_OF_DESPAIR",
+  "WEBS_OF_CHANCE",
+]);
+
 async function submitHpBatch(args: {
   sessionId: string;
   note?: string;
@@ -198,6 +203,10 @@ export default function BattlePage({ onBack }: Props) {
     return String((currentBattleRow as any)?.quest ?? "").trim();
   }, [currentBattleRow]);
 
+  const canStrikeBoss = useMemo(() => {
+    return !NO_STRIKE_BOSS_KEYS.has(currentBossKey);
+  }, [currentBossKey]);
+
   useEffect(() => {
     const turn = String((currentBattleRow as any)?.turn ?? "").toUpperCase();
     const ga = turn === "GUILD" ? "OPEN" : "CLOSED";
@@ -239,6 +248,7 @@ export default function BattlePage({ onBack }: Props) {
   }, [guildFilter, selectedIds, students, activeHomeroom]);
 
   const hasBossConfigured = Boolean(bossInstanceId);
+  const showBossStrikePanel = hasBossConfigured && canStrikeBoss;
   const guildAttacksOpen = guildAttacks === "OPEN";
 
   const studentAttackMode = !isTeacher && groupAction === "ATTACK";
@@ -449,6 +459,15 @@ export default function BattlePage({ onBack }: Props) {
       setBossBanner(null);
       setBossSubmitErr(null);
 
+      if (!canStrikeBoss) {
+        setBossSubmitErr("This quest does not use boss strikes.");
+        setBossBanner({
+          type: "err",
+          msg: "This quest does not use boss strikes.",
+        });
+        return;
+      }
+
       const cleanGuild = String(guild || "").trim();
       if (!cleanGuild) {
         setBossSubmitErr("Missing guild.");
@@ -549,6 +568,7 @@ export default function BattlePage({ onBack }: Props) {
       }
     },
     [
+      canStrikeBoss,
       bossInstanceId,
       bossSubmitting,
       bossDamage,
@@ -630,7 +650,7 @@ export default function BattlePage({ onBack }: Props) {
                 />
 
                 <RightRail
-                  hasBossConfigured={hasBossConfigured}
+                  hasBossConfigured={showBossStrikePanel}
                   bossName={bossName}
                   bossKey={currentBossKey}
                   questName={currentQuestName}

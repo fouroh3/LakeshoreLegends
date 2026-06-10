@@ -49,6 +49,11 @@ type Props = {
   completedGuildAction: string;
 };
 
+const NO_STRIKE_BOSS_KEYS = new Set([
+  "HOTEL_OF_DESPAIR",
+  "WEBS_OF_CHANCE",
+]);
+
 const card =
   "rounded-2xl border border-zinc-900/60 bg-zinc-950/15 shadow-[0_10px_40px_rgb(0,0,0,0.35)]";
 const label = "text-[10px] uppercase tracking-widest text-zinc-500";
@@ -85,6 +90,14 @@ function bossBadgeText(name: string) {
   if (words.length === 0) return "B";
   if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
   return `${words[0][0] ?? ""}${words[1][0] ?? ""}`.toUpperCase();
+}
+
+function cleanKey(value: string) {
+  return String(value || "")
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
 }
 
 export default function RightRail({
@@ -135,17 +148,6 @@ export default function RightRail({
 
   const bossBarColor = useMemo(() => hpBarColorFromPct(bossPct), [bossPct]);
 
-  const showAttackUi = isTeacher ? true : groupAction === "ATTACK";
-  const showHealUi = isTeacher ? true : groupAction === "HEAL";
-
-  const attackDisabledReason = useMemo(() => {
-    if (!hasBossConfigured) return "No boss configured";
-    if (bossDefeated) return "Boss defeated";
-    if (!activeRound || activeRound <= 0) return "Missing round";
-    if (!activeGuild) return "Choose a guild first";
-    return "";
-  }, [hasBossConfigured, bossDefeated, activeRound, activeGuild]);
-
   const bossLookupValue = useMemo(() => {
     return (
       boss?.bossName?.trim() ||
@@ -169,6 +171,31 @@ export default function RightRail({
       getBossMeta(bossKey || "")
     );
   }, [boss?.bossName, bossName, questName, bossKey]);
+
+  const canStrikeBoss = useMemo(() => {
+    const keysToCheck = [
+      bossKey,
+      boss?.bossKey || "",
+      bossMeta?.bossKey || "",
+      bossName,
+      questName,
+      boss?.bossName || "",
+    ].map(cleanKey);
+
+    return !keysToCheck.some((key) => NO_STRIKE_BOSS_KEYS.has(key));
+  }, [bossKey, boss?.bossKey, bossMeta?.bossKey, bossName, questName, boss?.bossName]);
+
+  const showAttackUi = canStrikeBoss && (isTeacher ? true : groupAction === "ATTACK");
+  const showHealUi = isTeacher ? true : canStrikeBoss ? groupAction === "HEAL" : true;
+
+  const attackDisabledReason = useMemo(() => {
+    if (!canStrikeBoss) return "This quest does not use boss strikes";
+    if (!hasBossConfigured) return "No boss configured";
+    if (bossDefeated) return "Boss defeated";
+    if (!activeRound || activeRound <= 0) return "Missing round";
+    if (!activeGuild) return "Choose a guild first";
+    return "";
+  }, [canStrikeBoss, hasBossConfigured, bossDefeated, activeRound, activeGuild]);
 
   const isLowBossHp = !bossDefeated && bossPct > 0 && bossPct <= 0.3;
 
@@ -318,26 +345,34 @@ export default function RightRail({
       {!isTeacher && (
         <div className={`${card} mb-2 p-3`}>
           <div className={label}>Group Action</div>
-          <div className="mt-2 grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              className={[
-                "rounded-xl border px-3 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50",
-                groupAction === "ATTACK"
-                  ? "border-red-400/45 bg-red-500/10 text-white"
-                  : "border-zinc-800/70 bg-zinc-950/25 hover:bg-zinc-950/35 text-zinc-300",
-              ].join(" ")}
-              onClick={() => setGroupAction("ATTACK")}
-              disabled={guildActionLocked}
-            >
-              Attack
-            </button>
+
+          <div
+            className={[
+              "mt-2 grid gap-2",
+              canStrikeBoss ? "grid-cols-2" : "grid-cols-1",
+            ].join(" ")}
+          >
+            {canStrikeBoss && (
+              <button
+                type="button"
+                className={[
+                  "rounded-xl border px-3 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50",
+                  groupAction === "ATTACK"
+                    ? "border-red-400/45 bg-red-500/10 text-white"
+                    : "border-zinc-800/70 bg-zinc-950/25 hover:bg-zinc-950/35 text-zinc-300",
+                ].join(" ")}
+                onClick={() => setGroupAction("ATTACK")}
+                disabled={guildActionLocked}
+              >
+                Attack
+              </button>
+            )}
 
             <button
               type="button"
               className={[
                 "rounded-xl border px-3 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50",
-                groupAction === "HEAL"
+                !canStrikeBoss || groupAction === "HEAL"
                   ? "border-cyan-300/50 bg-cyan-500/15 text-white"
                   : "border-zinc-800/70 bg-zinc-950/25 hover:bg-zinc-950/35 text-zinc-300",
               ].join(" ")}
