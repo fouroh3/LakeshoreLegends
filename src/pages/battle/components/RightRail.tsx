@@ -122,6 +122,31 @@ export default function RightRail({
   groupAction,
   setGroupAction,
 }: Props) {
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    if (!bossCooldownUntil || bossCooldownUntil <= Date.now()) {
+      setNow(Date.now());
+      return;
+    }
+
+    const intervalId = window.setInterval(() => {
+      setNow(Date.now());
+    }, 100);
+
+    const timeoutMs = Math.max(0, bossCooldownUntil - Date.now());
+    const timeoutId = window.setTimeout(() => {
+      setNow(Date.now());
+    }, timeoutMs + 25);
+
+    return () => {
+      window.clearInterval(intervalId);
+      window.clearTimeout(timeoutId);
+    };
+  }, [bossCooldownUntil]);
+
+  // Restrictions removed:
+  // Guild action buttons are never locked by completed ATTACK/HEAL status.
   const guildActionLocked = false;
 
   const bossPct = useMemo(() => {
