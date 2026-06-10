@@ -6,6 +6,8 @@ import ensnaringCryptLogo from "../../assets/quests/Quest Logo - Ensnaring Crypt
 import finalExaminerLogo from "../../assets/quests/Quest Logo - Final Examiner.png";
 import plaguebornWoodsLogo from "../../assets/quests/Quest Logo - Plagueborn Woods.png";
 import prismTowerLogo from "../../assets/quests/Quest Logo - The Prism Tower.png";
+import hotelOfDespairLogo from "../../assets/quests/Quest Logo - Hotel of Despair.png";
+import websOfChanceLogo from "../../assets/quests/Quest Logo - Webs of Chance.png";
 
 export type BossMeta = {
   bossKey: string;
@@ -50,6 +52,18 @@ const BOSS_META: BossMeta[] = [
     questName: "The Prism Tower",
     bossName: "The Prism Sentinel",
     logo: prismTowerLogo,
+  },
+  {
+    bossKey: "HOTEL_OF_DESPAIR",
+    questName: "Hotel of Despair",
+    bossName: "The Ghostly Bellhop",
+    logo: hotelOfDespairLogo,
+  },
+  {
+    bossKey: "WEBS_OF_CHANCE",
+    questName: "Webs of Chance",
+    bossName: "The Riddle Weaver",
+    logo: websOfChanceLogo,
   },
 ];
 
