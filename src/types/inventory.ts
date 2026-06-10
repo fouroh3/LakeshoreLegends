@@ -1,6 +1,6 @@
 // src/types/inventory.ts
 
-export type InventoryCardType = "relic" | "potion" | "item" | "other";
+export type InventoryCardType = "relic" | "potion" | "item" | "fate";
 
 export type InventoryCard = {
   id: string;
@@ -16,7 +16,9 @@ export type InventoryCard = {
   whisper?: string;
   lore?: string;
   source?: string;
-  loreChain?: "lake" | "prism" | "alchemist";
+  quest?: string;
+  flavorText?: string;
+  loreChain?: "lake" | "prism" | "alchemist" | "plagueborn";
 };
 
 export function groupInventory(cards: InventoryCard[]) {
@@ -24,7 +26,7 @@ export function groupInventory(cards: InventoryCard[]) {
     relic: cards.filter((c) => c.type === "relic"),
     potion: cards.filter((c) => c.type === "potion"),
     item: cards.filter((c) => c.type === "item"),
-    other: cards.filter((c) => c.type === "other"),
+    fate: cards.filter((c) => c.type === "fate"),
   };
 }
 

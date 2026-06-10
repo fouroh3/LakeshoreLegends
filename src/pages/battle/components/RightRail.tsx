@@ -1,5 +1,5 @@
 // src/pages/battle/components/RightRail.tsx
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import type { Student } from "../../../types";
 import type { BossState } from "../../../bossApi";
 import { hpBarColorFromPct } from "../../../utils/hpColor";
@@ -102,7 +102,6 @@ export default function RightRail({
   onSubmitBossAttack,
   bossSubmitErr,
   bossBanner,
-  bossCooldownUntil,
   activeRound,
   activeGuild,
   studentHealMode,
@@ -121,7 +120,6 @@ export default function RightRail({
   onSubmit,
   banner,
   groupAction,
-  completedGuildAction,
   setGroupAction,
 }: Props) {
   const [now, setNow] = useState(() => Date.now());
@@ -161,11 +159,6 @@ export default function RightRail({
   }, [boss]);
 
   const bossBarColor = useMemo(() => hpBarColorFromPct(bossPct), [bossPct]);
-
-  const cooldownMs = useMemo(() => {
-    const ms = bossCooldownUntil - now;
-    return ms > 0 ? ms : 0;
-  }, [bossCooldownUntil, now]);
 
   const showAttackUi = isTeacher ? true : groupAction === "ATTACK";
   const showHealUi = isTeacher ? true : groupAction === "HEAL";

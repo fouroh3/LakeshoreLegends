@@ -21,8 +21,13 @@ type Props = {
   allStudents?: any[];
 };
 
-type InventoryFilter = "all" | "relic" | "potion" | "item" | "other";
-
+type InventoryFilter =
+  | "all"
+  | "relic"
+  | "potion"
+  | "item"
+  | "fate";
+  
 type ResolvedInventoryCard = Omit<InventoryCard, "imageUrl"> & {
   imageUrl: string;
 };
@@ -99,9 +104,11 @@ function normalizeInventory(rawInventory: any): ResolvedInventoryCard[] {
         underscored.replace(/^item_/, ""),
         underscored.replace(/^potion_/, ""),
         underscored.replace(/^relic_/, ""),
+        underscored.replace(/^fate_/, ""),
         `item_${underscored}`,
         `potion_${underscored}`,
         `relic_${underscored}`,
+        `fate_${underscored}`,
       ];
 
       const base =
@@ -137,9 +144,11 @@ function normalizeInventory(rawInventory: any): ResolvedInventoryCard[] {
         normalizedId.replace(/^item_/, ""),
         normalizedId.replace(/^potion_/, ""),
         normalizedId.replace(/^relic_/, ""),
+        normalizedId.replace(/^fate_/, ""),
         `item_${normalizedId}`,
         `potion_${normalizedId}`,
         `relic_${normalizedId}`,
+        `fate_${normalizedId}`,
       ];
 
       const base =
@@ -174,7 +183,7 @@ function groupInventory(cards: ResolvedInventoryCard[]) {
     relic: cards.filter((c) => c.type === "relic"),
     potion: cards.filter((c) => c.type === "potion"),
     item: cards.filter((c) => c.type === "item"),
-    other: cards.filter((c) => c.type === "other"),
+    fate: cards.filter((c) => c.type === "fate"),
   };
 }
 
@@ -674,12 +683,12 @@ function InventoryFilterTabs({
         grouped.relic.length +
         grouped.potion.length +
         grouped.item.length +
-        grouped.other.length,
+        grouped.fate.length,
     },
     { key: "relic", label: "Relics", count: grouped.relic.length },
     { key: "potion", label: "Potions", count: grouped.potion.length },
     { key: "item", label: "Items", count: grouped.item.length },
-    { key: "other", label: "Other", count: grouped.other.length },
+    { key: "fate", label: "Fate Cards", count: grouped.fate.length },
   ];
 
   const tabs = allTabs.filter((tab) => tab.count > 0);
@@ -1039,20 +1048,24 @@ function InventorySection({
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
   const inlineDetailRef = useRef<HTMLDivElement | null>(null);
 
-  const visibleCards = useMemo((): ResolvedInventoryCard[] => {
-    switch (filter) {
-      case "relic":
-        return grouped.relic;
-      case "potion":
-        return grouped.potion;
-      case "item":
-        return grouped.item;
-      case "other":
-        return grouped.other;
-      default:
-        return inventory;
-    }
-  }, [filter, grouped, inventory]);
+const visibleCards = useMemo((): ResolvedInventoryCard[] => {
+  switch (filter) {
+    case "relic":
+      return grouped.relic;
+
+    case "potion":
+      return grouped.potion;
+
+    case "item":
+      return grouped.item;
+
+    case "fate":
+      return grouped.fate;
+
+    default:
+      return inventory;
+  }
+}, [filter, grouped, inventory]);
 
   useEffect(() => {
     if (!visibleCards.length) {
@@ -1396,12 +1409,21 @@ function getCompletedChainsFromInventories(
     alchemist: new Set<string>(),
   };
 
-  for (const inventory of inventories) {
-    for (const card of inventory) {
-      if (!card.loreChain) continue;
-      uniqueByChain[card.loreChain].add(String(card.id));
+for (const inventory of inventories) {
+  for (const card of inventory) {
+    if (!card.loreChain) continue;
+
+    const chain = card.loreChain as ResonanceChain | undefined;
+    
+    if (!chain) continue;
+
+    if (!uniqueByChain[chain]) {
+      uniqueByChain[chain] = new Set<string>();
     }
+
+    uniqueByChain[chain]?.add(String(card.id));
   }
+}
 
   return {
     lake: uniqueByChain.lake.size >= 3,

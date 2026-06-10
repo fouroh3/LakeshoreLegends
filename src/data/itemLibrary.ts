@@ -1,5 +1,6 @@
 // src/data/itemLibrary.ts
 import type { InventoryCard } from "../types/inventory";
+import { fateCardLibrary } from "./fateCardLibrary";
 
 export const itemLibrary: InventoryCard[] = [
   // ITEMS
@@ -353,8 +354,20 @@ export const itemLibrary: InventoryCard[] = [
   },
 ];
 
+export const allInventoryCards: InventoryCard[] = [
+  ...itemLibrary,
+  ...fateCardLibrary,
+];
+
 export const itemLibraryById: Record<string, InventoryCard> =
-  Object.fromEntries(itemLibrary.map((c) => [c.id, c]));
+  Object.fromEntries(
+    allInventoryCards.map((c) => [c.id, c])
+  );
 
 export const itemLibraryByName: Record<string, InventoryCard> =
-  Object.fromEntries(itemLibrary.map((c) => [c.name.toLowerCase(), c]));
+  Object.fromEntries(
+    allInventoryCards.map((c) => [
+      c.name.toLowerCase(),
+      c,
+    ])
+  );

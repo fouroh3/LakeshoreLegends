@@ -152,15 +152,18 @@ function splitSkills(raw: any): string[] {
     .map((x) => x.trim())
     .filter(Boolean);
 }
-
 function splitInventory(raw: any): string[] {
   const s = String(raw ?? "").trim();
 
   if (!s) return [];
 
   return s
-    .split(/[;,|]/g)
-    .map((x) => x.trim())
+    .split(/[;,|\n\r]/g)
+    .map((x) =>
+      x
+        .trim()
+        .replace(/^["']|["']$/g, "")
+    )
     .filter(Boolean);
 }
 
@@ -258,11 +261,19 @@ function rowsToStudents(rows: string[][]): Student[] {
     "companion_status"
   );
 
-  console.log("HEADERS", headers);
-  console.log("iCompanion", iCompanion, headers[iCompanion]);
 
   const iSkills = pickStrict(idx, "skills", "skill");
-  const iInventory = pickStrict(idx, "inventory");
+  const iInventory = pickStrict(
+    idx,
+    "inventory",
+  "inventory ids",
+  "inventoryids",
+  "cards",
+  "card inventory",
+  "items",
+  "item inventory",
+  "collected cards"
+);
 
   const iStr = pickFlexible(idx, "str", "strength");
   const iDex = pickFlexible(idx, "dex", "dexterity");
@@ -429,6 +440,7 @@ function rowsToStudents(rows: string[][]): Student[] {
 
     const inventory = splitInventory(inventoryRaw);
 
+
     const student: Student = {
       id,
       first,
@@ -488,7 +500,6 @@ export async function loadStudents(): Promise<Student[]> {
   const rows = parseCSV(text);
   const students = rowsToStudents(rows);
 
-  console.log("FIRST STUDENT", students[0]);
 
   cache = {
     at: now,
