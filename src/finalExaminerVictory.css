@@ -12,27 +12,27 @@ main:has(section[class*="border-violet-300/25"] > div:last-child .h-2.overflow-h
     url("./assets/guilds/scouts.png"),
     url("./assets/guilds/shadows.png"),
     url("./assets/guilds/blades.png"),
-    radial-gradient(circle at 50% 44%, rgba(255, 244, 163, 0.42) 0%, rgba(250, 204, 21, 0.13) 16%, transparent 35%),
+    radial-gradient(circle at 50% 47%, rgba(255, 244, 163, 0.44) 0%, rgba(250, 204, 21, 0.14) 16%, transparent 35%),
     radial-gradient(ellipse at 50% 118%, rgba(16, 185, 129, 0.34), transparent 52%),
     linear-gradient(135deg, rgba(1, 16, 18, 0.96), rgba(4, 42, 35, 0.94) 48%, rgba(10, 35, 58, 0.96));
   background-repeat: no-repeat;
   background-size:
-    min(18vw, 245px),
-    min(18vw, 245px),
-    min(18vw, 245px),
-    min(18vw, 245px),
-    min(18vw, 245px),
-    min(18vw, 245px),
+    min(16vw, 220px),
+    min(16vw, 220px),
+    min(16vw, 220px),
+    min(16vw, 220px),
+    min(16vw, 220px),
+    min(16vw, 220px),
     auto,
     auto,
     auto;
   background-position:
-    8% 16%,
-    29% 70%,
-    50% 14%,
-    72% 70%,
-    92% 16%,
-    50% 83%,
+    9% 20%,
+    22% 74%,
+    35% 18%,
+    78% 74%,
+    91% 20%,
+    50% 82%,
     center,
     center,
     center;
@@ -41,21 +41,27 @@ main:has(section[class*="border-violet-300/25"] > div:last-child .h-2.overflow-h
 }
 
 main:has(section[class*="border-violet-300/25"] > div:last-child .h-2.overflow-hidden.rounded-full > div[style^="width: 0"])::after {
-  content: "LAKESHORE LEGENDS\A THE FINAL EXAMINER HAS FALLEN\A\A THE LEGENDS RISE";
+  content: "THE FINAL EXAMINER HAS FALLEN\A\A THE LEGENDS RISE";
   position: fixed;
   z-index: 92;
   left: 50%;
-  top: 50%;
-  width: min(92vw, 1040px);
+  top: 51%;
+  width: min(76vw, 890px);
+  min-height: 330px;
   transform: translate(-50%, -50%);
   pointer-events: none;
   color: #fff8cf;
-  font-size: clamp(1.1rem, 2.6vw, 2.65rem);
+  font-size: clamp(1.05rem, 2.35vw, 2.4rem);
   font-weight: 950;
-  line-height: 1.22;
-  letter-spacing: 0.16em;
+  line-height: 1.32;
+  letter-spacing: 0.15em;
   text-align: center;
   white-space: pre-line;
+  background-image: url("./assets/Lakeshore Legends Logo.png");
+  background-repeat: no-repeat;
+  background-position: center top;
+  background-size: min(42vw, 500px) auto;
+  padding-top: clamp(7.4rem, 14vw, 11.2rem);
   text-shadow:
     0 2px 0 rgba(0, 0, 0, 0.85),
     0 0 18px rgba(254, 240, 138, 0.9),
@@ -75,7 +81,16 @@ main:has(section[class*="border-violet-300/25"] > div:last-child .h-2.overflow-h
 
 @media (max-width: 760px) {
   main:has(section[class*="border-violet-300/25"] > div:last-child .h-2.overflow-hidden.rounded-full > div[style^="width: 0"])::before {
-    background-size: 28vw, 28vw, 28vw, 28vw, 28vw, 28vw, auto, auto, auto;
-    background-position: 6% 14%, 23% 75%, 50% 11%, 77% 75%, 94% 14%, 50% 86%, center, center, center;
+    background-size: 24vw, 24vw, 24vw, 24vw, 24vw, 24vw, auto, auto, auto;
+    background-position: 8% 18%, 23% 76%, 36% 16%, 77% 76%, 92% 18%, 50% 85%, center, center, center;
+  }
+
+  main:has(section[class*="border-violet-300/25"] > div:last-child .h-2.overflow-hidden.rounded-full > div[style^="width: 0"])::after {
+    width: 92vw;
+    min-height: 260px;
+    background-size: min(72vw, 380px) auto;
+    padding-top: 7rem;
+    font-size: clamp(0.9rem, 4.5vw, 1.45rem);
+    letter-spacing: 0.1em;
   }
 }
