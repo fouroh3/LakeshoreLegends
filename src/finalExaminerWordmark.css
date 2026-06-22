@@ -1,0 +1,20 @@
+/* Let the subtle Final Examiner wordmark span the entire chamber width. */
+#root main section[class*="border-violet-300/25"]::before {
+  left: 0 !important;
+  right: 0 !important;
+  width: 100% !important;
+  bottom: -0.2em !important;
+  text-align: center !important;
+  font-size: clamp(3rem, 7.55vw, 8.7rem) !important;
+  letter-spacing: -0.075em !important;
+}
+
+/* Keep the victory banner's own centered treatment intact. */
+#root main section[class*="border-violet-300/25"]:has(> div:last-child .h-2.overflow-hidden.rounded-full > div[style^="width: 0"])::before {
+  left: 50% !important;
+  right: auto !important;
+  width: min(91%, 720px) !important;
+  text-align: center !important;
+  font-size: inherit !important;
+  letter-spacing: inherit !important;
+}
