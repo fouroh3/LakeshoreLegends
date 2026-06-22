@@ -1,42 +1,45 @@
-/* Smartboard layout: give the class column enough visual weight to match the boss arena. */
+/* Smartboard layout: keep the arena readable without turning the Examiner chamber into empty space. */
 @media (min-width: 1200px) and (min-height: 700px) {
   #root main > section.grid.flex-1 {
-    grid-template-columns: minmax(360px, 0.88fr) minmax(0, 1.72fr) !important;
+    grid-template-columns: minmax(310px, 0.76fr) minmax(0, 1.84fr) !important;
     gap: 1rem !important;
+    align-items: start !important;
   }
 
-  #root main > section.grid.flex-1 > div:first-child {
-    display: flex;
-    flex-direction: column;
-  }
-
+  /* Keep class cards compact and readable rather than stretching them to fill the whole arena height. */
   #root main > section.grid.flex-1 > div:first-child > div.mt-3.grid.gap-2 {
-    flex: 1 1 auto;
-    display: flex !important;
-    flex-direction: column;
-    justify-content: space-between;
-    gap: .8rem !important;
+    display: grid !important;
+    gap: .65rem !important;
   }
 
   #root main > section.grid.flex-1 > div:first-child > div.mt-3.grid.gap-2 > article {
-    flex: 1 1 0;
     min-height: 0;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    padding-top: 1rem !important;
-    padding-bottom: 1rem !important;
+    padding-top: .78rem !important;
+    padding-bottom: .78rem !important;
   }
 
   #root main > section.grid.flex-1 > div:first-child > div.mt-3.grid.gap-2 > article .text-2xl {
-    font-size: 2rem !important;
+    font-size: 1.72rem !important;
   }
 
-  #root main > section.grid.flex-1 > div:first-child > div.mt-3.grid.gap-2 > article .text-base {
-    font-size: 1.08rem !important;
-  }
-
+  /* The Examiner becomes a deliberate command panel, not a large empty lower half. */
   #root main > section.grid.flex-1 > div.flex.flex-col > section.mt-3 {
-    min-height: 0;
+    flex: 0 0 220px !important;
+    min-height: 220px !important;
+    max-height: 220px !important;
+    grid-template-columns: minmax(0, 1fr) 235px !important;
+    padding: 1.15rem !important;
+  }
+
+  #root main > section.grid.flex-1 > div.flex.flex-col > section.mt-3 > div:first-child {
+    align-items: center !important;
+  }
+
+  #root main > section.grid.flex-1 > div.flex.flex-col > section.mt-3 > div:last-child {
+    padding: .9rem 1rem !important;
+  }
+
+  #root main > section.grid.flex-1 > div.flex.flex-col > section.mt-3 > div:last-child .text-3xl {
+    font-size: 2.35rem !important;
   }
 }
