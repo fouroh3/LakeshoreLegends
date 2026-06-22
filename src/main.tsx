@@ -10,6 +10,7 @@ import "./finalExaminerMinionEffects.css";
 import "./finalExaminerClassDanger.css";
 import "./finalExaminerImpactEffects.css";
 import "./finalExaminerTeacherScroll.css";
+import "./finalExaminerIdentityScale.css";
 import "./finalExaminerTeacherRoute";
 import "./finalExaminerLiveTicker";
 
