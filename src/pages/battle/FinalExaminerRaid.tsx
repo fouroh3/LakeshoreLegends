@@ -54,7 +54,11 @@ function BossLogo({ boss, large = false }: { boss: FinalExaminerBossState; large
     <img
       src={meta.logo}
       alt=""
-      className={large ? "h-16 w-auto object-contain opacity-95" : "h-8 w-auto object-contain opacity-90"}
+      className={
+        large
+          ? "h-[72px] w-auto object-contain opacity-100 drop-shadow-[0_0_14px_rgba(255,255,255,0.24)]"
+          : "h-10 w-auto object-contain opacity-100 drop-shadow-[0_0_10px_rgba(255,255,255,0.22)]"
+      }
       draggable={false}
     />
   );
@@ -154,7 +158,7 @@ export default function FinalExaminerRaid() {
       {(compact ? raid?.bosses || [] : minions).map((boss, index) => (
         <article
           key={boss.bossKey}
-          className="relative min-w-0 overflow-hidden rounded-xl border border-white/10 bg-black/25 px-3 py-3"
+          className="relative flex min-h-[205px] min-w-0 flex-col overflow-hidden rounded-xl border border-white/10 bg-black/25 px-3 py-3 shadow-[0_10px_24px_rgba(0,0,0,0.18)]"
         >
           <div className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${bossBar(boss)}`} />
           <div className="flex items-center justify-between gap-2">
@@ -167,15 +171,17 @@ export default function FinalExaminerRaid() {
             <div className="min-h-[38px] text-sm font-black leading-5">{boss.bossName}</div>
             <span className="shrink-0 text-[9px] font-black tracking-[0.12em] text-zinc-300">{bossState(boss)}</span>
           </div>
-          <div className="mt-3 flex items-end justify-between gap-2">
-            <div>
-              <div className="text-xl font-black text-rose-100">{num(boss.currentHP)}</div>
-              <div className="text-[9px] font-bold tracking-[0.1em] text-zinc-500">OF {num(boss.maxHP)}</div>
+          <div className="mt-auto pt-3">
+            <div className="flex items-end justify-between gap-2">
+              <div>
+                <div className="text-xl font-black text-rose-100">{num(boss.currentHP)}</div>
+                <div className="text-[9px] font-bold tracking-[0.1em] text-zinc-500">OF {num(boss.maxHP)}</div>
+              </div>
+              <span className="text-xs font-black text-zinc-300">{Math.round(percent(boss.currentHP, boss.maxHP))}%</span>
             </div>
-            <span className="text-xs font-black text-zinc-300">{Math.round(percent(boss.currentHP, boss.maxHP))}%</span>
-          </div>
-          <div className="mt-2">
-            <Bar current={boss.currentHP} max={boss.maxHP} className={bossBar(boss)} />
+            <div className="mt-2">
+              <Bar current={boss.currentHP} max={boss.maxHP} className={bossBar(boss)} />
+            </div>
           </div>
         </article>
       ))}
