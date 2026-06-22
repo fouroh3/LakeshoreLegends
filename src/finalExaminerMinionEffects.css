@@ -35,6 +35,29 @@
   animation: final-examiner-minion-dead-mark 1.5s cubic-bezier(.12,.9,.26,1) both;
 }
 
+/* Once fallen, strip the card down to its name plus the permanent Dead marker. */
+#root main > section.mt-4.grid.flex-1 > div:last-child > div.mt-3.grid.grid-cols-5 > article.group[class*="from-emerald-950/35"] {
+  background: #050609 !important;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.05), inset 0 -30px 50px rgba(0,0,0,.86) !important;
+  filter: brightness(.72) saturate(.18) !important;
+}
+
+#root main > section.mt-4.grid.flex-1 > div:last-child > div.mt-3.grid.grid-cols-5 > article.group[class*="from-emerald-950/35"] > img[draggable="false"] {
+  display: none !important;
+}
+
+#root main > section.mt-4.grid.flex-1 > div:last-child > div.mt-3.grid.grid-cols-5 > article.group[class*="from-emerald-950/35"] > div.relative.flex > div:first-child,
+#root main > section.mt-4.grid.flex-1 > div:last-child > div.mt-3.grid.grid-cols-5 > article.group[class*="from-emerald-950/35"] > div.relative.flex > div:last-child {
+  visibility: hidden !important;
+}
+
+#root main > section.mt-4.grid.flex-1 > div:last-child > div.mt-3.grid.grid-cols-5 > article.group[class*="from-emerald-950/35"] > div.relative.flex > div:nth-child(2) {
+  color: rgba(255,255,255,.76) !important;
+  opacity: 1 !important;
+  filter: none !important;
+  z-index: 2 !important;
+}
+
 @keyframes final-examiner-minion-fall {
   0% { transform: scale(1) rotate(0deg); filter: brightness(1) saturate(1); }
   12% { transform: scale(1.055) rotate(-1deg); filter: brightness(1.7) saturate(1.55); }
