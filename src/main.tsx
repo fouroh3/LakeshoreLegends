@@ -4,6 +4,7 @@ import App from "./App";
 import FinalExaminerRaid from "./pages/battle/FinalExaminerRaid";
 import "./index.css";
 import "./finalExaminerVictory.css";
+import "./finalExaminerCritical.css";
 
 const isFinalExaminerRoute =
   window.location.pathname.replace(/^\/+|\/+$/g, "").toLowerCase() ===
