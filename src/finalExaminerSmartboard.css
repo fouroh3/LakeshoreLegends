@@ -44,10 +44,23 @@
     gap: clamp(.35rem, .65vh, .65rem) !important;
   }
 
+  /* Every class card uses the same content lane plus a fixed bar lane. */
   #root > div.min-h-\[100dvh\] > main > section.mt-4.grid.flex-1 > div:first-child > div.mt-3.grid > article {
+    display: grid !important;
+    grid-template-rows: minmax(0, 1fr) auto !important;
     min-height: 0 !important;
     overflow: hidden !important;
     padding: clamp(.42rem, .75vh, .72rem) clamp(.6rem, .8vw, .85rem) !important;
+  }
+
+  #root > div.min-h-\[100dvh\] > main > section.mt-4.grid.flex-1 > div:first-child > div.mt-3.grid > article > div.flex.items-center.justify-between.gap-3.pl-1 {
+    align-self: start !important;
+    min-height: 0 !important;
+  }
+
+  #root > div.min-h-\[100dvh\] > main > section.mt-4.grid.flex-1 > div:first-child > div.mt-3.grid > article > div.mt-2 {
+    align-self: end !important;
+    margin-top: 0 !important;
   }
 
   #root > div.min-h-\[100dvh\] > main > section.mt-4.grid.flex-1 > div:first-child > div.mt-3.grid > article .text-2xl {
@@ -65,7 +78,7 @@
   }
 
   #root > div.min-h-\[100dvh\] > main > section.mt-4.grid.flex-1 > div:first-child > div.mt-3.grid > article .mt-2 {
-    margin-top: clamp(.25rem, .45vh, .5rem) !important;
+    margin-top: 0 !important;
   }
 
   /* BOSS ARENA --------------------------------------------------------- */
