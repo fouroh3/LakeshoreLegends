@@ -69,6 +69,46 @@
   text-shadow: 0 0 52px rgba(225, 29, 72, .62) !important;
 }
 
+/* The fifth Fallen card breaks the seal: one dramatic entrance, then the chamber resumes its normal breath. */
+#root main div.flex.flex-col:has(> div.grid.grid-cols-5 > article.group:nth-child(1)[class*="from-emerald-950/35"]):has(> div.grid.grid-cols-5 > article.group:nth-child(2)[class*="from-emerald-950/35"]):has(> div.grid.grid-cols-5 > article.group:nth-child(3)[class*="from-emerald-950/35"]):has(> div.grid.grid-cols-5 > article.group:nth-child(4)[class*="from-emerald-950/35"]):has(> div.grid.grid-cols-5 > article.group:nth-child(5)[class*="from-emerald-950/35"]) > section[class*="border-violet-300/25"] {
+  animation: final-examiner-seal-break 1.9s cubic-bezier(.14,.92,.22,1) both, final-examiner-chamber-breath 5.8s ease-in-out 1.9s infinite !important;
+}
+
+#root main div.flex.flex-col:has(> div.grid.grid-cols-5 > article.group:nth-child(1)[class*="from-emerald-950/35"]):has(> div.grid.grid-cols-5 > article.group:nth-child(2)[class*="from-emerald-950/35"]):has(> div.grid.grid-cols-5 > article.group:nth-child(3)[class*="from-emerald-950/35"]):has(> div.grid.grid-cols-5 > article.group:nth-child(4)[class*="from-emerald-950/35"]):has(> div.grid.grid-cols-5 > article.group:nth-child(5)[class*="from-emerald-950/35"]) > section[class*="border-violet-300/25"]::before {
+  content: "THE SEAL IS BROKEN";
+  z-index: 20;
+  left: 50%;
+  right: auto;
+  top: .6rem;
+  bottom: auto;
+  transform: translateX(-50%);
+  width: max-content;
+  border: 1px solid rgba(254,202,202,.78);
+  border-radius: 9999px;
+  padding: .36rem .84rem;
+  background: rgba(69,10,10,.94);
+  box-shadow: 0 0 0 5px rgba(127,29,29,.16), 0 0 34px rgba(239,68,68,.62);
+  color: rgb(254,226,226);
+  font-size: .6rem;
+  font-weight: 950;
+  letter-spacing: .22em;
+  white-space: nowrap;
+  animation: final-examiner-seal-label 1.9s ease-out both;
+}
+
+@keyframes final-examiner-seal-break {
+  0% { transform: scale(.97); filter: brightness(.62) saturate(.72); }
+  22% { transform: scale(1.02); filter: brightness(1.65) saturate(1.65); box-shadow: 0 0 94px rgba(239,68,68,.82) !important; }
+  48% { transform: scale(.992); filter: brightness(.9) saturate(1.1); }
+  100% { transform: scale(1); filter: brightness(1) saturate(1); }
+}
+
+@keyframes final-examiner-seal-label {
+  0% { opacity: 0; transform: translateX(-50%) scale(.72); }
+  24% { opacity: 1; transform: translateX(-50%) scale(1.08); }
+  100% { opacity: 1; transform: translateX(-50%) scale(1); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   #root main article.group[class*="from-emerald-950/35"],
   #root main article.group[class*="from-emerald-950/35"]::before,
