@@ -12,31 +12,34 @@ main:has(section[class*="border-violet-300/25"] > div:last-child .h-2.overflow-h
     url("./assets/guilds/scouts.png"),
     url("./assets/guilds/shadows.png"),
     url("./assets/guilds/blades.png"),
-    radial-gradient(circle at 50% 47%, rgba(255, 244, 163, 0.44) 0%, rgba(250, 204, 21, 0.14) 16%, transparent 35%),
-    radial-gradient(ellipse at 50% 118%, rgba(16, 185, 129, 0.34), transparent 52%),
-    linear-gradient(135deg, rgba(1, 16, 18, 0.96), rgba(4, 42, 35, 0.94) 48%, rgba(10, 35, 58, 0.96));
+    linear-gradient(rgba(0, 8, 11, 0.66), rgba(0, 8, 11, 0.76)),
+    radial-gradient(circle at 50% 48%, rgba(255, 244, 163, 0.20) 0%, rgba(250, 204, 21, 0.06) 17%, transparent 37%),
+    radial-gradient(ellipse at 50% 118%, rgba(16, 185, 129, 0.22), transparent 52%),
+    linear-gradient(135deg, rgba(1, 16, 18, 0.98), rgba(4, 42, 35, 0.97) 48%, rgba(10, 35, 58, 0.98));
   background-repeat: no-repeat;
   background-size:
-    min(16vw, 220px),
-    min(16vw, 220px),
-    min(16vw, 220px),
-    min(16vw, 220px),
-    min(16vw, 220px),
-    min(16vw, 220px),
+    min(14vw, 190px),
+    min(14vw, 190px),
+    min(14vw, 190px),
+    min(14vw, 190px),
+    min(14vw, 190px),
+    min(14vw, 190px),
+    auto,
     auto,
     auto,
     auto;
   background-position:
-    9% 20%,
-    22% 74%,
-    35% 18%,
-    78% 74%,
-    91% 20%,
-    50% 82%,
+    10% 22%,
+    20% 73%,
+    33% 15%,
+    80% 73%,
+    90% 22%,
+    50% 85%,
+    center,
     center,
     center,
     center;
-  box-shadow: inset 0 0 140px rgba(0, 0, 0, 0.78);
+  box-shadow: inset 0 0 190px rgba(0, 0, 0, 0.92);
   animation: legends-victory-tableau 5.5s ease-in-out infinite;
 }
 
@@ -45,52 +48,52 @@ main:has(section[class*="border-violet-300/25"] > div:last-child .h-2.overflow-h
   position: fixed;
   z-index: 92;
   left: 50%;
-  top: 51%;
-  width: min(76vw, 890px);
-  min-height: 330px;
+  top: 52%;
+  width: min(70vw, 820px);
+  min-height: 310px;
   transform: translate(-50%, -50%);
   pointer-events: none;
   color: #fff8cf;
-  font-size: clamp(1.05rem, 2.35vw, 2.4rem);
+  font-size: clamp(1.02rem, 2.1vw, 2.25rem);
   font-weight: 950;
-  line-height: 1.32;
+  line-height: 1.36;
   letter-spacing: 0.15em;
   text-align: center;
   white-space: pre-line;
   background-image: url("./assets/Lakeshore Legends Logo.png");
   background-repeat: no-repeat;
   background-position: center top;
-  background-size: min(42vw, 500px) auto;
-  padding-top: clamp(7.4rem, 14vw, 11.2rem);
+  background-size: min(30vw, 360px) auto;
+  padding-top: clamp(6.2rem, 10.8vw, 8.9rem);
   text-shadow:
-    0 2px 0 rgba(0, 0, 0, 0.85),
-    0 0 18px rgba(254, 240, 138, 0.9),
-    0 0 48px rgba(250, 204, 21, 0.54);
+    0 2px 0 rgba(0, 0, 0, 0.92),
+    0 0 14px rgba(254, 240, 138, 0.92),
+    0 0 40px rgba(250, 204, 21, 0.50);
   animation: legends-victory-title 3.8s ease-in-out infinite;
 }
 
 @keyframes legends-victory-tableau {
-  0%, 100% { filter: brightness(0.94) saturate(1); }
-  50% { filter: brightness(1.14) saturate(1.18); }
+  0%, 100% { filter: brightness(0.84) saturate(0.93); }
+  50% { filter: brightness(0.98) saturate(1.06); }
 }
 
 @keyframes legends-victory-title {
-  0%, 100% { opacity: 0.86; transform: translate(-50%, -50%) scale(0.985); }
-  50% { opacity: 1; transform: translate(-50%, -50%) scale(1.025); }
+  0%, 100% { opacity: 0.90; transform: translate(-50%, -50%) scale(0.99); }
+  50% { opacity: 1; transform: translate(-50%, -50%) scale(1.018); }
 }
 
 @media (max-width: 760px) {
   main:has(section[class*="border-violet-300/25"] > div:last-child .h-2.overflow-hidden.rounded-full > div[style^="width: 0"])::before {
-    background-size: 24vw, 24vw, 24vw, 24vw, 24vw, 24vw, auto, auto, auto;
-    background-position: 8% 18%, 23% 76%, 36% 16%, 77% 76%, 92% 18%, 50% 85%, center, center, center;
+    background-size: 21vw, 21vw, 21vw, 21vw, 21vw, 21vw, auto, auto, auto, auto;
+    background-position: 8% 20%, 20% 75%, 34% 13%, 80% 75%, 92% 20%, 50% 86%, center, center, center, center;
   }
 
   main:has(section[class*="border-violet-300/25"] > div:last-child .h-2.overflow-hidden.rounded-full > div[style^="width: 0"])::after {
-    width: 92vw;
+    width: 88vw;
     min-height: 260px;
-    background-size: min(72vw, 380px) auto;
-    padding-top: 7rem;
-    font-size: clamp(0.9rem, 4.5vw, 1.45rem);
-    letter-spacing: 0.1em;
+    background-size: min(56vw, 310px) auto;
+    padding-top: 6rem;
+    font-size: clamp(0.88rem, 4vw, 1.35rem);
+    letter-spacing: 0.09em;
   }
 }
