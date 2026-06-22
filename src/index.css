@@ -29,6 +29,20 @@ img.pointer-events-none.absolute.\-right-3.\-top-3 {
   opacity: 0.13 !important;
 }
 
+/* Final Examiner boss cards: keep only the meaningful state badge. */
+article[class*="from-"] > div:nth-of-type(2) > div:first-child > span:first-child {
+  display: none;
+}
+
+article[class*="from-"] > div:nth-of-type(2) > div:first-child {
+  justify-content: flex-end;
+}
+
+article[class*="from-"] > div:nth-of-type(2) > div:nth-child(2) {
+  margin-top: 0.8rem !important;
+  max-width: 90% !important;
+}
+
 article[class*="from-emerald-950/35"] { isolation: isolate; }
 article[class*="from-emerald-950/35"]::after {
   content: "✦ FALLEN ✦";
@@ -184,7 +198,6 @@ section[class*="border-violet-300/25"]:has(> div:last-child .h-2.overflow-hidden
   line-height: 1.4;
   text-align: center;
   white-space: pre-line;
-  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.72);
 }
 section[class*="border-violet-300/25"]:has(> div:last-child .h-2.overflow-hidden.rounded-full > div[style^="width: 0"])::after {
   content: "✦";
