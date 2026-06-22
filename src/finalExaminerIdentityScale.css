@@ -1,31 +1,23 @@
-/* Give the Examiner identity real presence inside the oversized chamber. */
+/* Force the Examiner identity block to use the empty left-side chamber space. */
 @media (min-width: 1000px) {
-  #root main > section.mt-4.grid.flex-1 > div:last-child > section.mt-3 > div:first-child {
-    gap: 2rem !important;
-    padding-left: 1.4rem !important;
-    transform: translateY(-0.2rem);
+  #root main section[class*="border-violet-300/25"] > div.flex.items-center.gap-4 {
+    transform: scale(1.32) !important;
+    transform-origin: left center !important;
+    width: 72% !important;
+    max-width: 860px !important;
   }
 
-  #root main > section.mt-4.grid.flex-1 > div:last-child > section.mt-3 > div:first-child > img {
-    height: 150px !important;
-    max-height: 58% !important;
+  #root main section[class*="border-violet-300/25"] > div.flex.items-center.gap-4 > img {
+    height: 112px !important;
+    width: auto !important;
   }
 
-  #root main > section.mt-4.grid.flex-1 > div:last-child > section.mt-3 > div:first-child .text-\[10px\] {
+  #root main section[class*="border-violet-300/25"] > div.flex.items-center.gap-4 h2 {
+    font-size: 2.5rem !important;
+    line-height: .98 !important;
+  }
+
+  #root main section[class*="border-violet-300/25"] > div.flex.items-center.gap-4 p {
     font-size: 1rem !important;
-    letter-spacing: .22em !important;
-  }
-
-  #root main > section.mt-4.grid.flex-1 > div:last-child > section.mt-3 > div:first-child h2 {
-    margin-top: .55rem !important;
-    font-size: clamp(3.3rem, 4vw, 5.4rem) !important;
-    line-height: .92 !important;
-    letter-spacing: -.055em !important;
-  }
-
-  #root main > section.mt-4.grid.flex-1 > div:last-child > section.mt-3 > div:first-child p {
-    margin-top: .7rem !important;
-    font-size: clamp(1.25rem, 1.35vw, 1.6rem) !important;
-    line-height: 1.12 !important;
   }
 }
