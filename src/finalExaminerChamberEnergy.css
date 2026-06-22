@@ -1,13 +1,10 @@
 /* Final Phase: a restrained energy sweep keeps the Examiner chamber feeling alive. */
-#root main section[class*="border-violet-300/25"]:has(> div:first-child > div:first-child > div:first-child:not(:has(+ h2))) {
+#root main section.final-examiner-chamber-active {
+  position: relative;
   overflow: hidden;
 }
 
-#root main section[class*="border-violet-300/25"]:has(> div:first-child > div:first-child > div:first-child) {
-  position: relative;
-}
-
-#root main section[class*="border-violet-300/25"]:has(> div:first-child > div:first-child > div:first-child)::after {
+#root main section.final-examiner-chamber-active::after {
   content: "";
   position: absolute;
   inset: 0;
@@ -25,7 +22,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  #root main section[class*="border-violet-300/25"]:has(> div:first-child > div:first-child > div:first-child)::after {
+  #root main section.final-examiner-chamber-active::after {
     animation: none !important;
   }
 }
