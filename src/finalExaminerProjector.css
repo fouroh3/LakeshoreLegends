@@ -18,24 +18,26 @@
     margin-top: .55rem !important;
   }
 
-  #root main > section.mt-4.grid.flex-1 > div:first-child > div.mt-3.grid > article .text-\[9px\] {
+  #root main > section.mt-4.grid.flex-1 > div:first-child > div.mt-3.grid > article > div.flex.items-center.justify-between.gap-3.pl-1 > div:first-child > div:first-child {
     font-size: clamp(.62rem, .68vw, .78rem) !important;
     letter-spacing: .15em !important;
   }
 
-  #root main > section.mt-4.grid.flex-1 > div:first-child > div.mt-3.grid > article .mt-0\.5.text-base {
-    font-size: clamp(1.15rem, 1.26vw, 1.48rem) !important;
+  /* Direct child targeting: teacher/class name. */
+  #root main > section.mt-4.grid.flex-1 > div:first-child > div.mt-3.grid > article > div.flex.items-center.justify-between.gap-3.pl-1 > div:first-child > div:nth-child(2) {
+    font-size: clamp(1.3rem, 1.5vw, 1.7rem) !important;
     line-height: 1.05 !important;
   }
 
-  #root main > section.mt-4.grid.flex-1 > div:first-child > div.mt-3.grid > article .text-2xl {
-    font-size: clamp(2.05rem, 2.3vw, 2.8rem) !important;
+  /* Direct child targeting: current HP and max-HP caption. */
+  #root main > section.mt-4.grid.flex-1 > div:first-child > div.mt-3.grid > article > div.flex.items-center.justify-between.gap-3.pl-1 > div.text-right > div:first-child {
+    font-size: clamp(2.2rem, 2.55vw, 3rem) !important;
     line-height: .92 !important;
   }
 
-  #root main > section.mt-4.grid.flex-1 > div:first-child > div.mt-3.grid > article .text-right .text-\[9px\] {
-    margin-top: .2rem !important;
-    font-size: clamp(.56rem, .62vw, .72rem) !important;
+  #root main > section.mt-4.grid.flex-1 > div:first-child > div.mt-3.grid > article > div.flex.items-center.justify-between.gap-3.pl-1 > div.text-right > div:nth-child(2) {
+    margin-top: .22rem !important;
+    font-size: clamp(.6rem, .66vw, .76rem) !important;
   }
 
   #root main > section.mt-4.grid.flex-1 > div:first-child > div.mt-3.grid > article .h-2 {
