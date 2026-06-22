@@ -28,11 +28,9 @@
   box-shadow: 0 0 14px rgba(248,113,113,.86);
 }
 
-/* Arena clearance is progress, not health: never pulse it at low percentages. */
-#root main .w-\[200px\] .h-2,
-#root main .w-\[200px\] .h-2 > div {
-  animation: none !important;
-  filter: none !important;
+/* The top banner already owns raid progress, so the arena header stays clean. */
+#root main > section.grid > div.flex.flex-col > div.flex.items-center.justify-between > div.w-\[200px\] {
+  display: none;
 }
 
 @keyframes final-examiner-class-danger {
