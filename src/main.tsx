@@ -3,6 +3,7 @@ import ReactDOM from "react-dom/client";
 import App from "./App";
 import FinalExaminerRaid from "./pages/battle/FinalExaminerRaid";
 import "./index.css";
+import "./finalExaminerVictory.css";
 
 const isFinalExaminerRoute =
   window.location.pathname.replace(/^\/+|\/+$/g, "").toLowerCase() ===
