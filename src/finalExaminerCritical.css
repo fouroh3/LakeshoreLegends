@@ -68,7 +68,7 @@ section[class*="border-violet-300/25"]:has(> div:last-child .h-2.overflow-hidden
 section[class*="border-violet-300/25"]:has(> div:last-child .h-2.overflow-hidden.rounded-full > div[style^="width: 2"]):not(:has(> div:last-child .h-2.overflow-hidden.rounded-full > div[style^="width: 26"])):not(:has(> div:last-child .h-2.overflow-hidden.rounded-full > div[style^="width: 27"])):not(:has(> div:last-child .h-2.overflow-hidden.rounded-full > div[style^="width: 28"])):not(:has(> div:last-child .h-2.overflow-hidden.rounded-full > div[style^="width: 29"])) > div:last-child .text-violet-100 {
   color: rgb(254, 202, 202) !important;
   text-shadow: 0 0 18px rgba(239, 68, 68, 0.66);
-  animation: final-examiner-hp-warning 0.92s ease-in-out infinite;
+  animation: final-examiner-hp-warning 1.35s ease-in-out infinite;
 }
 
 @keyframes final-examiner-last-stand {
