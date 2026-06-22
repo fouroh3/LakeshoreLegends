@@ -38,3 +38,15 @@
 #root main article.group:has(img[draggable="false"]) > div.relative.flex.min-h-\[182px\] > div:last-child .text-2xl {
   font-size: 1.65rem !important;
 }
+
+/* At laptop-sized board widths the watermark competes with the title, HP, and percent.
+   Remove it completely rather than letting it overlap the responsive card content. */
+@media (max-width: 1650px) and (min-height: 600px) {
+  #root main > section.mt-4.grid.flex-1 > div:last-child > div.mt-3.grid.grid-cols-5 > article.group > img[draggable="false"] {
+    display: none !important;
+  }
+
+  #root main > section.mt-4.grid.flex-1 > div:last-child > div.mt-3.grid.grid-cols-5 > article.group > div.relative.flex > div:nth-child(2) {
+    max-width: 100% !important;
+  }
+}
