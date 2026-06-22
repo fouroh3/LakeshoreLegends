@@ -1,0 +1,24 @@
+/* Prevent the Final Examiner wordmark styling from turning the seal-break label into a giant clipped banner. */
+#root main div.flex.flex-col:has(> div.grid.grid-cols-5 > article.group:nth-child(1)[class*="from-emerald-950/35"]):has(> div.grid.grid-cols-5 > article.group:nth-child(2)[class*="from-emerald-950/35"]):has(> div.grid.grid-cols-5 > article.group:nth-child(3)[class*="from-emerald-950/35"]):has(> div.grid.grid-cols-5 > article.group:nth-child(4)[class*="from-emerald-950/35"]):has(> div.grid.grid-cols-5 > article.group:nth-child(5)[class*="from-emerald-950/35"]) > section[class*="border-violet-300/25"]::before {
+  content: "THE SEAL IS BROKEN" !important;
+  left: 50% !important;
+  right: auto !important;
+  top: .8rem !important;
+  bottom: auto !important;
+  width: max-content !important;
+  max-width: calc(100% - 2rem) !important;
+  transform: translateX(-50%) !important;
+  text-align: center !important;
+  border: 1px solid rgba(254, 202, 202, .78) !important;
+  border-radius: 9999px !important;
+  padding: .38rem .9rem !important;
+  background: rgba(69, 10, 10, .94) !important;
+  box-shadow: 0 0 0 5px rgba(127, 29, 29, .16), 0 0 34px rgba(239, 68, 68, .62) !important;
+  color: rgb(254, 226, 226) !important;
+  font-size: .66rem !important;
+  font-weight: 950 !important;
+  line-height: 1 !important;
+  letter-spacing: .22em !important;
+  white-space: nowrap !important;
+  text-shadow: none !important;
+}
