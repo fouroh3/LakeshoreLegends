@@ -12,9 +12,9 @@ main:has(section[class*="border-violet-300/25"] > div:last-child .h-2.overflow-h
     url("./assets/guilds/scouts.png"),
     url("./assets/guilds/shadows.png"),
     url("./assets/guilds/blades.png"),
-    linear-gradient(rgba(0, 8, 11, 0.66), rgba(0, 8, 11, 0.76)),
-    radial-gradient(circle at 50% 48%, rgba(255, 244, 163, 0.20) 0%, rgba(250, 204, 21, 0.06) 17%, transparent 37%),
-    radial-gradient(ellipse at 50% 118%, rgba(16, 185, 129, 0.22), transparent 52%),
+    linear-gradient(rgba(0, 8, 11, 0.68), rgba(0, 8, 11, 0.79)),
+    radial-gradient(circle at 50% 48%, rgba(255, 244, 163, 0.18) 0%, rgba(250, 204, 21, 0.055) 17%, transparent 37%),
+    radial-gradient(ellipse at 50% 118%, rgba(16, 185, 129, 0.20), transparent 52%),
     linear-gradient(135deg, rgba(1, 16, 18, 0.98), rgba(4, 42, 35, 0.97) 48%, rgba(10, 35, 58, 0.98));
   background-repeat: no-repeat;
   background-size:
@@ -29,12 +29,12 @@ main:has(section[class*="border-violet-300/25"] > div:last-child .h-2.overflow-h
     auto,
     auto;
   background-position:
-    10% 22%,
-    20% 73%,
-    33% 15%,
-    80% 73%,
-    90% 22%,
-    50% 85%,
+    16% 22%,
+    16% 74%,
+    50% 13%,
+    84% 74%,
+    84% 22%,
+    50% 86%,
     center,
     center,
     center,
@@ -85,7 +85,7 @@ main:has(section[class*="border-violet-300/25"] > div:last-child .h-2.overflow-h
 @media (max-width: 760px) {
   main:has(section[class*="border-violet-300/25"] > div:last-child .h-2.overflow-hidden.rounded-full > div[style^="width: 0"])::before {
     background-size: 21vw, 21vw, 21vw, 21vw, 21vw, 21vw, auto, auto, auto, auto;
-    background-position: 8% 20%, 20% 75%, 34% 13%, 80% 75%, 92% 20%, 50% 86%, center, center, center, center;
+    background-position: 12% 23%, 12% 75%, 50% 12%, 88% 75%, 88% 23%, 50% 87%, center, center, center, center;
   }
 
   main:has(section[class*="border-violet-300/25"] > div:last-child .h-2.overflow-hidden.rounded-full > div[style^="width: 0"])::after {
