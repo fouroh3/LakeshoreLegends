@@ -29,12 +29,12 @@ main:has(section[class*="border-violet-300/25"] > div:last-child .h-2.overflow-h
     auto,
     auto;
   background-position:
-    10% 74%,
-    26% 74%,
-    42% 74%,
-    58% 74%,
-    74% 74%,
-    90% 74%,
+    10% 81%,
+    26% 81%,
+    42% 81%,
+    58% 81%,
+    74% 81%,
+    90% 81%,
     center,
     center,
     center,
@@ -86,7 +86,7 @@ main:has(section[class*="border-violet-300/25"] > div:last-child .h-2.overflow-h
 @media (max-width: 760px) {
   main:has(section[class*="border-violet-300/25"] > div:last-child .h-2.overflow-hidden.rounded-full > div[style^="width: 0"])::before {
     background-size: 14vw, 14vw, 14vw, 14vw, 14vw, 14vw, auto, auto, auto, auto;
-    background-position: 8% 76%, 24% 76%, 40% 76%, 60% 76%, 76% 76%, 92% 76%, center, center, center, center;
+    background-position: 8% 82%, 24% 82%, 40% 82%, 60% 82%, 76% 82%, 92% 82%, center, center, center, center;
   }
 
   main:has(section[class*="border-violet-300/25"] > div:last-child .h-2.overflow-hidden.rounded-full > div[style^="width: 0"])::after {
