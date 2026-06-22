@@ -28,15 +28,61 @@ function bossState(boss: FinalExaminerBossState) {
   return "ACTIVE";
 }
 
-function bossBar(boss: FinalExaminerBossState) {
-  if (boss.defeated) return "from-emerald-400 to-cyan-300";
-  if (boss.locked) return "from-violet-500 to-fuchsia-300";
-  return "from-rose-500 via-pink-400 to-orange-300";
+function bossTheme(boss: FinalExaminerBossState) {
+  if (boss.defeated) {
+    return {
+      edge: "from-emerald-400 to-cyan-300",
+      wash: "from-emerald-950/35 via-black/35 to-cyan-950/20",
+      glow: "shadow-[inset_0_0_40px_rgba(16,185,129,0.10)]",
+    };
+  }
+
+  if (boss.locked) {
+    return {
+      edge: "from-violet-500 to-fuchsia-300",
+      wash: "from-violet-950/45 via-black/35 to-fuchsia-950/20",
+      glow: "shadow-[inset_0_0_40px_rgba(168,85,247,0.10)]",
+    };
+  }
+
+  const themes: Record<string, { edge: string; wash: string; glow: string }> = {
+    KEEPER_SHADOWS: {
+      edge: "from-sky-400 via-indigo-400 to-violet-300",
+      wash: "from-sky-950/45 via-slate-950/25 to-violet-950/20",
+      glow: "shadow-[inset_0_0_38px_rgba(56,189,248,0.10)]",
+    },
+    CRYPT_WARDEN: {
+      edge: "from-amber-300 via-orange-400 to-stone-300",
+      wash: "from-amber-950/35 via-stone-950/35 to-orange-950/20",
+      glow: "shadow-[inset_0_0_38px_rgba(251,191,36,0.08)]",
+    },
+    THE_ALCHEMIST: {
+      edge: "from-lime-300 via-emerald-400 to-teal-300",
+      wash: "from-lime-950/30 via-emerald-950/35 to-teal-950/25",
+      glow: "shadow-[inset_0_0_38px_rgba(74,222,128,0.10)]",
+    },
+    PLAGUEBEARER: {
+      edge: "from-rose-400 via-red-500 to-orange-300",
+      wash: "from-rose-950/40 via-red-950/35 to-orange-950/20",
+      glow: "shadow-[inset_0_0_38px_rgba(244,63,94,0.10)]",
+    },
+    PRISM_SENTINEL: {
+      edge: "from-fuchsia-400 via-violet-400 to-cyan-300",
+      wash: "from-fuchsia-950/35 via-violet-950/35 to-cyan-950/20",
+      glow: "shadow-[inset_0_0_38px_rgba(217,70,239,0.10)]",
+    },
+  };
+
+  return themes[boss.bossKey] || {
+    edge: "from-rose-500 via-pink-400 to-orange-300",
+    wash: "from-rose-950/35 via-black/35 to-orange-950/20",
+    glow: "shadow-[inset_0_0_38px_rgba(244,63,94,0.10)]",
+  };
 }
 
 function Bar({ current, max, className }: { current: number; max: number; className: string }) {
   return (
-    <div className="h-2 overflow-hidden rounded-full bg-black/50">
+    <div className="h-2 overflow-hidden rounded-full bg-black/55 ring-1 ring-white/5">
       <div
         className={`h-full rounded-full bg-gradient-to-r ${className}`}
         style={{ width: `${percent(current, max)}%` }}
@@ -45,22 +91,70 @@ function Bar({ current, max, className }: { current: number; max: number; classN
   );
 }
 
-function BossLogo({ boss, large = false }: { boss: FinalExaminerBossState; large?: boolean }) {
+function BossWatermark({ boss }: { boss: FinalExaminerBossState }) {
   const meta = getBossMeta(boss.bossKey) || getBossMeta(boss.bossName);
-
   if (!meta?.logo) return null;
 
   return (
     <img
       src={meta.logo}
       alt=""
-      className={
-        large
-          ? "h-[72px] w-auto object-contain opacity-100 drop-shadow-[0_0_14px_rgba(255,255,255,0.24)]"
-          : "h-10 w-auto object-contain opacity-100 drop-shadow-[0_0_10px_rgba(255,255,255,0.22)]"
-      }
+      className="pointer-events-none absolute -right-3 -top-3 h-28 w-auto select-none opacity-[0.16] grayscale brightness-200 contrast-125"
       draggable={false}
     />
+  );
+}
+
+function FinalBossMark({ boss }: { boss: FinalExaminerBossState }) {
+  const meta = getBossMeta(boss.bossKey) || getBossMeta(boss.bossName);
+  if (!meta?.logo) return null;
+
+  return (
+    <img
+      src={meta.logo}
+      alt=""
+      className="h-[72px] w-auto object-contain drop-shadow-[0_0_18px_rgba(255,255,255,0.25)]"
+      draggable={false}
+    />
+  );
+}
+
+function EncounterCard({ boss }: { boss: FinalExaminerBossState }) {
+  const theme = bossTheme(boss);
+
+  return (
+    <article
+      className={`group relative min-w-0 overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br ${theme.wash} px-4 py-4 ${theme.glow}`}
+    >
+      <BossWatermark boss={boss} />
+      <div className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${theme.edge}`} />
+
+      <div className="relative flex h-full min-h-[182px] flex-col">
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-[9px] font-black tracking-[0.18em] text-white/45">QUEST BOSS</span>
+          <span className="rounded-full border border-white/10 bg-black/20 px-2 py-1 text-[9px] font-black tracking-[0.12em] text-white/70">
+            {bossState(boss)}
+          </span>
+        </div>
+
+        <div className="mt-4 max-w-[82%] text-[15px] font-black leading-[1.15] tracking-tight text-white sm:text-base">
+          {boss.bossName}
+        </div>
+
+        <div className="mt-auto pt-5">
+          <div className="flex items-end justify-between gap-2">
+            <div>
+              <div className="text-2xl font-black tracking-tight text-white">{num(boss.currentHP)}</div>
+              <div className="mt-0.5 text-[9px] font-bold tracking-[0.15em] text-white/40">OF {num(boss.maxHP)} HP</div>
+            </div>
+            <div className="text-sm font-black text-white/75">{Math.round(percent(boss.currentHP, boss.maxHP))}%</div>
+          </div>
+          <div className="mt-3">
+            <Bar current={boss.currentHP} max={boss.maxHP} className={theme.edge} />
+          </div>
+        </div>
+      </div>
+    </article>
   );
 }
 
@@ -153,41 +247,6 @@ export default function FinalExaminerRaid() {
     }
   }
 
-  const bossCards = (compact = false) => (
-    <div className={compact ? "grid gap-2 sm:grid-cols-2 xl:grid-cols-3" : "grid grid-cols-5 gap-2"}>
-      {(compact ? raid?.bosses || [] : minions).map((boss, index) => (
-        <article
-          key={boss.bossKey}
-          className="relative flex min-h-[205px] min-w-0 flex-col overflow-hidden rounded-xl border border-white/10 bg-black/25 px-3 py-3 shadow-[0_10px_24px_rgba(0,0,0,0.18)]"
-        >
-          <div className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${bossBar(boss)}`} />
-          <div className="flex items-center justify-between gap-2">
-            <div className="text-[9px] font-black tracking-[0.13em] text-zinc-500">
-              {boss.bossKey === "FINAL_EXAMINER" ? "FINAL BOSS" : `MINION 0${index + 1}`}
-            </div>
-            <BossLogo boss={boss} />
-          </div>
-          <div className="mt-2 flex items-start justify-between gap-2">
-            <div className="min-h-[38px] text-sm font-black leading-5">{boss.bossName}</div>
-            <span className="shrink-0 text-[9px] font-black tracking-[0.12em] text-zinc-300">{bossState(boss)}</span>
-          </div>
-          <div className="mt-auto pt-3">
-            <div className="flex items-end justify-between gap-2">
-              <div>
-                <div className="text-xl font-black text-rose-100">{num(boss.currentHP)}</div>
-                <div className="text-[9px] font-bold tracking-[0.1em] text-zinc-500">OF {num(boss.maxHP)}</div>
-              </div>
-              <span className="text-xs font-black text-zinc-300">{Math.round(percent(boss.currentHP, boss.maxHP))}%</span>
-            </div>
-            <div className="mt-2">
-              <Bar current={boss.currentHP} max={boss.maxHP} className={bossBar(boss)} />
-            </div>
-          </div>
-        </article>
-      ))}
-    </div>
-  );
-
   return (
     <div className="min-h-[100dvh] overflow-x-hidden bg-[#05070d] text-zinc-100">
       <AppTopBar
@@ -227,7 +286,7 @@ export default function FinalExaminerRaid() {
 
                 <section className="mt-5 grid gap-4 xl:grid-cols-[0.85fr_1.5fr]">
                   <div className="rounded-[24px] border border-cyan-300/15 bg-cyan-950/10 p-4"><div className="text-[10px] font-black tracking-[0.18em] text-cyan-200/80">LIVE CLASS HP</div><div className="mt-3 space-y-2">{raid.classes.map((unit) => <div key={unit.classKey} className="rounded-xl border border-cyan-300/15 bg-black/20 p-3"><div className="flex justify-between gap-3 text-sm font-black"><span>{unit.label}</span><span className="text-cyan-100">{num(unit.currentHP)} / {num(unit.startingHP)}</span></div><div className="mt-2"><Bar current={unit.currentHP} max={unit.startingHP} className="from-cyan-400 via-sky-300 to-teal-200" /></div></div>)}</div></div>
-                  <div className="rounded-[24px] border border-rose-300/15 bg-rose-950/10 p-4"><div className="flex items-center justify-between"><div className="text-[10px] font-black tracking-[0.18em] text-rose-200/80">LIVE BOSS STATUS</div><div className="text-sm font-black text-rose-100">{defeated} / 5 defeated</div></div><div className="mt-3">{bossCards(true)}</div></div>
+                  <div className="rounded-[24px] border border-rose-300/15 bg-rose-950/10 p-4"><div className="flex items-center justify-between"><div className="text-[10px] font-black tracking-[0.18em] text-rose-200/80">LIVE BOSS STATUS</div><div className="text-sm font-black text-rose-100">{defeated} / 5 defeated</div></div><div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{(raid.bosses || []).map((boss) => <EncounterCard key={boss.bossKey} boss={boss} />)}</div></div>
                 </section>
               </>
             ) : null}
@@ -244,7 +303,7 @@ export default function FinalExaminerRaid() {
               <section className="mt-4 grid flex-1 gap-4 xl:grid-cols-[0.76fr_1.84fr]">
                 <div className="rounded-[22px] border border-cyan-300/15 bg-[linear-gradient(145deg,rgba(8,24,34,0.88),rgba(8,12,20,0.96))] p-4"><div className="flex items-center justify-between"><div><div className="text-[10px] font-black tracking-[0.19em] text-cyan-200/85">RAID PARTIES</div><h2 className="mt-0.5 text-lg font-black">Class Vitality</h2></div><div className="rounded-full border border-cyan-300/15 bg-cyan-300/10 px-2.5 py-1 text-[9px] font-black tracking-[0.13em] text-cyan-100">LIVE HP</div></div><div className="mt-3 grid gap-2">{raid.classes.map((unit, index) => <article key={unit.classKey} className="relative overflow-hidden rounded-xl border border-cyan-300/15 bg-black/20 px-4 py-3"><div className="absolute inset-y-0 left-0 w-1 bg-cyan-300/75" /><div className="flex items-center justify-between gap-3 pl-1"><div><div className="text-[9px] font-bold tracking-[0.14em] text-cyan-200/65">RAID UNIT 0{index + 1}</div><div className="mt-0.5 text-base font-black">{unit.label}</div></div><div className="text-right"><div className="text-2xl font-black text-cyan-100">{num(unit.currentHP)}</div><div className="text-[9px] font-bold tracking-[0.1em] text-zinc-500">OF {num(unit.startingHP)}</div></div></div><div className="mt-2"><Bar current={unit.currentHP} max={unit.startingHP} className="from-cyan-400 via-sky-300 to-teal-200" /></div></article>)}</div></div>
 
-                <div className="flex flex-col rounded-[22px] border border-rose-300/15 bg-[linear-gradient(145deg,rgba(36,8,18,0.75),rgba(9,10,18,0.98))] p-4"><div className="flex items-center justify-between"><div><div className="text-[10px] font-black tracking-[0.19em] text-rose-200/85">BOSS ARENA</div><h2 className="mt-0.5 text-lg font-black">The Five Minions</h2></div><div className="w-[200px]"><div className="flex justify-between text-[9px] font-bold tracking-[0.12em] text-zinc-500"><span>ARENA CLEARANCE</span><span>{Math.round(percent(total - remaining, total))}%</span></div><div className="mt-1.5"><Bar current={total - remaining} max={total} className="from-rose-400 to-amber-200" /></div></div></div><div className="mt-3">{bossCards()}</div>{finalBoss ? <section className="mt-3 grid flex-1 gap-3 rounded-xl border border-violet-300/25 bg-[radial-gradient(circle_at_82%_30%,rgba(192,132,252,0.18),transparent_30%),rgba(25,12,45,0.75)] p-4 lg:grid-cols-[1fr_280px] lg:items-center"><div className="flex items-center gap-4"><BossLogo boss={finalBoss} large /><div><div className="text-[10px] font-black tracking-[0.19em] text-violet-200/85">{finalBoss.locked ? "THE SEAL HOLDS" : finalBoss.defeated ? "EXAMINER DEFEATED" : "FINAL PHASE ACTIVE"}</div><h2 className="mt-1 text-2xl font-black tracking-[-0.04em]">{finalBoss.bossName}</h2><p className="mt-1 text-xs text-zinc-300">Defeat every minion to break the seal.</p></div></div><div className="rounded-xl border border-violet-200/15 bg-black/25 px-4 py-3 text-right"><div className="text-[9px] font-bold tracking-[0.14em] text-violet-200/65">FINAL EXAMINER HP</div><div className="mt-1 text-3xl font-black text-violet-100">{num(finalBoss.currentHP)}</div><div className="text-[9px] font-bold tracking-[0.1em] text-zinc-500">OF {num(finalBoss.maxHP)}</div><div className="mt-2"><Bar current={finalBoss.currentHP} max={finalBoss.maxHP} className="from-violet-500 via-fuchsia-400 to-cyan-300" /></div></div></section> : null}</div>
+                <div className="flex flex-col rounded-[22px] border border-rose-300/15 bg-[linear-gradient(145deg,rgba(36,8,18,0.75),rgba(9,10,18,0.98))] p-4"><div className="flex items-center justify-between"><div><div className="text-[10px] font-black tracking-[0.19em] text-rose-200/85">BOSS ARENA</div><h2 className="mt-0.5 text-lg font-black">The Five Minions</h2></div><div className="w-[200px]"><div className="flex justify-between text-[9px] font-bold tracking-[0.12em] text-zinc-500"><span>ARENA CLEARANCE</span><span>{Math.round(percent(total - remaining, total))}%</span></div><div className="mt-1.5"><Bar current={total - remaining} max={total} className="from-rose-400 to-amber-200" /></div></div></div><div className="mt-3 grid grid-cols-5 gap-2">{minions.map((boss) => <EncounterCard key={boss.bossKey} boss={boss} />)}</div>{finalBoss ? <section className="mt-3 grid flex-1 gap-3 rounded-xl border border-violet-300/25 bg-[radial-gradient(circle_at_82%_30%,rgba(192,132,252,0.18),transparent_30%),rgba(25,12,45,0.75)] p-4 lg:grid-cols-[1fr_280px] lg:items-center"><div className="flex items-center gap-4"><FinalBossMark boss={finalBoss} /><div><div className="text-[10px] font-black tracking-[0.19em] text-violet-200/85">{finalBoss.locked ? "THE SEAL HOLDS" : finalBoss.defeated ? "EXAMINER DEFEATED" : "FINAL PHASE ACTIVE"}</div><h2 className="mt-1 text-2xl font-black tracking-[-0.04em]">{finalBoss.bossName}</h2><p className="mt-1 text-xs text-zinc-300">Defeat every minion to break the seal.</p></div></div><div className="rounded-xl border border-violet-200/15 bg-black/25 px-4 py-3 text-right"><div className="text-[9px] font-bold tracking-[0.14em] text-violet-200/65">FINAL EXAMINER HP</div><div className="mt-1 text-3xl font-black text-violet-100">{num(finalBoss.currentHP)}</div><div className="text-[9px] font-bold tracking-[0.1em] text-zinc-500">OF {num(finalBoss.maxHP)}</div><div className="mt-2"><Bar current={finalBoss.currentHP} max={finalBoss.maxHP} className="from-violet-500 via-fuchsia-400 to-cyan-300" /></div></div></section> : null}</div>
               </section>
             ) : null}
           </>
