@@ -1,4 +1,4 @@
-/* A defeated minion gets a larger ceremonial defeat sequence before settling into Fallen. */
+/* A defeated minion gets a ceremonial defeat sequence, then remains visibly marked Dead. */
 #root main article.group[class*="from-emerald-950/35"] {
   overflow: visible !important;
   animation: final-examiner-minion-fall 1.75s cubic-bezier(.16,.9,.22,1) both;
@@ -15,22 +15,24 @@
   animation: final-examiner-minion-aura 1.6s cubic-bezier(.16,.9,.22,1) both;
 }
 
+/* Permanent dashboard-style defeat marker after the burst resolves. */
 #root main article.group[class*="from-emerald-950/35"]::after {
-  content: "✦ ✦ ✦";
+  content: "☠\A DEAD";
+  white-space: pre;
   position: absolute;
   z-index: 25;
   left: 50%;
-  top: 50%;
-  width: 150%;
-  transform: translate(-50%, -50%) scale(.2);
+  top: 52%;
+  transform: translate(-50%, -50%) scale(.72);
   pointer-events: none;
-  color: rgba(254,240,138,.96);
-  font-size: clamp(1.8rem, 3.4vw, 3.2rem);
+  color: rgba(255,255,255,.96);
+  font-size: clamp(1.3rem, 2.15vw, 2.4rem);
   font-weight: 950;
-  letter-spacing: .55em;
+  line-height: 1.02;
+  letter-spacing: .14em;
   text-align: center;
-  text-shadow: 0 0 14px rgba(255,255,255,.96), 0 0 34px rgba(45,212,191,.8), 0 0 72px rgba(16,185,129,.72);
-  animation: final-examiner-minion-stars 1.7s cubic-bezier(.12,.9,.26,1) both;
+  text-shadow: 0 2px 14px rgba(0,0,0,.95), 0 0 26px rgba(255,255,255,.3);
+  animation: final-examiner-minion-dead-mark 1.5s cubic-bezier(.12,.9,.26,1) both;
 }
 
 @keyframes final-examiner-minion-fall {
@@ -48,11 +50,11 @@
   100% { opacity: 0; transform: scale(1.48); }
 }
 
-@keyframes final-examiner-minion-stars {
-  0% { opacity: 0; transform: translate(-50%, -50%) scale(.16) rotate(-12deg); }
-  18% { opacity: 1; transform: translate(-50%, -50%) scale(1.08) rotate(4deg); }
-  48% { opacity: .82; transform: translate(-50%, -50%) scale(1.42) rotate(-5deg); }
-  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.95) rotate(10deg); }
+@keyframes final-examiner-minion-dead-mark {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(.2) rotate(-8deg); }
+  26% { opacity: 1; transform: translate(-50%, -50%) scale(1.13) rotate(2deg); }
+  52% { opacity: 1; transform: translate(-50%, -50%) scale(.96) rotate(0deg); }
+  100% { opacity: .96; transform: translate(-50%, -50%) scale(1) rotate(0deg); }
 }
 
 /* The chamber begins to burn hotter once the minion line starts falling. */
