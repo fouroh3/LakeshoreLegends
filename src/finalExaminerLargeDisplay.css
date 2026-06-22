@@ -1,21 +1,21 @@
-/* Large displays keep the original bold Phase 1 hierarchy.
-   Laptop compaction remains isolated to the smaller layout. */
-@media (min-width: 1700px) and (min-height: 700px) {
+/* Large, tall displays keep a bold Phase 1 hierarchy.
+   This intentionally does not apply to the shorter laptop viewport. */
+@media (min-width: 1500px) and (min-height: 850px) {
   #root main > section.mt-4.grid.flex-1 > div:last-child > div.mt-3.grid.grid-cols-5 > article {
-    padding: .9rem 1rem !important;
+    padding: 1rem 1.05rem !important;
   }
 
   #root main > section.mt-4.grid.flex-1 > div:last-child > div.mt-3.grid.grid-cols-5 > article .text-\[15px\] {
-    font-size: clamp(1.05rem, 1.32vw, 1.42rem) !important;
-    line-height: 1.12 !important;
+    font-size: clamp(1.18rem, 1.48vw, 1.62rem) !important;
+    line-height: 1.1 !important;
   }
 
   #root main > section.mt-4.grid.flex-1 > div:last-child > div.mt-3.grid.grid-cols-5 > article .text-2xl {
-    font-size: clamp(1.85rem, 2.45vw, 2.55rem) !important;
+    font-size: clamp(2rem, 2.6vw, 2.7rem) !important;
   }
 
   #root main > section.mt-4.grid.flex-1 > div:last-child > div.mt-3.grid.grid-cols-5 > article .text-sm {
-    font-size: 1.08rem !important;
+    font-size: 1.12rem !important;
   }
 
   #root main > section.mt-4.grid.flex-1 > div:last-child > div.mt-3.grid.grid-cols-5 > article > img[draggable="false"] {
