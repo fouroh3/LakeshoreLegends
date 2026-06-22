@@ -48,25 +48,25 @@ img.pointer-events-none.absolute.\-right-3.\-top-3 {
   opacity: 0.13 !important;
 }
 
-/* Final Examiner: defeated encounter cards receive a clear, magical victory seal. */
+/* Final Examiner: defeated encounter cards use a dark fallen seal, not a celebratory victory stamp. */
 article[class*="from-emerald-950/35"] {
   isolation: isolate;
 }
 
 article[class*="from-emerald-950/35"]::after {
-  content: "✦ VANQUISHED ✦";
+  content: "✦ FALLEN ✦";
   position: absolute;
   z-index: 20;
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%) rotate(-8deg);
   width: max-content;
-  border: 1px solid rgba(110, 231, 183, 0.65);
+  border: 1px solid rgba(251, 113, 133, 0.48);
   border-radius: 9999px;
   padding: 0.42rem 0.75rem;
-  background: rgba(2, 44, 34, 0.92);
-  box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.08), 0 0 22px rgba(52, 211, 153, 0.34);
-  color: rgb(209, 250, 229);
+  background: rgba(50, 12, 20, 0.9);
+  box-shadow: 0 0 0 4px rgba(127, 29, 29, 0.12), 0 0 18px rgba(190, 24, 93, 0.18);
+  color: rgb(254, 226, 226);
   font-size: 0.62rem;
   font-weight: 900;
   letter-spacing: 0.18em;
@@ -74,7 +74,7 @@ article[class*="from-emerald-950/35"]::after {
 }
 
 article[class*="from-emerald-950/35"] > *:not(:last-child) {
-  filter: saturate(0.62) brightness(0.82);
+  filter: saturate(0.45) brightness(0.74);
 }
 
 /* Utility for clamping lines in names/badges (fallback for old Tailwind builds) */
