@@ -1,0 +1,13 @@
+/* Boss title leads each minion card; its state badge stays tucked into the upper-right. */
+#root main article.group:has(img[draggable="false"]) > div.relative.flex.min-h-\[182px\] > div:first-child {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 2;
+}
+
+#root main article.group:has(img[draggable="false"]) > div.relative.flex.min-h-\[182px\] > div:nth-child(2) {
+  margin-top: 0 !important;
+  max-width: calc(100% - 3.5rem) !important;
+  padding-top: 0.05rem;
+}
