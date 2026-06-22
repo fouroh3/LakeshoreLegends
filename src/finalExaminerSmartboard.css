@@ -1,3 +1,26 @@
+/* Final Examiner board: fit wide laptop and smartboard displays without page scrolling. */
+@media (min-width: 1000px) and (min-height: 600px) {
+  #root > div.min-h-\[100dvh\] {
+    height: 100dvh !important;
+    overflow: hidden !important;
+  }
+
+  #root > div.min-h-\[100dvh\] > main {
+    height: calc(100dvh - 86px) !important;
+    min-height: 0 !important;
+    padding-top: .75rem !important;
+    padding-bottom: .75rem !important;
+  }
+
+  #root > div.min-h-\[100dvh\] > main > section:first-child {
+    flex: 0 0 auto;
+  }
+
+  #root > div.min-h-\[100dvh\] > main > section.grid.flex-1 {
+    min-height: 0 !important;
+  }
+}
+
 /* Smartboard layout: give the minion phase and Final Examiner chamber a deliberate 40 / 60 split. */
 @media (min-width: 1200px) and (min-height: 700px) {
   #root main > section.grid.flex-1 {
