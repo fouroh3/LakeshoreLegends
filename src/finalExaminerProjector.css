@@ -97,21 +97,31 @@
     opacity: .14 !important;
   }
 
-  /* Final Examiner chamber: boost identity and HUD together for room distance. */
+  /* Final Examiner chamber: give the identity block more deliberate weight. */
+  #root main > section.mt-4.grid.flex-1 > div:last-child > section.mt-3 > div:first-child {
+    gap: clamp(1.35rem, 1.9vw, 2.15rem) !important;
+    padding-left: clamp(.55rem, 1.15vw, 1.5rem) !important;
+  }
+
   #root main > section.mt-4.grid.flex-1 > div:last-child > section.mt-3 > div:first-child > img {
-    height: clamp(74px, 5.8vw, 106px) !important;
+    height: clamp(102px, 7.6vw, 142px) !important;
   }
 
   #root main > section.mt-4.grid.flex-1 > div:last-child > section.mt-3 > div:first-child .text-\[10px\] {
-    font-size: clamp(.66rem, .68vw, .82rem) !important;
+    font-size: clamp(.82rem, .88vw, 1.05rem) !important;
+    letter-spacing: .2em !important;
   }
 
   #root main > section.mt-4.grid.flex-1 > div:last-child > section.mt-3 > div:first-child h2 {
-    font-size: clamp(2rem, 2.35vw, 3rem) !important;
+    margin-top: .45rem !important;
+    font-size: clamp(2.7rem, 3.2vw, 4rem) !important;
+    line-height: .96 !important;
   }
 
   #root main > section.mt-4.grid.flex-1 > div:last-child > section.mt-3 > div:first-child p {
-    font-size: clamp(.9rem, .95vw, 1.12rem) !important;
+    margin-top: .55rem !important;
+    font-size: clamp(1.1rem, 1.18vw, 1.38rem) !important;
+    line-height: 1.12 !important;
   }
 
   #root main > section.mt-4.grid.flex-1 > div:last-child > section.mt-3 > div:last-child .text-3xl {
