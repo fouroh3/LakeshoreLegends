@@ -4,6 +4,7 @@ const TICKER_API_URL =
   "https://script.google.com/macros/s/AKfycbw6gMIFYPvaljF3Ls-waojzprU6bygZZonOIJeKLopN2NSKgkDT-EsRKznxQiGpth_6/exec";
 
 const RAID_ID = "final_examiner_2026";
+let lastEventId = "";
 
 function bossNameFromKey(key: string) {
   const names: Record<string, string> = {
@@ -41,6 +42,43 @@ function findExistingTicker() {
   ) || null;
 }
 
+function findCardWithText(text: string) {
+  if (!text) return null;
+
+  return Array.from(document.querySelectorAll<HTMLElement>("#root article, #root section")).find((element) =>
+    element.textContent?.includes(text)
+  ) || null;
+}
+
+function playImpact(event: any) {
+  const eventId = String(event?.timestamp || "") + String(event?.classKey || "") + String(event?.action || "") + String(event?.targetBossKey || "") + String(event?.appliedAmount || "");
+  if (!eventId || eventId === lastEventId) return;
+  lastEventId = eventId;
+
+  const action = String(event.action || "").toUpperCase();
+  const amount = Math.max(0, Math.round(Number(event.appliedAmount || event.requestedAmount || 0))).toLocaleString();
+  const target = action === "STRIKE"
+    ? findCardWithText(bossNameFromKey(String(event.targetBossKey || "")))
+    : findCardWithText(String(event.classLabel || ""));
+
+  if (!target) return;
+
+  target.classList.remove("final-examiner-impact-target", "final-examiner-impact-heal");
+  void target.offsetWidth;
+  target.classList.add("final-examiner-impact-target");
+  if (action === "HEAL") target.classList.add("final-examiner-impact-heal");
+
+  const number = document.createElement("div");
+  number.className = "final-examiner-impact-number";
+  number.textContent = action === "HEAL" ? `+${amount}` : `-${amount}`;
+  target.appendChild(number);
+
+  window.setTimeout(() => {
+    number.remove();
+    target.classList.remove("final-examiner-impact-target", "final-examiner-impact-heal");
+  }, 1050);
+}
+
 async function refreshTicker() {
   const ticker = findExistingTicker();
   if (!ticker) return;
@@ -51,6 +89,7 @@ async function refreshTicker() {
     if (!data?.ok) return;
 
     ticker.innerHTML = `<span class="mr-2 text-[9px] font-black tracking-[0.18em] text-cyan-300">LIVE FEED</span>${formatLatestEvent(data.latestEvent)}`;
+    playImpact(data.latestEvent);
   } catch {
     // The smartboard stays usable if this optional update is unavailable.
   }
