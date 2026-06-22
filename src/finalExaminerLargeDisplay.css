@@ -1,6 +1,26 @@
-/* Large, tall displays keep a bold Phase 1 hierarchy.
-   This intentionally does not apply to the shorter laptop viewport. */
+/* Large, tall displays keep a bold hierarchy.
+   These overrides intentionally do not apply to the shorter laptop viewport. */
 @media (min-width: 1500px) and (min-height: 850px) {
+  /* Class Vitality: names and HP readouts scale up with the tall smartboard cards. */
+  #root main > section.mt-4.grid.flex-1 > div:first-child > div.mt-3.grid > article {
+    padding: .85rem 1rem !important;
+  }
+
+  #root main > section.mt-4.grid.flex-1 > div:first-child > div.mt-3.grid > article .text-base {
+    font-size: clamp(1rem, 1.22vw, 1.24rem) !important;
+    line-height: 1.08 !important;
+  }
+
+  #root main > section.mt-4.grid.flex-1 > div:first-child > div.mt-3.grid > article .text-2xl {
+    font-size: clamp(1.85rem, 2.25vw, 2.35rem) !important;
+    line-height: 1 !important;
+  }
+
+  #root main > section.mt-4.grid.flex-1 > div:first-child > div.mt-3.grid > article .text-\[9px\] {
+    font-size: clamp(.58rem, .7vw, .7rem) !important;
+  }
+
+  /* Five minions: restore the larger Phase 1 treatment only on tall boards. */
   #root main > section.mt-4.grid.flex-1 > div:last-child > div.mt-3.grid.grid-cols-5 > article {
     padding: 1rem 1.05rem !important;
   }
