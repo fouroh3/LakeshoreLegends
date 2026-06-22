@@ -1,5 +1,6 @@
 import "./finalExaminerChamberEnergy.css";
 import "./finalExaminerSmartboard.css";
+import "./finalExaminerWordmark.css";
 import "./finalExaminerTeacherLabels";
 import "./finalExaminerChamberState";
 
