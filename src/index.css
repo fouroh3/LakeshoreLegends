@@ -18,20 +18,17 @@ body {
 }
 
 .scroll-smooth { scroll-behavior: smooth; }
-
 * { scrollbar-width: thin; scrollbar-color: #3f3f46 #18181b; }
 *::-webkit-scrollbar { height: 10px; width: 10px; }
 *::-webkit-scrollbar-track { background: #18181b; }
 *::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 9999px; }
 
-/* Final Examiner: quest-logo watermarks. */
 img.pointer-events-none.absolute.\-right-3.\-top-3 {
   right: -1.25rem !important;
   top: -1.25rem !important;
   opacity: 0.13 !important;
 }
 
-/* Fallen boss seal. */
 article[class*="from-emerald-950/35"] { isolation: isolate; }
 article[class*="from-emerald-950/35"]::after {
   content: "✦ FALLEN ✦";
@@ -54,10 +51,8 @@ article[class*="from-emerald-950/35"]::after {
 }
 article[class*="from-emerald-950/35"] > *:not(:last-child) { filter: saturate(0.45) brightness(0.74); }
 
-/* HP color changes by remaining health. Each gradient stays inside one color family. */
+/* HP colors change as health falls. */
 #root main .h-2.overflow-hidden.rounded-full > div { background-image: linear-gradient(to right, #15803d, #4ade80) !important; }
-
-/* 50–74%: yellow-green to amber. */
 #root main .h-2.overflow-hidden.rounded-full > div[style^="width: 50"],
 #root main .h-2.overflow-hidden.rounded-full > div[style^="width: 51"],
 #root main .h-2.overflow-hidden.rounded-full > div[style^="width: 52"],
@@ -70,16 +65,12 @@ article[class*="from-emerald-950/35"] > *:not(:last-child) { filter: saturate(0.
 #root main .h-2.overflow-hidden.rounded-full > div[style^="width: 59"],
 #root main .h-2.overflow-hidden.rounded-full > div[style^="width: 6"]:not([style^="width: 6%;"]):not([style^="width: 6."]),
 #root main .h-2.overflow-hidden.rounded-full > div[style^="width: 7"]:not([style^="width: 7%;"]):not([style^="width: 7."]) { background-image: linear-gradient(to right, #84cc16, #f59e0b) !important; }
-
-/* 26–49%: amber to orange. */
 #root main .h-2.overflow-hidden.rounded-full > div[style^="width: 26"],
 #root main .h-2.overflow-hidden.rounded-full > div[style^="width: 27"],
 #root main .h-2.overflow-hidden.rounded-full > div[style^="width: 28"],
 #root main .h-2.overflow-hidden.rounded-full > div[style^="width: 29"],
 #root main .h-2.overflow-hidden.rounded-full > div[style^="width: 3"]:not([style^="width: 3%;"]):not([style^="width: 3."]),
 #root main .h-2.overflow-hidden.rounded-full > div[style^="width: 4"]:not([style^="width: 4%;"]):not([style^="width: 4."]) { background-image: linear-gradient(to right, #f59e0b, #ea580c) !important; }
-
-/* 0–25%: red and pulsing. */
 #root main .h-2.overflow-hidden.rounded-full > div[style^="width: 0"],
 #root main .h-2.overflow-hidden.rounded-full > div[style^="width: 1"]:not([style^="width: 100"]),
 #root main .h-2.overflow-hidden.rounded-full > div[style^="width: 2"]:not([style^="width: 26"]):not([style^="width: 27"]):not([style^="width: 28"]):not([style^="width: 29"]),
@@ -101,13 +92,12 @@ article[class*="from-emerald-950/35"] > *:not(:last-child) { filter: saturate(0.
   animation: final-examiner-critical-pulse 1.15s ease-in-out infinite;
   box-shadow: 0 0 10px rgba(239, 68, 68, 0.68);
 }
-
 @keyframes final-examiner-critical-pulse {
   0%, 100% { opacity: 0.68; filter: saturate(1.05) brightness(0.9); }
   50% { opacity: 1; filter: saturate(1.45) brightness(1.26); }
 }
 
-/* Final Examiner: an oppressive sealed chamber, not a decorative card. */
+/* Final Examiner: looming sealed chamber. */
 section[class*="border-violet-300/25"] {
   position: relative;
   isolation: isolate;
@@ -117,14 +107,9 @@ section[class*="border-violet-300/25"] {
     radial-gradient(ellipse at 19% 120%, rgba(127, 29, 29, 0.44), transparent 42%),
     radial-gradient(ellipse at 86% 12%, rgba(76, 5, 25, 0.42), transparent 34%),
     linear-gradient(135deg, #21030d 0%, #09060d 52%, #18030b 100%) !important;
-  box-shadow:
-    inset 0 0 0 1px rgba(251, 113, 133, 0.16),
-    inset 0 -38px 58px rgba(0, 0, 0, 0.66),
-    0 0 0 1px rgba(127, 29, 29, 0.22),
-    0 0 28px rgba(127, 29, 29, 0.26);
+  box-shadow: inset 0 0 0 1px rgba(251, 113, 133, 0.16), inset 0 -38px 58px rgba(0, 0, 0, 0.66), 0 0 0 1px rgba(127, 29, 29, 0.22), 0 0 28px rgba(127, 29, 29, 0.26);
   animation: final-examiner-chamber-breath 5.8s ease-in-out infinite;
 }
-
 section[class*="border-violet-300/25"]::before {
   content: "THE FINAL EXAMINER";
   position: absolute;
@@ -139,7 +124,6 @@ section[class*="border-violet-300/25"]::before {
   white-space: nowrap;
   pointer-events: none;
 }
-
 section[class*="border-violet-300/25"]::after {
   content: "◉";
   position: absolute;
@@ -154,7 +138,6 @@ section[class*="border-violet-300/25"]::after {
   filter: blur(0.2px);
   pointer-events: none;
 }
-
 section[class*="border-violet-300/25"] > * { position: relative; z-index: 1; }
 section[class*="border-violet-300/25"] h2 { text-shadow: 0 0 25px rgba(251, 113, 133, 0.30); }
 section[class*="border-violet-300/25"] > div:last-child {
@@ -163,50 +146,69 @@ section[class*="border-violet-300/25"] > div:last-child {
   box-shadow: inset 0 0 22px rgba(0, 0, 0, 0.48) !important;
 }
 section[class*="border-violet-300/25"] > div:last-child .text-violet-100 { color: rgb(244, 244, 245) !important; }
-
 @keyframes final-examiner-chamber-breath {
   0%, 100% { box-shadow: inset 0 0 0 1px rgba(251, 113, 133, 0.13), inset 0 -38px 58px rgba(0, 0, 0, 0.66), 0 0 0 1px rgba(127, 29, 29, 0.22), 0 0 22px rgba(127, 29, 29, 0.18); }
   50% { box-shadow: inset 0 0 0 1px rgba(251, 113, 133, 0.24), inset 0 -38px 58px rgba(0, 0, 0, 0.66), 0 0 0 1px rgba(190, 24, 93, 0.42), 0 0 42px rgba(127, 29, 29, 0.36); }
 }
 
-/* Victory: detected from the Final Examiner's own 0% HP bar. */
+/* Final event victory: a bright, ceremonial release after the darkest fight. */
 section[class*="border-violet-300/25"]:has(> div:last-child .h-2.overflow-hidden.rounded-full > div[style^="width: 0"]) {
-  border-color: rgba(74, 222, 128, 0.82) !important;
+  min-height: 196px;
+  border-color: rgba(250, 204, 21, 0.92) !important;
   background:
-    radial-gradient(ellipse at 22% 130%, rgba(20, 83, 45, 0.38), transparent 42%),
-    radial-gradient(ellipse at 86% 12%, rgba(6, 78, 59, 0.30), transparent 34%),
-    linear-gradient(135deg, #06150e 0%, #06100d 52%, #08130d 100%) !important;
-  animation: final-examiner-victory-pulse 2.8s ease-in-out infinite;
+    radial-gradient(circle at 50% 45%, rgba(250, 204, 21, 0.30), transparent 27%),
+    radial-gradient(ellipse at 15% 120%, rgba(16, 185, 129, 0.42), transparent 48%),
+    radial-gradient(ellipse at 88% 4%, rgba(6, 182, 212, 0.30), transparent 38%),
+    linear-gradient(135deg, #06251d 0%, #0a2d25 45%, #09243a 100%) !important;
+  box-shadow: inset 0 0 0 1px rgba(254, 240, 138, 0.36), inset 0 -32px 52px rgba(0, 0, 0, 0.30), 0 0 0 1px rgba(250, 204, 21, 0.42), 0 0 54px rgba(250, 204, 21, 0.28), 0 0 90px rgba(16, 185, 129, 0.18);
+  animation: final-examiner-victory-anthem 4.4s ease-in-out infinite;
 }
-
 section[class*="border-violet-300/25"]:has(> div:last-child .h-2.overflow-hidden.rounded-full > div[style^="width: 0"])::before {
-  content: "✦ THE FINAL EXAMINER HAS FALLEN ✦";
+  content: "LAKESHORE LEGENDS\A VICTORY IS YOURS";
   z-index: 30;
   left: 50%;
   right: auto;
-  top: 0.7rem;
+  top: 0.55rem;
   bottom: auto;
   transform: translateX(-50%);
-  width: max-content;
-  border: 1px solid rgba(134, 239, 172, 0.68);
-  border-radius: 9999px;
-  padding: 0.36rem 0.78rem;
-  background: rgba(3, 44, 28, 0.92);
-  box-shadow: 0 0 0 4px rgba(20, 83, 45, 0.16), 0 0 22px rgba(74, 222, 128, 0.25);
-  color: rgb(220, 252, 231);
-  font-size: 0.58rem;
-  letter-spacing: 0.18em;
-  line-height: 1.2;
+  width: min(91%, 720px);
+  border: 1px solid rgba(254, 240, 138, 0.86);
+  border-radius: 14px;
+  padding: 0.42rem 1rem 0.48rem;
+  background: linear-gradient(90deg, rgba(120, 53, 15, 0.90), rgba(146, 64, 14, 0.94), rgba(120, 53, 15, 0.90));
+  box-shadow: 0 0 0 4px rgba(250, 204, 21, 0.13), 0 0 30px rgba(250, 204, 21, 0.42);
+  color: #fef3c7;
+  font-size: clamp(0.68rem, 1.1vw, 0.86rem);
+  font-weight: 950;
+  letter-spacing: 0.28em;
+  line-height: 1.4;
+  text-align: center;
+  white-space: pre-line;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.72);
 }
-
 section[class*="border-violet-300/25"]:has(> div:last-child .h-2.overflow-hidden.rounded-full > div[style^="width: 0"])::after {
-  color: rgba(74, 222, 128, 0.10);
-  text-shadow: 0 0 34px rgba(74, 222, 128, 0.34);
+  content: "✦";
+  z-index: -1;
+  left: 50%;
+  top: 51%;
+  transform: translate(-50%, -50%) scale(1.25);
+  color: rgba(254, 240, 138, 0.32);
+  font-size: 18rem;
+  line-height: 1;
+  text-shadow: 0 0 48px rgba(250, 204, 21, 0.70), 0 0 90px rgba(16, 185, 129, 0.42);
+  filter: none;
 }
-
-@keyframes final-examiner-victory-pulse {
-  0%, 100% { box-shadow: inset 0 0 0 1px rgba(134, 239, 172, 0.12), inset 0 -38px 58px rgba(0, 0, 0, 0.62), 0 0 0 1px rgba(20, 83, 45, 0.24), 0 0 20px rgba(20, 83, 45, 0.16); }
-  50% { box-shadow: inset 0 0 0 1px rgba(134, 239, 172, 0.26), inset 0 -38px 58px rgba(0, 0, 0, 0.62), 0 0 0 1px rgba(74, 222, 128, 0.42), 0 0 38px rgba(20, 83, 45, 0.30); }
+section[class*="border-violet-300/25"]:has(> div:last-child .h-2.overflow-hidden.rounded-full > div[style^="width: 0"]) h2 {
+  color: #fff7d6;
+  text-shadow: 0 0 22px rgba(254, 240, 138, 0.56);
+}
+section[class*="border-violet-300/25"]:has(> div:last-child .h-2.overflow-hidden.rounded-full > div[style^="width: 0"]) > div:last-child {
+  border-color: rgba(254, 240, 138, 0.36) !important;
+  background: linear-gradient(145deg, rgba(2, 20, 16, 0.84), rgba(12, 42, 35, 0.74)) !important;
+}
+@keyframes final-examiner-victory-anthem {
+  0%, 100% { box-shadow: inset 0 0 0 1px rgba(254, 240, 138, 0.26), inset 0 -32px 52px rgba(0, 0, 0, 0.30), 0 0 0 1px rgba(250, 204, 21, 0.36), 0 0 34px rgba(250, 204, 21, 0.20), 0 0 68px rgba(16, 185, 129, 0.14); }
+  50% { box-shadow: inset 0 0 0 1px rgba(254, 240, 138, 0.52), inset 0 -32px 52px rgba(0, 0, 0, 0.22), 0 0 0 1px rgba(250, 204, 21, 0.78), 0 0 70px rgba(250, 204, 21, 0.42), 0 0 116px rgba(16, 185, 129, 0.30); }
 }
 
 .line-clamp-1 { display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
