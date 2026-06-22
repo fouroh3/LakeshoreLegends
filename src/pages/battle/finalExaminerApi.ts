@@ -53,10 +53,22 @@ async function readJson(url: string, init?: RequestInit) {
   return data;
 }
 
+function normalizeRaidState(raw: any): FinalExaminerRaidState {
+  const raid = (raw?.raid ?? raw?.state ?? raw) as FinalExaminerRaidState;
+
+  return {
+    ...raid,
+    bosses: (raid.bosses || []).map((boss) => ({
+      ...boss,
+      defeated: Boolean(boss.defeated) || Number(boss.currentHP) <= 0,
+    })),
+  };
+}
+
 export async function getFinalExaminerState(raidId = "final_examiner_2026") {
   const url = `${API_URL}?action=finalexaminerstate&raidId=${encodeURIComponent(raidId)}&_=${Date.now()}`;
   const data = await readJson(url);
-  return (data.raid ?? data.state ?? data) as FinalExaminerRaidState;
+  return normalizeRaidState(data);
 }
 
 export async function submitFinalExaminerAction(args: {
