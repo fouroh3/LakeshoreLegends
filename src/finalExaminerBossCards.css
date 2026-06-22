@@ -4,6 +4,14 @@
   padding-bottom: 0.9rem !important;
 }
 
+/* Lower and enlarge the boss mark so it fills the visual dead zone between title and HP. */
+#root main article.group > img.pointer-events-none.absolute.-right-3.-top-3 {
+  top: 2rem !important;
+  right: -0.7rem !important;
+  height: 7.8rem !important;
+  opacity: 0.18 !important;
+}
+
 #root main article.group:has(img[draggable="false"]) > div.relative.flex.min-h-\[182px\] {
   min-height: 158px !important;
 }
