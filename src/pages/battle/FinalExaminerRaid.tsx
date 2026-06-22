@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import AppTopBar from "../../components/AppTopBar";
 import { getBossMeta } from "./battleBossMeta";
 import {
@@ -130,9 +130,13 @@ function EncounterCard({ boss }: { boss: FinalExaminerBossState }) {
       <div className="relative flex min-h-[182px] flex-col">
         <div className="flex items-center justify-between gap-2">
           <span className="text-[9px] font-black tracking-[0.18em] text-white/45">QUEST BOSS</span>
-          <span className="rounded-full border border-white/10 bg-black/20 px-2 py-1 text-[9px] font-black tracking-[0.12em] text-white/70">{bossState(boss)}</span>
+          <span className="rounded-full border border-white/10 bg-black/20 px-2 py-1 text-[9px] font-black tracking-[0.12em] text-white/70">
+            {bossState(boss)}
+          </span>
         </div>
-        <div className="mt-4 max-w-[82%] text-[15px] font-black leading-[1.15] tracking-tight text-white sm:text-base">{boss.bossName}</div>
+        <div className="mt-4 max-w-[82%] text-[15px] font-black leading-[1.15] tracking-tight text-white sm:text-base">
+          {boss.bossName}
+        </div>
         <div className="mt-auto pt-5">
           <div className="flex items-end justify-between gap-2">
             <div>
@@ -141,11 +145,48 @@ function EncounterCard({ boss }: { boss: FinalExaminerBossState }) {
             </div>
             <div className="text-sm font-black text-white/75">{Math.round(percent(boss.currentHP, boss.maxHP))}%</div>
           </div>
-          <div className="mt-3"><Bar current={boss.currentHP} max={boss.maxHP} className={theme.edge} /></div>
+          <div className="mt-3">
+            <Bar current={boss.currentHP} max={boss.maxHP} className={theme.edge} />
+          </div>
         </div>
       </div>
     </article>
   );
+}
+
+function activityMessage(previous: FinalExaminerRaidState | null, next: FinalExaminerRaidState) {
+  if (!previous) return "The raid command board is live. Await the next class action.";
+
+  const previousFinal = previous.bosses.find((boss) => boss.bossKey === "FINAL_EXAMINER");
+  const nextFinal = next.bosses.find((boss) => boss.bossKey === "FINAL_EXAMINER");
+  if (previousFinal?.locked && nextFinal && !nextFinal.locked) {
+    return "THE SEAL IS BROKEN — The Final Examiner enters the arena.";
+  }
+
+  for (const nextBoss of next.bosses) {
+    const oldBoss = previous.bosses.find((boss) => boss.bossKey === nextBoss.bossKey);
+    if (!oldBoss) continue;
+
+    if (!oldBoss.defeated && nextBoss.defeated) {
+      return `${nextBoss.bossName} has fallen.`;
+    }
+
+    const change = oldBoss.currentHP - nextBoss.currentHP;
+    if (change > 0) {
+      return `${nextBoss.bossName} took ${num(change)} damage.`;
+    }
+  }
+
+  for (const nextClass of next.classes) {
+    const oldClass = previous.classes.find((unit) => unit.classKey === nextClass.classKey);
+    if (!oldClass) continue;
+
+    const change = oldClass.currentHP - nextClass.currentHP;
+    if (change > 0) return `${nextClass.label} took ${num(change)} class damage.`;
+    if (change < 0) return `${nextClass.label} restored ${num(Math.abs(change))} class HP.`;
+  }
+
+  return "The raid command board is live. Await the next class action.";
 }
 
 export default function FinalExaminerRaid() {
@@ -153,15 +194,20 @@ export default function FinalExaminerRaid() {
   const [raid, setRaid] = useState<FinalExaminerRaidState | null>(null);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [activity, setActivity] = useState("The raid command board is live. Await the next class action.");
   const [classKey, setClassKey] = useState("");
   const [action, setAction] = useState<RaidAction>("STRIKE");
   const [target, setTarget] = useState("");
   const [amount, setAmount] = useState("");
   const [busy, setBusy] = useState(false);
+  const previousRaid = useRef<FinalExaminerRaidState | null>(null);
 
   const refresh = useCallback(async () => {
     try {
-      setRaid(await getFinalExaminerState(RAID_ID));
+      const nextRaid = await getFinalExaminerState(RAID_ID);
+      setActivity(activityMessage(previousRaid.current, nextRaid));
+      previousRaid.current = nextRaid;
+      setRaid(nextRaid);
       setError("");
     } catch (caught: any) {
       setError(caught?.message || "Final Examiner is not configured yet.");
@@ -236,7 +282,10 @@ export default function FinalExaminerRaid() {
             <section className="relative overflow-hidden rounded-[28px] border border-amber-300/20 bg-[radial-gradient(circle_at_86%_15%,rgba(251,191,36,0.16),transparent_30%),linear-gradient(135deg,rgba(54,35,5,0.88),rgba(12,12,16,0.98))] p-6 shadow-[0_18px_50px_rgba(0,0,0,0.35)]">
               <div className="text-[10px] font-black tracking-[0.24em] text-amber-200/80">FINAL EXAMINER · TEACHER CONSOLE</div>
               <div className="mt-2 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-                <div><h1 className="text-4xl font-black tracking-[-0.05em] text-white">Record a Class Action</h1><p className="mt-1 text-sm text-zinc-300">Enter the combined total only after a class finishes rolling.</p></div>
+                <div>
+                  <h1 className="text-4xl font-black tracking-[-0.05em] text-white">Record a Class Action</h1>
+                  <p className="mt-1 text-sm text-zinc-300">Enter the combined total only after a class finishes rolling.</p>
+                </div>
                 <a href="/finalexaminer" className="rounded-xl border border-white/15 bg-white/[0.05] px-4 py-2 text-sm font-bold text-white transition hover:border-white/30 hover:bg-white/[0.1]">Open Student Raid Board</a>
               </div>
             </section>
@@ -259,9 +308,21 @@ export default function FinalExaminerRaid() {
             </> : null}
           </>
         ) : <>
-          <section className="relative overflow-hidden rounded-[26px] border border-violet-300/20 bg-[radial-gradient(circle_at_87%_15%,rgba(168,85,247,0.23),transparent_28%),linear-gradient(135deg,rgba(24,13,47,0.98),rgba(8,10,22,0.98))] px-6 py-4 shadow-[0_18px_50px_rgba(0,0,0,0.35)]"><div className="flex items-center justify-between gap-5"><div><div className="text-[10px] font-black tracking-[0.22em] text-violet-200/80">ENDGAME RAID · LIVE COMMAND BOARD</div><h1 className="mt-1 text-3xl font-black tracking-[-0.05em] text-white">THE FINAL EXAMINER</h1></div><div className="grid grid-cols-4 gap-2">{[["PHASE", raid?.phase === "FINAL_EXAMINER" ? "FINAL BOSS" : raid?.phase || "LOADING", "text-violet-100"], ["DOWN", `${defeated} / 5`, "text-white"], ["MINION HP", num(remaining), "text-rose-200"], ["STATUS", "LIVE", "text-cyan-100"]].map(([label, value, color]) => <div key={label} className="min-w-[94px] rounded-xl border border-white/10 bg-black/25 px-3 py-2"><div className="text-[9px] font-bold tracking-[0.14em] text-zinc-500">{label}</div><div className={`mt-1 text-sm font-black ${color}`}>{value}</div></div>)}</div></div></section>
+          <section className="relative overflow-hidden rounded-[26px] border border-violet-300/20 bg-[radial-gradient(circle_at_87%_15%,rgba(168,85,247,0.23),transparent_28%),linear-gradient(135deg,rgba(24,13,47,0.98),rgba(8,10,22,0.98))] px-6 py-4 shadow-[0_18px_50px_rgba(0,0,0,0.35)]">
+            <div className="flex items-center justify-between gap-5">
+              <div><div className="text-[10px] font-black tracking-[0.22em] text-violet-200/80">ENDGAME RAID · LIVE COMMAND BOARD</div><h1 className="mt-1 text-3xl font-black tracking-[-0.05em] text-white">THE FINAL EXAMINER</h1></div>
+              <div className="grid grid-cols-4 gap-2">{[["PHASE", raid?.phase === "FINAL_EXAMINER" ? "FINAL BOSS" : raid?.phase || "LOADING", "text-violet-100"], ["DOWN", `${defeated} / 5`, "text-white"], ["MINION HP", num(remaining), "text-rose-200"], ["STATUS", "LIVE", "text-cyan-100"]].map(([label, value, color]) => <div key={label} className="min-w-[94px] rounded-xl border border-white/10 bg-black/25 px-3 py-2"><div className="text-[9px] font-bold tracking-[0.14em] text-zinc-500">{label}</div><div className={`mt-1 text-sm font-black ${color}`}>{value}</div></div>)}</div>
+            </div>
+            <div className="mt-3 flex min-h-[34px] items-center justify-center rounded-xl border border-cyan-300/15 bg-black/25 px-4 text-center text-xs font-bold tracking-wide text-cyan-50 shadow-[inset_0_0_16px_rgba(34,211,238,0.05)]">
+              <span className="mr-2 text-[9px] font-black tracking-[0.18em] text-cyan-300">LIVE FEED</span>
+              {activity}
+            </div>
+          </section>
           {error ? <div className="mt-3 rounded-xl border border-red-400/25 bg-red-950/30 px-4 py-2 text-sm text-red-100">{error}</div> : null}
-          {raid?.active ? <section className="mt-4 grid flex-1 gap-4 xl:grid-cols-[0.76fr_1.84fr]"><div className="rounded-[22px] border border-cyan-300/15 bg-[linear-gradient(145deg,rgba(8,24,34,0.88),rgba(8,12,20,0.96))] p-4"><div className="flex items-center justify-between"><div><div className="text-[10px] font-black tracking-[0.19em] text-cyan-200/85">RAID PARTIES</div><h2 className="mt-0.5 text-lg font-black">Class Vitality</h2></div><div className="rounded-full border border-cyan-300/15 bg-cyan-300/10 px-2.5 py-1 text-[9px] font-black tracking-[0.13em] text-cyan-100">LIVE HP</div></div><div className="mt-3 grid gap-2">{raid.classes.map((unit, index) => <article key={unit.classKey} className="relative overflow-hidden rounded-xl border border-cyan-300/15 bg-black/20 px-4 py-3"><div className="absolute inset-y-0 left-0 w-1 bg-cyan-300/75" /><div className="flex items-center justify-between gap-3 pl-1"><div><div className="text-[9px] font-bold tracking-[0.14em] text-cyan-200/65">RAID UNIT 0{index + 1}</div><div className="mt-0.5 text-base font-black">{unit.label}</div></div><div className="text-right"><div className="text-2xl font-black text-cyan-100">{num(unit.currentHP)}</div><div className="text-[9px] font-bold tracking-[0.1em] text-zinc-500">OF {num(unit.startingHP)}</div></div></div><div className="mt-2"><Bar current={unit.currentHP} max={unit.startingHP} className="from-cyan-400 via-sky-300 to-teal-200" /></div></article>)}</div></div><div className="flex flex-col rounded-[22px] border border-rose-300/15 bg-[linear-gradient(145deg,rgba(36,8,18,0.75),rgba(9,10,18,0.98))] p-4"><div className="flex items-center justify-between"><div><div className="text-[10px] font-black tracking-[0.19em] text-rose-200/85">BOSS ARENA</div><h2 className="mt-0.5 text-lg font-black">The Five Minions</h2></div><div className="w-[200px]"><div className="flex justify-between text-[9px] font-bold tracking-[0.12em] text-zinc-500"><span>ARENA CLEARANCE</span><span>{Math.round(percent(total - remaining, total))}%</span></div><div className="mt-1.5"><Bar current={total - remaining} max={total} className="from-rose-400 to-amber-200" /></div></div></div><div className="mt-3 grid grid-cols-5 gap-2">{minions.map((boss) => <EncounterCard key={boss.bossKey} boss={boss} />)}</div>{finalBoss ? <section className="mt-3 grid flex-1 gap-3 rounded-xl border border-violet-300/25 bg-[radial-gradient(circle_at_82%_30%,rgba(192,132,252,0.18),transparent_30%),rgba(25,12,45,0.75)] p-4 lg:grid-cols-[1fr_280px] lg:items-center"><div className="flex items-center gap-4"><FinalBossMark boss={finalBoss} /><div><div className="text-[10px] font-black tracking-[0.19em] text-violet-200/85">{finalBoss.locked ? "THE SEAL HOLDS" : finalBoss.defeated ? "EXAMINER DEFEATED" : "FINAL PHASE ACTIVE"}</div><h2 className="mt-1 text-2xl font-black tracking-[-0.04em]">{finalBoss.bossName}</h2><p className="mt-1 text-xs text-zinc-300">Defeat every minion to break the seal.</p></div></div><div className="rounded-xl border border-violet-200/15 bg-black/25 px-4 py-3 text-right"><div className="text-[9px] font-bold tracking-[0.14em] text-violet-200/65">FINAL EXAMINER HP</div><div className="mt-1 text-3xl font-black text-violet-100">{num(finalBoss.currentHP)}</div><div className="text-[9px] font-bold tracking-[0.1em] text-zinc-500">OF {num(finalBoss.maxHP)}</div><div className="mt-2"><Bar current={finalBoss.currentHP} max={finalBoss.maxHP} className="from-violet-500 via-fuchsia-400 to-cyan-300" /></div></div></section> : null}</div></section> : null}
+          {raid?.active ? <section className="mt-4 grid flex-1 gap-4 xl:grid-cols-[0.76fr_1.84fr]">
+            <div className="rounded-[22px] border border-cyan-300/15 bg-[linear-gradient(145deg,rgba(8,24,34,0.88),rgba(8,12,20,0.96))] p-4"><div className="flex items-center justify-between"><div><div className="text-[10px] font-black tracking-[0.19em] text-cyan-200/85">RAID PARTIES</div><h2 className="mt-0.5 text-lg font-black">Class Vitality</h2></div><div className="rounded-full border border-cyan-300/15 bg-cyan-300/10 px-2.5 py-1 text-[9px] font-black tracking-[0.13em] text-cyan-100">LIVE HP</div></div><div className="mt-3 grid gap-2">{raid.classes.map((unit, index) => <article key={unit.classKey} className="relative overflow-hidden rounded-xl border border-cyan-300/15 bg-black/20 px-4 py-3"><div className="absolute inset-y-0 left-0 w-1 bg-cyan-300/75" /><div className="flex items-center justify-between gap-3 pl-1"><div><div className="text-[9px] font-bold tracking-[0.14em] text-cyan-200/65">RAID UNIT 0{index + 1}</div><div className="mt-0.5 text-base font-black">{unit.label}</div></div><div className="text-right"><div className="text-2xl font-black text-cyan-100">{num(unit.currentHP)}</div><div className="text-[9px] font-bold tracking-[0.1em] text-zinc-500">OF {num(unit.startingHP)}</div></div></div><div className="mt-2"><Bar current={unit.currentHP} max={unit.startingHP} className="from-cyan-400 via-sky-300 to-teal-200" /></div></article>)}</div></div>
+            <div className="flex flex-col rounded-[22px] border border-rose-300/15 bg-[linear-gradient(145deg,rgba(36,8,18,0.75),rgba(9,10,18,0.98))] p-4"><div className="flex items-center justify-between"><div><div className="text-[10px] font-black tracking-[0.19em] text-rose-200/85">BOSS ARENA</div><h2 className="mt-0.5 text-lg font-black">The Five Minions</h2></div><div className="w-[200px]"><div className="flex justify-between text-[9px] font-bold tracking-[0.12em] text-zinc-500"><span>ARENA CLEARANCE</span><span>{Math.round(percent(total - remaining, total))}%</span></div><div className="mt-1.5"><Bar current={total - remaining} max={total} className="from-rose-400 to-amber-200" /></div></div></div><div className="mt-3 grid grid-cols-5 gap-2">{minions.map((boss) => <EncounterCard key={boss.bossKey} boss={boss} />)}</div>{finalBoss ? <section className="mt-3 grid flex-1 gap-3 rounded-xl border border-violet-300/25 bg-[radial-gradient(circle_at_82%_30%,rgba(192,132,252,0.18),transparent_30%),rgba(25,12,45,0.75)] p-4 lg:grid-cols-[1fr_280px] lg:items-center"><div className="flex items-center gap-4"><FinalBossMark boss={finalBoss} /><div><div className="text-[10px] font-black tracking-[0.19em] text-violet-200/85">{finalBoss.locked ? "THE SEAL HOLDS" : finalBoss.defeated ? "EXAMINER DEFEATED" : "FINAL PHASE ACTIVE"}</div><h2 className="mt-1 text-2xl font-black tracking-[-0.04em]">{finalBoss.bossName}</h2><p className="mt-1 text-xs text-zinc-300">Defeat every minion to break the seal.</p></div></div><div className="rounded-xl border border-violet-200/15 bg-black/25 px-4 py-3 text-right"><div className="text-[9px] font-bold tracking-[0.14em] text-violet-200/65">FINAL EXAMINER HP</div><div className="mt-1 text-3xl font-black text-violet-100">{num(finalBoss.currentHP)}</div><div className="text-[9px] font-bold tracking-[0.1em] text-zinc-500">OF {num(finalBoss.maxHP)}</div><div className="mt-2"><Bar current={finalBoss.currentHP} max={finalBoss.maxHP} className="from-violet-500 via-fuchsia-400 to-cyan-300" /></div></div></section> : null}</div>
+          </section> : null}
         </>}
       </main>
     </div>
