@@ -9,22 +9,18 @@
   letter-spacing: -0.075em !important;
 }
 
-/* Replace the oversized eye graphic with a quieter ember-like aura behind the Examiner. */
+/* Keep the chamber as one scene: wordmark + subtle red haze, with no separate centre pill. */
 #root main section[class*="border-violet-300/25"]::after {
-  content: "" !important;
-  left: 50% !important;
-  top: 52% !important;
-  width: clamp(13rem, 22vw, 24rem) !important;
-  height: clamp(7rem, 12vw, 13rem) !important;
-  transform: translate(-50%, -50%) !important;
-  border-radius: 9999px !important;
+  content: none !important;
+}
+
+#root main section[class*="border-violet-300/25"] {
   background:
-    radial-gradient(ellipse at center, rgba(225,29,72,.20) 0%, rgba(190,24,93,.12) 33%, rgba(127,29,29,.05) 55%, transparent 72%) !important;
-  box-shadow: 0 0 46px rgba(190,24,93,.14) !important;
-  color: transparent !important;
-  font-size: 0 !important;
-  text-shadow: none !important;
-  filter: none !important;
+    radial-gradient(ellipse at 36% 58%, rgba(190,24,93,.15), transparent 31%),
+    linear-gradient(90deg, transparent 18%, rgba(127,29,29,.10) 42%, rgba(127,29,29,.10) 62%, transparent 84%),
+    radial-gradient(ellipse at 19% 120%, rgba(127,29,29,.44), transparent 42%),
+    radial-gradient(ellipse at 86% 12%, rgba(76,5,25,.42), transparent 34%),
+    linear-gradient(135deg, #21030d 0%, #09060d 52%, #18030b 100%) !important;
 }
 
 /* Keep the victory banner's own centered treatment intact. */
