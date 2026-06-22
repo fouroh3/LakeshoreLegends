@@ -8,6 +8,7 @@ import "./finalExaminerCritical.css";
 import "./finalExaminerBossCards.css";
 import "./finalExaminerMinionEffects.css";
 import "./finalExaminerClassDanger.css";
+import "./finalExaminerLiveTicker";
 
 const isFinalExaminerRoute =
   window.location.pathname.replace(/^\/+|\/+$/g, "").toLowerCase() ===
