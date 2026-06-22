@@ -77,42 +77,48 @@ article[class*="from-emerald-950/35"] > *:not(:last-child) {
   filter: saturate(0.45) brightness(0.74);
 }
 
-/* Final Examiner: all HP bars use the game-wide health logic. */
+/* Final Examiner: all HP bars use the standard green → amber → red health language. */
 #root main .h-2.overflow-hidden.rounded-full > div {
   background-image: linear-gradient(to right, rgb(34, 197, 94), rgb(134, 239, 172)) !important;
 }
 
-/* Wounded: amber. */
-#root main .h-2.overflow-hidden.rounded-full > div[style^="width: 2"],
-#root main .h-2.overflow-hidden.rounded-full > div[style^="width: 3"],
-#root main .h-2.overflow-hidden.rounded-full > div[style^="width: 4"] {
-  background-image: linear-gradient(to right, rgb(245, 158, 11), rgb(253, 230, 138)) !important;
-}
-
-/* Critical: red and pulsing. */
-#root main .h-2.overflow-hidden.rounded-full > div[style^="width: 0"],
-#root main .h-2.overflow-hidden.rounded-full > div[style^="width: 1"],
-#root main .h-2.overflow-hidden.rounded-full > div[style^="width: 2"]:where([style^="width: 20"], [style^="width: 21"], [style^="width: 22"], [style^="width: 23"], [style^="width: 24"]),
-#root main .h-2.overflow-hidden.rounded-full > div[style^="width: 3"]:where([style^="width: 30"], [style^="width: 31"], [style^="width: 32"], [style^="width: 33"], [style^="width: 34"], [style^="width: 35"], [style^="width: 36"], [style^="width: 37"], [style^="width: 38"], [style^="width: 39"]) {
-  background-image: linear-gradient(to right, rgb(220, 38, 38), rgb(251, 113, 133)) !important;
-  animation: final-examiner-critical-pulse 1.15s ease-in-out infinite;
-  box-shadow: 0 0 10px rgba(239, 68, 68, 0.62);
-}
-
-/* Correct the 25–49% amber range after the generic 2–4 selector above. */
-#root main .h-2.overflow-hidden.rounded-full > div[style^="width: 25"],
+/* Wounded: 26–49%. */
 #root main .h-2.overflow-hidden.rounded-full > div[style^="width: 26"],
 #root main .h-2.overflow-hidden.rounded-full > div[style^="width: 27"],
 #root main .h-2.overflow-hidden.rounded-full > div[style^="width: 28"],
 #root main .h-2.overflow-hidden.rounded-full > div[style^="width: 29"],
-#root main .h-2.overflow-hidden.rounded-full > div[style^="width: 4"] {
+#root main .h-2.overflow-hidden.rounded-full > div[style^="width: 3"]:not([style^="width: 3%;"]):not([style^="width: 3."]),
+#root main .h-2.overflow-hidden.rounded-full > div[style^="width: 4"]:not([style^="width: 4%;"]):not([style^="width: 4."]) {
   background-image: linear-gradient(to right, rgb(245, 158, 11), rgb(253, 230, 138)) !important;
   animation: none;
   box-shadow: none;
 }
 
+/* Critical: 0–25%, including decimal values. */
+#root main .h-2.overflow-hidden.rounded-full > div[style^="width: 0"],
+#root main .h-2.overflow-hidden.rounded-full > div[style^="width: 1"]:not([style^="width: 100"]),
+#root main .h-2.overflow-hidden.rounded-full > div[style^="width: 2"]:not([style^="width: 26"]):not([style^="width: 27"]):not([style^="width: 28"]):not([style^="width: 29"]),
+#root main .h-2.overflow-hidden.rounded-full > div[style^="width: 3%;"],
+#root main .h-2.overflow-hidden.rounded-full > div[style^="width: 3."],
+#root main .h-2.overflow-hidden.rounded-full > div[style^="width: 4%;"],
+#root main .h-2.overflow-hidden.rounded-full > div[style^="width: 4."],
+#root main .h-2.overflow-hidden.rounded-full > div[style^="width: 5%;"],
+#root main .h-2.overflow-hidden.rounded-full > div[style^="width: 5."],
+#root main .h-2.overflow-hidden.rounded-full > div[style^="width: 6%;"],
+#root main .h-2.overflow-hidden.rounded-full > div[style^="width: 6."],
+#root main .h-2.overflow-hidden.rounded-full > div[style^="width: 7%;"],
+#root main .h-2.overflow-hidden.rounded-full > div[style^="width: 7."],
+#root main .h-2.overflow-hidden.rounded-full > div[style^="width: 8%;"],
+#root main .h-2.overflow-hidden.rounded-full > div[style^="width: 8."],
+#root main .h-2.overflow-hidden.rounded-full > div[style^="width: 9%;"],
+#root main .h-2.overflow-hidden.rounded-full > div[style^="width: 9."] {
+  background-image: linear-gradient(to right, rgb(220, 38, 38), rgb(251, 113, 133)) !important;
+  animation: final-examiner-critical-pulse 1.15s ease-in-out infinite;
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.62);
+}
+
 @keyframes final-examiner-critical-pulse {
-  0%, 100% { opacity: 0.7; filter: brightness(0.9); }
+  0%, 100% { opacity: 0.68; filter: brightness(0.9); }
   50% { opacity: 1; filter: brightness(1.28); }
 }
 
