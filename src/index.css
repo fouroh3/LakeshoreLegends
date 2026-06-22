@@ -2,7 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Hard lock the dark canvas (baseline) */
 html,
 body,
 #root {
@@ -10,7 +9,6 @@ body,
   background: #09090b;
 }
 
-/* Improve font rendering on most platforms */
 html,
 body {
   -webkit-font-smoothing: antialiased;
@@ -75,19 +73,38 @@ article[class*="from-emerald-950/35"] > *:not(:last-child) {
   filter: saturate(0.45) brightness(0.74);
 }
 
-/* Final Examiner: every filled HP bar is a readable green → amber → red health gradient. */
+/* Standard raid HP logic: the FULL bar changes color as HP falls. */
 #root main .h-2.overflow-hidden.rounded-full > div {
-  background-image: linear-gradient(
-    to right,
-    rgb(34, 197, 94) 0%,
-    rgb(132, 204, 22) 42%,
-    rgb(245, 158, 11) 68%,
-    rgb(239, 68, 68) 100%
-  ) !important;
-  background-size: 100% 100% !important;
+  background-image: linear-gradient(to right, #22c55e, #bbf7d0) !important;
 }
 
-/* Critical bars retain the same gradient but pulse red at 25% HP or lower. */
+/* 50–74%: yellow-green fading to amber. */
+#root main .h-2.overflow-hidden.rounded-full > div[style^="width: 50"],
+#root main .h-2.overflow-hidden.rounded-full > div[style^="width: 51"],
+#root main .h-2.overflow-hidden.rounded-full > div[style^="width: 52"],
+#root main .h-2.overflow-hidden.rounded-full > div[style^="width: 53"],
+#root main .h-2.overflow-hidden.rounded-full > div[style^="width: 54"],
+#root main .h-2.overflow-hidden.rounded-full > div[style^="width: 55"],
+#root main .h-2.overflow-hidden.rounded-full > div[style^="width: 56"],
+#root main .h-2.overflow-hidden.rounded-full > div[style^="width: 57"],
+#root main .h-2.overflow-hidden.rounded-full > div[style^="width: 58"],
+#root main .h-2.overflow-hidden.rounded-full > div[style^="width: 59"],
+#root main .h-2.overflow-hidden.rounded-full > div[style^="width: 6"]:not([style^="width: 6%;"]):not([style^="width: 6."]),
+#root main .h-2.overflow-hidden.rounded-full > div[style^="width: 7"]:not([style^="width: 7%;"]):not([style^="width: 7."]) {
+  background-image: linear-gradient(to right, #a3e635, #fbbf24) !important;
+}
+
+/* 26–49%: amber fading to orange. */
+#root main .h-2.overflow-hidden.rounded-full > div[style^="width: 26"],
+#root main .h-2.overflow-hidden.rounded-full > div[style^="width: 27"],
+#root main .h-2.overflow-hidden.rounded-full > div[style^="width: 28"],
+#root main .h-2.overflow-hidden.rounded-full > div[style^="width: 29"],
+#root main .h-2.overflow-hidden.rounded-full > div[style^="width: 3"]:not([style^="width: 3%;"]):not([style^="width: 3."]),
+#root main .h-2.overflow-hidden.rounded-full > div[style^="width: 4"]:not([style^="width: 4%;"]):not([style^="width: 4."]) {
+  background-image: linear-gradient(to right, #fbbf24, #f97316) !important;
+}
+
+/* 0–25%: red, pulsing critical. */
 #root main .h-2.overflow-hidden.rounded-full > div[style^="width: 0"],
 #root main .h-2.overflow-hidden.rounded-full > div[style^="width: 1"]:not([style^="width: 100"]),
 #root main .h-2.overflow-hidden.rounded-full > div[style^="width: 2"]:not([style^="width: 26"]):not([style^="width: 27"]):not([style^="width: 28"]):not([style^="width: 29"]),
@@ -105,6 +122,7 @@ article[class*="from-emerald-950/35"] > *:not(:last-child) {
 #root main .h-2.overflow-hidden.rounded-full > div[style^="width: 8."],
 #root main .h-2.overflow-hidden.rounded-full > div[style^="width: 9%;"],
 #root main .h-2.overflow-hidden.rounded-full > div[style^="width: 9."] {
+  background-image: linear-gradient(to right, #dc2626, #fb7185) !important;
   animation: final-examiner-critical-pulse 1.15s ease-in-out infinite;
   box-shadow: 0 0 10px rgba(239, 68, 68, 0.68);
 }
@@ -114,7 +132,7 @@ article[class*="from-emerald-950/35"] > *:not(:last-child) {
   50% { opacity: 1; filter: saturate(1.45) brightness(1.26); }
 }
 
-/* Final Examiner: turn the final-boss panel into a looming sealed chamber. */
+/* Final Examiner: looming sealed chamber. */
 section[class*="border-violet-300/25"] {
   position: relative;
   isolation: isolate;
