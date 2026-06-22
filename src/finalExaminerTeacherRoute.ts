@@ -7,19 +7,31 @@ const isLegacyTeacherQuery =
   normalizedPath === "finalexaminer" &&
   new URLSearchParams(window.location.search).get("teacher") === "1";
 
+function restoreCleanTeacherUrl() {
+  const observer = new MutationObserver(() => {
+    const teacherConsoleMounted = document.body.textContent?.includes(
+      "Record a Class Action"
+    );
+
+    if (!teacherConsoleMounted) return;
+
+    observer.disconnect();
+    window.history.replaceState({}, "", "/finalexaminer/teacher");
+  });
+
+  observer.observe(document.documentElement, {
+    childList: true,
+    subtree: true,
+  });
+}
+
 /*
-  The teacher console still uses the existing internal query flag during its
-  initial React render, then immediately restores the clean classroom URL.
-  This keeps all current console behavior intact without exposing ?teacher=1.
+  FinalExaminerRaid reads ?teacher=1 during its initial render. Keep that
+  flag until the teacher console mounts, then restore the clean URL.
 */
 if (isTeacherPath) {
   window.history.replaceState({}, "", "/finalexaminer?teacher=1");
-
-  window.setTimeout(() => {
-    window.history.replaceState({}, "", "/finalexaminer/teacher");
-  }, 0);
+  restoreCleanTeacherUrl();
 } else if (isLegacyTeacherQuery) {
-  window.setTimeout(() => {
-    window.history.replaceState({}, "", "/finalexaminer/teacher");
-  }, 0);
+  restoreCleanTeacherUrl();
 }
