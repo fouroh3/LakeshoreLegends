@@ -74,7 +74,7 @@ export async function getFinalExaminerState(raidId = "final_examiner_2026") {
 export async function submitFinalExaminerAction(args: {
   raidId?: string;
   classKey: string;
-  action: "HEAL" | "STRIKE";
+  action: "HEAL" | "STRIKE" | "DAMAGE";
   amount: number;
   targetBossKey?: string;
   note?: string;
