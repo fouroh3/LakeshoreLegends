@@ -14,27 +14,27 @@ main:has(section[class*="border-violet-300/25"] > div:last-child .h-2.overflow-h
     url("./assets/guilds/blades.png"),
     linear-gradient(rgba(0, 7, 10, 0.74), rgba(0, 7, 10, 0.84)),
     radial-gradient(circle at 50% 42%, rgba(255, 244, 163, 0.18) 0%, rgba(250, 204, 21, 0.05) 18%, transparent 36%),
-    radial-gradient(ellipse at 50% 118%, rgba(16, 185, 129, 0.18), transparent 52%),
+    radial-gradient(ellipse at 50% 108%, rgba(16, 185, 129, 0.18), transparent 52%),
     linear-gradient(135deg, rgba(1, 16, 18, 0.98), rgba(4, 42, 35, 0.97) 48%, rgba(10, 35, 58, 0.98));
   background-repeat: no-repeat;
   background-size:
-    min(10.5vw, 145px),
-    min(10.5vw, 145px),
-    min(10.5vw, 145px),
-    min(10.5vw, 145px),
-    min(10.5vw, 145px),
-    min(10.5vw, 145px),
+    min(11.5vw, 158px),
+    min(11.5vw, 158px),
+    min(11.5vw, 158px),
+    min(11.5vw, 158px),
+    min(11.5vw, 158px),
+    min(11.5vw, 158px),
     auto,
     auto,
     auto,
     auto;
   background-position:
-    10% 80%,
-    26% 80%,
-    42% 80%,
-    58% 80%,
-    74% 80%,
-    90% 80%,
+    10% 74%,
+    26% 74%,
+    42% 74%,
+    58% 74%,
+    74% 74%,
+    90% 74%,
     center,
     center,
     center,
@@ -49,9 +49,9 @@ main:has(section[class*="border-violet-300/25"] > div:last-child .h-2.overflow-h
   position: fixed;
   z-index: 92;
   left: 50%;
-  top: 6vh;
+  top: 11vh;
   width: min(70vw, 860px);
-  min-height: 62vh;
+  min-height: 52vh;
   transform: translateX(-50%);
   pointer-events: none;
   color: #fff8cf;
@@ -65,7 +65,7 @@ main:has(section[class*="border-violet-300/25"] > div:last-child .h-2.overflow-h
   background-repeat: no-repeat;
   background-position: center top;
   background-size: min(22vw, 285px) auto;
-  padding-top: clamp(11.2rem, 20vw, 15.8rem);
+  padding-top: clamp(7.8rem, 14vw, 10.8rem);
   text-shadow:
     0 2px 0 rgba(0, 0, 0, 0.94),
     0 0 15px rgba(254, 240, 138, 0.95),
@@ -85,16 +85,16 @@ main:has(section[class*="border-violet-300/25"] > div:last-child .h-2.overflow-h
 
 @media (max-width: 760px) {
   main:has(section[class*="border-violet-300/25"] > div:last-child .h-2.overflow-hidden.rounded-full > div[style^="width: 0"])::before {
-    background-size: 13vw, 13vw, 13vw, 13vw, 13vw, 13vw, auto, auto, auto, auto;
-    background-position: 8% 82%, 24% 82%, 40% 82%, 60% 82%, 76% 82%, 92% 82%, center, center, center, center;
+    background-size: 14vw, 14vw, 14vw, 14vw, 14vw, 14vw, auto, auto, auto, auto;
+    background-position: 8% 76%, 24% 76%, 40% 76%, 60% 76%, 76% 76%, 92% 76%, center, center, center, center;
   }
 
   main:has(section[class*="border-violet-300/25"] > div:last-child .h-2.overflow-hidden.rounded-full > div[style^="width: 0"])::after {
-    top: 5vh;
+    top: 10vh;
     width: 86vw;
-    min-height: 58vh;
+    min-height: 50vh;
     background-size: min(46vw, 260px) auto;
-    padding-top: 10rem;
+    padding-top: 8.2rem;
     font-size: clamp(0.94rem, 4vw, 1.45rem);
     letter-spacing: 0.09em;
   }
