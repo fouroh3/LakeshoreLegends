@@ -63,7 +63,6 @@ export default function AppTopBar({
             <RouteLink href="/store" active={activeView === "store"}>Store</RouteLink>
             <RouteLink href="/cards" active={activeView === "cards"}>Cards</RouteLink>
             <RouteLink href="/battle" active={activeView === "battle"}>Battle Mode</RouteLink>
-            <RouteLink href="/bossdisplay">Boss Display</RouteLink>
             <RouteLink href="/finalexaminer">Final Examiner</RouteLink>
 
             {shownText ? (
