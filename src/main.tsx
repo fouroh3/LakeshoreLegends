@@ -8,6 +8,7 @@ import "./finalExaminerCritical.css";
 import "./finalExaminerBossCards.css";
 import "./finalExaminerMinionEffects.css";
 import "./finalExaminerClassDanger.css";
+import "./finalExaminerImpactEffects.css";
 import "./finalExaminerLiveTicker";
 
 const isFinalExaminerRoute =
