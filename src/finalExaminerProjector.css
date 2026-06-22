@@ -1,0 +1,95 @@
+/* FINAL EXAMINER PROJECTOR BOARD
+   The student board is designed first for a classroom display, not a laptop UI. */
+@media (min-width: 1000px) {
+  /* Left column: every class tile has a shared, readable projector rhythm. */
+  #root main > section.mt-4.grid.flex-1 > div:first-child > div.mt-3.grid > article {
+    padding: .8rem 1rem !important;
+  }
+
+  #root main > section.mt-4.grid.flex-1 > div:first-child > div.mt-3.grid > article .mt-0\.5.text-base {
+    font-size: clamp(1rem, 1.05vw, 1.25rem) !important;
+    line-height: 1.08 !important;
+  }
+
+  #root main > section.mt-4.grid.flex-1 > div:first-child > div.mt-3.grid > article .text-2xl {
+    font-size: clamp(1.8rem, 2vw, 2.45rem) !important;
+    line-height: .96 !important;
+  }
+
+  #root main > section.mt-4.grid.flex-1 > div:first-child > div.mt-3.grid > article .text-\[9px\] {
+    font-size: clamp(.58rem, .62vw, .72rem) !important;
+  }
+
+  /* Five minions: same three lanes in every card, with title space sized for a room display. */
+  #root main > section.mt-4.grid.flex-1 > div:last-child > div.mt-3.grid.grid-cols-5 > article.group {
+    padding: .95rem 1rem !important;
+  }
+
+  #root main > section.mt-4.grid.flex-1 > div:last-child > div.mt-3.grid.grid-cols-5 > article.group > div.relative.flex {
+    display: grid !important;
+    grid-template-rows: 1.65rem minmax(0, 1fr) auto !important;
+    min-height: 0 !important;
+    height: 100% !important;
+  }
+
+  #root main > section.mt-4.grid.flex-1 > div:last-child > div.mt-3.grid.grid-cols-5 > article.group > div.relative.flex > div:first-child {
+    position: static !important;
+    display: flex !important;
+    justify-content: flex-end !important;
+    align-items: flex-start !important;
+    min-height: 0 !important;
+  }
+
+  #root main > section.mt-4.grid.flex-1 > div:last-child > div.mt-3.grid.grid-cols-5 > article.group > div.relative.flex > div:nth-child(2) {
+    align-self: start !important;
+    max-width: 100% !important;
+    margin-top: .25rem !important;
+    padding: 0 !important;
+    font-size: clamp(1.08rem, 1.28vw, 1.52rem) !important;
+    line-height: 1.1 !important;
+  }
+
+  #root main > section.mt-4.grid.flex-1 > div:last-child > div.mt-3.grid.grid-cols-5 > article.group > div.relative.flex > div:last-child {
+    align-self: end !important;
+    padding-top: .45rem !important;
+  }
+
+  #root main > section.mt-4.grid.flex-1 > div:last-child > div.mt-3.grid.grid-cols-5 > article.group > div.relative.flex > div:last-child .text-2xl {
+    font-size: clamp(2rem, 2.15vw, 2.7rem) !important;
+    line-height: .96 !important;
+  }
+
+  #root main > section.mt-4.grid.flex-1 > div:last-child > div.mt-3.grid.grid-cols-5 > article.group > div.relative.flex > div:last-child .text-sm {
+    font-size: clamp(1rem, 1.05vw, 1.22rem) !important;
+  }
+
+  /* Watermarks are decorative only; they never get to compete with readable data. */
+  #root main > section.mt-4.grid.flex-1 > div:last-child > div.mt-3.grid.grid-cols-5 > article.group > img[draggable="false"] {
+    top: 2rem !important;
+    right: -.55rem !important;
+    height: clamp(5.8rem, 7vw, 8.6rem) !important;
+    max-height: 54% !important;
+    opacity: .14 !important;
+  }
+
+  /* Final Examiner chamber: boost identity and HUD together for room distance. */
+  #root main > section.mt-4.grid.flex-1 > div:last-child > section.mt-3 > div:first-child > img {
+    height: clamp(74px, 5.8vw, 106px) !important;
+  }
+
+  #root main > section.mt-4.grid.flex-1 > div:last-child > section.mt-3 > div:first-child .text-\[10px\] {
+    font-size: clamp(.66rem, .68vw, .82rem) !important;
+  }
+
+  #root main > section.mt-4.grid.flex-1 > div:last-child > section.mt-3 > div:first-child h2 {
+    font-size: clamp(2rem, 2.35vw, 3rem) !important;
+  }
+
+  #root main > section.mt-4.grid.flex-1 > div:last-child > section.mt-3 > div:first-child p {
+    font-size: clamp(.9rem, .95vw, 1.12rem) !important;
+  }
+
+  #root main > section.mt-4.grid.flex-1 > div:last-child > section.mt-3 > div:last-child .text-3xl {
+    font-size: clamp(3rem, 4vw, 4.8rem) !important;
+  }
+}
