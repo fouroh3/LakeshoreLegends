@@ -235,7 +235,8 @@ case "finalexaminerstate":
 In doPost switch:
 case "finalexaminerstart":
   return jsonOut_(finalExaminerStart_(body));
-case "finalexamineraction":n  return jsonOut_(finalExaminerAction_(body));
+case "finalexamineraction":
+  return jsonOut_(finalExaminerAction_(body));
 
 And add ensureFinalExaminerSheets_(); inside RUN_ensureAllSheets().
 */
