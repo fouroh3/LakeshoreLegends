@@ -1,5 +1,6 @@
 // src/components/AppTopBar.tsx
 
+import type { ReactNode } from "react";
 import logoUrl from "../assets/Lakeshore Legends Logo.png";
 
 type TopBarView = "dashboard" | "store" | "cards" | "battle";
@@ -20,10 +21,25 @@ function navButtonClass(active: boolean) {
   ].join(" ");
 }
 
+function RouteLink({
+  href,
+  active = false,
+  children,
+}: {
+  href: string;
+  active?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <a href={href} className={navButtonClass(active)}>
+      {children}
+    </a>
+  );
+}
+
 export default function AppTopBar({
   title,
   activeView,
-  onNavigate,
   shownText,
 }: Props) {
   return (
@@ -42,45 +58,20 @@ export default function AppTopBar({
             </h1>
           </div>
 
-          <div className="flex flex-wrap items-center justify-center gap-2 md:justify-end">
-            <button
-              type="button"
-              onClick={() => onNavigate("dashboard")}
-              className={navButtonClass(activeView === "dashboard")}
-            >
-              Dashboard
-            </button>
-
-            <button
-              type="button"
-              onClick={() => onNavigate("store")}
-              className={navButtonClass(activeView === "store")}
-            >
-              Store
-            </button>
-
-            <button
-              type="button"
-              onClick={() => onNavigate("cards")}
-              className={navButtonClass(activeView === "cards")}
-            >
-              Cards
-            </button>
-
-            <button
-              type="button"
-              onClick={() => onNavigate("battle")}
-              className={navButtonClass(activeView === "battle")}
-            >
-              Battle Mode
-            </button>
+          <nav className="flex flex-wrap items-center justify-center gap-2 md:justify-end">
+            <RouteLink href="/" active={activeView === "dashboard"}>Dashboard</RouteLink>
+            <RouteLink href="/store" active={activeView === "store"}>Store</RouteLink>
+            <RouteLink href="/cards" active={activeView === "cards"}>Cards</RouteLink>
+            <RouteLink href="/battle" active={activeView === "battle"}>Battle Mode</RouteLink>
+            <RouteLink href="/bossdisplay">Boss Display</RouteLink>
+            <RouteLink href="/finalexaminer">Final Examiner</RouteLink>
 
             {shownText ? (
               <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold text-white/70">
                 {shownText}
               </span>
             ) : null}
-          </div>
+          </nav>
         </div>
       </div>
     </header>
