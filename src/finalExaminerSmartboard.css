@@ -12,7 +12,6 @@
     padding: clamp(.55rem, 1vh, .9rem) clamp(.8rem, 1.1vw, 1.25rem) !important;
   }
 
-  /* Top command banner keeps its natural size; everything below shares the remaining height. */
   #root > div.min-h-\[100dvh\] > main > section:first-child {
     flex: 0 0 auto !important;
   }
@@ -100,9 +99,19 @@
     padding: clamp(.5rem, .9vh, .9rem) clamp(.5rem, .75vw, .85rem) !important;
   }
 
+  /* Keep the watermark as a quiet background element at every card height. */
+  #root > div.min-h-\[100dvh\] > main > section.mt-4.grid.flex-1 > div:last-child > div.mt-3.grid.grid-cols-5 > article > img.pointer-events-none.absolute.-right-3.-top-3 {
+    top: clamp(1.45rem, 2.4vh, 2rem) !important;
+    right: -.35rem !important;
+    height: clamp(4.8rem, 6.7vw, 6.6rem) !important;
+    max-height: 56% !important;
+    opacity: .12 !important;
+  }
+
   #root > div.min-h-\[100dvh\] > main > section.mt-4.grid.flex-1 > div:last-child > div.mt-3.grid.grid-cols-5 > article > div.relative.flex {
     min-height: 0 !important;
     height: 100% !important;
+    z-index: 2 !important;
   }
 
   #root > div.min-h-\[100dvh\] > main > section.mt-4.grid.flex-1 > div:last-child > div.mt-3.grid.grid-cols-5 > article .text-2xl {
