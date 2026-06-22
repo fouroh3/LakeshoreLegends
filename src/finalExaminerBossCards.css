@@ -39,26 +39,36 @@
   font-size: 1.65rem !important;
 }
 
-/* Laptop boards: status takes its own compact row, then the title has the full card width. */
+/* Laptop boards: status, title, and HP each get fixed lanes so every card aligns. */
 @media (max-width: 1650px) and (min-height: 600px) {
   #root main > section.mt-4.grid.flex-1 > div:last-child > div.mt-3.grid.grid-cols-5 > article.group > img[draggable="false"] {
     display: none !important;
   }
 
+  #root main > section.mt-4.grid.flex-1 > div:last-child > div.mt-3.grid.grid-cols-5 > article.group > div.relative.flex {
+    display: grid !important;
+    grid-template-rows: 1.35rem minmax(0, 1fr) auto !important;
+    min-height: 0 !important;
+    height: 100% !important;
+  }
+
   #root main > section.mt-4.grid.flex-1 > div:last-child > div.mt-3.grid.grid-cols-5 > article.group > div.relative.flex > div:first-child {
     position: static !important;
     display: flex !important;
+    align-items: start !important;
     justify-content: flex-end !important;
-    min-height: 1.35rem !important;
+    min-height: 0 !important;
   }
 
   #root main > section.mt-4.grid.flex-1 > div:last-child > div.mt-3.grid.grid-cols-5 > article.group > div.relative.flex > div:nth-child(2) {
+    align-self: start !important;
     margin-top: .14rem !important;
     max-width: 100% !important;
     padding-right: 0 !important;
   }
 
   #root main > section.mt-4.grid.flex-1 > div:last-child > div.mt-3.grid.grid-cols-5 > article.group > div.relative.flex > div:last-child {
-    padding-top: .5rem !important;
+    align-self: end !important;
+    padding-top: .35rem !important;
   }
 }
