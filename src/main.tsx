@@ -6,6 +6,7 @@ import "./index.css";
 import "./finalExaminerVictory.css";
 import "./finalExaminerCritical.css";
 import "./finalExaminerBossCards.css";
+import "./finalExaminerMinionEffects.css";
 
 const isFinalExaminerRoute =
   window.location.pathname.replace(/^\/+|\/+$/g, "").toLowerCase() ===
