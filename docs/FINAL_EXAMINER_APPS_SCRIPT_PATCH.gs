@@ -188,8 +188,10 @@ function finalExaminerAction_(args) {
     const nowIso = new Date().toISOString();
 
     if (actionType === "HEAL") {
-      classHPAfter = classHPBefore + amount;
-      appliedAmount = amount;
+      appliedAmount = Math.min(amount, Math.max(0, classStartingHP - classHPBefore));
+      overkillLost = Math.max(0, amount - appliedAmount);
+      classHPAfter = Math.min(classStartingHP, classHPBefore + appliedAmount);
+
       classSh.getRange(classRowIndex + 1, 6, 1, 2).setValues([[classHPAfter, nowIso]]);
     } else {
       const bossRowIndex = bosses.findIndex((r, i) => i > 0 && norm_(r[0]) === raidId && norm_(r[1]) === targetBossKey);
@@ -233,8 +235,7 @@ case "finalexaminerstate":
 In doPost switch:
 case "finalexaminerstart":
   return jsonOut_(finalExaminerStart_(body));
-case "finalexamineraction":
-  return jsonOut_(finalExaminerAction_(body));
+case "finalexamineraction":n  return jsonOut_(finalExaminerAction_(body));
 
 And add ensureFinalExaminerSheets_(); inside RUN_ensureAllSheets().
 */
