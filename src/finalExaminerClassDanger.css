@@ -28,6 +28,13 @@
   box-shadow: 0 0 14px rgba(248,113,113,.86);
 }
 
+/* Arena clearance is progress, not health: never pulse it at low percentages. */
+#root main .w-\[200px\] .h-2,
+#root main .w-\[200px\] .h-2 > div {
+  animation: none !important;
+  filter: none !important;
+}
+
 @keyframes final-examiner-class-danger {
   0%, 100% { filter: brightness(.92); }
   50% { filter: brightness(1.15) saturate(1.24); }
