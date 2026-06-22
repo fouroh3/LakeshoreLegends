@@ -12,29 +12,29 @@ main:has(section[class*="border-violet-300/25"] > div:last-child .h-2.overflow-h
     url("./assets/guilds/scouts.png"),
     url("./assets/guilds/shadows.png"),
     url("./assets/guilds/blades.png"),
-    linear-gradient(rgba(0, 7, 10, 0.72), rgba(0, 7, 10, 0.82)),
-    radial-gradient(circle at 50% 48%, rgba(255, 244, 163, 0.16) 0%, rgba(250, 204, 21, 0.045) 18%, transparent 36%),
+    linear-gradient(rgba(0, 7, 10, 0.74), rgba(0, 7, 10, 0.84)),
+    radial-gradient(circle at 50% 42%, rgba(255, 244, 163, 0.18) 0%, rgba(250, 204, 21, 0.05) 18%, transparent 36%),
     radial-gradient(ellipse at 50% 118%, rgba(16, 185, 129, 0.18), transparent 52%),
     linear-gradient(135deg, rgba(1, 16, 18, 0.98), rgba(4, 42, 35, 0.97) 48%, rgba(10, 35, 58, 0.98));
   background-repeat: no-repeat;
   background-size:
-    min(12.5vw, 170px),
-    min(12.5vw, 170px),
-    min(12.5vw, 170px),
-    min(12.5vw, 170px),
-    min(12.5vw, 170px),
-    min(12.5vw, 170px),
+    min(10.5vw, 145px),
+    min(10.5vw, 145px),
+    min(10.5vw, 145px),
+    min(10.5vw, 145px),
+    min(10.5vw, 145px),
+    min(10.5vw, 145px),
     auto,
     auto,
     auto,
     auto;
   background-position:
-    18% 28%,
-    26% 76%,
-    50% 20%,
-    74% 76%,
-    82% 28%,
-    50% 87%,
+    10% 80%,
+    26% 80%,
+    42% 80%,
+    58% 80%,
+    74% 80%,
+    90% 80%,
     center,
     center,
     center,
@@ -43,15 +43,15 @@ main:has(section[class*="border-violet-300/25"] > div:last-child .h-2.overflow-h
   animation: legends-victory-tableau 5.5s ease-in-out infinite;
 }
 
-/* Top logo, then the decisive headline, then the final line. */
+/* Center title block stays completely clear of the guild crest row. */
 main:has(section[class*="border-violet-300/25"] > div:last-child .h-2.overflow-hidden.rounded-full > div[style^="width: 0"])::after {
   content: "THE FINAL EXAMINER HAS FALLEN\A\A THE LEGENDS RISE";
   position: fixed;
   z-index: 92;
   left: 50%;
-  top: 5vh;
-  width: min(68vw, 820px);
-  min-height: 82vh;
+  top: 6vh;
+  width: min(70vw, 860px);
+  min-height: 62vh;
   transform: translateX(-50%);
   pointer-events: none;
   color: #fff8cf;
@@ -85,14 +85,14 @@ main:has(section[class*="border-violet-300/25"] > div:last-child .h-2.overflow-h
 
 @media (max-width: 760px) {
   main:has(section[class*="border-violet-300/25"] > div:last-child .h-2.overflow-hidden.rounded-full > div[style^="width: 0"])::before {
-    background-size: 18vw, 18vw, 18vw, 18vw, 18vw, 18vw, auto, auto, auto, auto;
-    background-position: 12% 28%, 22% 77%, 50% 20%, 78% 77%, 88% 28%, 50% 88%, center, center, center, center;
+    background-size: 13vw, 13vw, 13vw, 13vw, 13vw, 13vw, auto, auto, auto, auto;
+    background-position: 8% 82%, 24% 82%, 40% 82%, 60% 82%, 76% 82%, 92% 82%, center, center, center, center;
   }
 
   main:has(section[class*="border-violet-300/25"] > div:last-child .h-2.overflow-hidden.rounded-full > div[style^="width: 0"])::after {
     top: 5vh;
     width: 86vw;
-    min-height: 80vh;
+    min-height: 58vh;
     background-size: min(46vw, 260px) auto;
     padding-top: 10rem;
     font-size: clamp(0.94rem, 4vw, 1.45rem);
