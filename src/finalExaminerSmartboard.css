@@ -21,43 +21,61 @@
     flex: 1 1 0 !important;
     min-height: 0 !important;
     overflow: hidden !important;
+    grid-template-rows: minmax(0, 1fr) !important;
   }
 
   #root main > section.grid.flex-1 > div {
     min-height: 0 !important;
+    overflow: hidden !important;
+  }
+
+  /* The class panel uses the same available height instead of pushing its last cards below the fold. */
+  #root main > section.grid.flex-1 > div:first-child {
+    display: grid !important;
+    grid-template-rows: auto minmax(0, 1fr) !important;
+  }
+
+  #root main > section.grid.flex-1 > div:first-child > div.mt-3.grid.gap-2 {
+    min-height: 0 !important;
+    overflow: hidden !important;
   }
 }
 
-/* Smartboard layout: give the minion phase and Final Examiner chamber a deliberate 40 / 60 split. */
+/* Wide laptop and smartboard: deliberate 40 / 60 boss-arena split. */
 @media (min-width: 1200px) and (min-height: 700px) {
   #root main > section.grid.flex-1 {
     grid-template-columns: minmax(310px, 0.76fr) minmax(0, 1.84fr) !important;
     gap: 1rem !important;
     align-items: stretch !important;
-    min-height: 0 !important;
   }
 
-  /* Keep class cards readable and compact on the left. */
+  /* Five class panels always divide their available column height evenly. */
   #root main > section.grid.flex-1 > div:first-child > div.mt-3.grid.gap-2 {
     display: grid !important;
-    gap: .65rem !important;
+    grid-template-rows: repeat(5, minmax(0, 1fr)) !important;
+    gap: .55rem !important;
   }
 
   #root main > section.grid.flex-1 > div:first-child > div.mt-3.grid.gap-2 > article {
-    min-height: 0;
-    padding-top: .78rem !important;
-    padding-bottom: .78rem !important;
+    min-height: 0 !important;
+    padding: clamp(.55rem, .8vh, .8rem) .85rem !important;
+    overflow: hidden !important;
   }
 
   #root main > section.grid.flex-1 > div:first-child > div.mt-3.grid.gap-2 > article .text-2xl {
-    font-size: 1.72rem !important;
+    font-size: clamp(1.35rem, 2vw, 1.72rem) !important;
+    line-height: 1 !important;
+  }
+
+  #root main > section.grid.flex-1 > div:first-child > div.mt-3.grid.gap-2 > article .text-base {
+    font-size: clamp(.82rem, 1.15vw, 1rem) !important;
   }
 
   /* The arena uses its full height: header, 40% minion phase, 60% Examiner phase. */
   #root main > section.grid.flex-1 > div.flex.flex-col {
     display: grid !important;
     grid-template-rows: auto minmax(0, 2fr) minmax(0, 3fr) !important;
-    row-gap: .75rem !important;
+    row-gap: .65rem !important;
     height: 100% !important;
     min-height: 0 !important;
     overflow: hidden !important;
@@ -67,60 +85,78 @@
   #root main > section.grid.flex-1 > div.flex.flex-col > section.mt-3 {
     margin-top: 0 !important;
     min-height: 0 !important;
+    overflow: hidden !important;
   }
 
+  /* Each minion card scales to its phase row. */
   #root main > section.grid.flex-1 > div.flex.flex-col > div.mt-3.grid.grid-cols-5 {
     height: 100% !important;
-    gap: .65rem !important;
+    gap: .6rem !important;
   }
 
   #root main > section.grid.flex-1 > div.flex.flex-col > div.mt-3.grid.grid-cols-5 > article {
     height: 100% !important;
     min-height: 0 !important;
+    padding: clamp(.7rem, 1.1vh, 1rem) clamp(.7rem, .9vw, 1rem) !important;
   }
 
-  /* The Final Examiner chamber occupies the remaining 60% with its own responsive content. */
+  #root main > section.grid.flex-1 > div.flex.flex-col > div.mt-3.grid.grid-cols-5 > article > div.relative.flex {
+    min-height: 0 !important;
+    height: 100% !important;
+  }
+
+  #root main > section.grid.flex-1 > div.flex.flex-col > div.mt-3.grid.grid-cols-5 > article .text-2xl {
+    font-size: clamp(1.45rem, 2.2vw, 2rem) !important;
+    line-height: 1 !important;
+  }
+
+  /* Examiner chamber fills its phase row and all content scales inside it. */
   #root main > section.grid.flex-1 > div.flex.flex-col > section.mt-3 {
     height: 100% !important;
     max-height: none !important;
-    grid-template-columns: minmax(0, 1fr) clamp(260px, 21vw, 345px) !important;
-    padding: clamp(1rem, 1.45vw, 1.5rem) !important;
+    grid-template-columns: minmax(0, 1fr) clamp(225px, 20vw, 345px) !important;
+    padding: clamp(.8rem, 1.25vw, 1.35rem) !important;
   }
 
-  /* Give the Examiner identity the same importance as the HUD. */
   #root main > section.grid.flex-1 > div.flex.flex-col > section.mt-3 > div:first-child {
-    gap: clamp(1rem, 1.8vw, 1.8rem) !important;
+    gap: clamp(.7rem, 1.4vw, 1.5rem) !important;
     align-items: center !important;
-    padding-left: clamp(.35rem, 1vw, 1.2rem) !important;
+    padding-left: clamp(.2rem, .75vw, .8rem) !important;
+    min-width: 0 !important;
   }
 
+  #root main > section.grid.flex.flex-col > section.mt-3 > div:first-child > img,
   #root main > section.grid.flex-1 > div.flex.flex-col > section.mt-3 > div:first-child > img {
-    height: clamp(78px, 8vw, 116px) !important;
+    height: clamp(58px, 6.5vw, 96px) !important;
   }
 
   #root main > section.grid.flex-1 > div.flex.flex-col > section.mt-3 > div:first-child .text-\[10px\] {
-    font-size: clamp(.66rem, .82vw, .9rem) !important;
-    letter-spacing: .22em !important;
+    font-size: clamp(.52rem, .68vw, .8rem) !important;
+    letter-spacing: .18em !important;
   }
 
   #root main > section.grid.flex-1 > div.flex.flex-col > section.mt-3 > div:first-child h2 {
-    margin-top: .45rem !important;
-    font-size: clamp(2rem, 2.6vw, 3.15rem) !important;
+    margin-top: .28rem !important;
+    font-size: clamp(1.35rem, 2.15vw, 2.75rem) !important;
     line-height: .98 !important;
+    white-space: nowrap !important;
   }
 
   #root main > section.grid.flex-1 > div.flex.flex-col > section.mt-3 > div:first-child p {
-    margin-top: .65rem !important;
-    font-size: clamp(.86rem, 1vw, 1.08rem) !important;
+    margin-top: .38rem !important;
+    font-size: clamp(.7rem, .9vw, 1rem) !important;
+    line-height: 1.15 !important;
   }
 
   #root main > section.grid.flex-1 > div.flex.flex-col > section.mt-3 > div:last-child {
-    min-height: clamp(130px, 18vh, 205px) !important;
-    padding: clamp(1rem, 1.45vw, 1.35rem) !important;
+    min-height: 0 !important;
+    height: min(82%, 190px) !important;
+    padding: clamp(.7rem, 1.1vw, 1.1rem) !important;
+    overflow: hidden !important;
   }
 
   #root main > section.grid.flex-1 > div.flex.flex-col > section.mt-3 > div:last-child .text-3xl {
-    font-size: clamp(2.8rem, 3.8vw, 4.35rem) !important;
-    line-height: .96 !important;
+    font-size: clamp(2.1rem, 3.5vw, 4rem) !important;
+    line-height: .94 !important;
   }
 }
