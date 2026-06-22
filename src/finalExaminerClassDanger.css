@@ -1,0 +1,34 @@
+/* Raid parties become visibly endangered at 25% HP or lower. */
+#root main article.relative:has(.h-2.overflow-hidden.rounded-full > div[style^="width: 1"]):not(:has(.h-2.overflow-hidden.rounded-full > div[style^="width: 100"])),
+#root main article.relative:has(.h-2.overflow-hidden.rounded-full > div[style^="width: 2"]):not(:has(.h-2.overflow-hidden.rounded-full > div[style^="width: 26"])):not(:has(.h-2.overflow-hidden.rounded-full > div[style^="width: 27"])):not(:has(.h-2.overflow-hidden.rounded-full > div[style^="width: 28"])):not(:has(.h-2.overflow-hidden.rounded-full > div[style^="width: 29"])),
+#root main article.relative:has(.h-2.overflow-hidden.rounded-full > div[style^="width: 3%"]),
+#root main article.relative:has(.h-2.overflow-hidden.rounded-full > div[style^="width: 3."]),
+#root main article.relative:has(.h-2.overflow-hidden.rounded-full > div[style^="width: 4%"]),
+#root main article.relative:has(.h-2.overflow-hidden.rounded-full > div[style^="width: 4."]),
+#root main article.relative:has(.h-2.overflow-hidden.rounded-full > div[style^="width: 5%"]),
+#root main article.relative:has(.h-2.overflow-hidden.rounded-full > div[style^="width: 5."]),
+#root main article.relative:has(.h-2.overflow-hidden.rounded-full > div[style^="width: 6%"]),
+#root main article.relative:has(.h-2.overflow-hidden.rounded-full > div[style^="width: 6."]),
+#root main article.relative:has(.h-2.overflow-hidden.rounded-full > div[style^="width: 7%"]),
+#root main article.relative:has(.h-2.overflow-hidden.rounded-full > div[style^="width: 7."]),
+#root main article.relative:has(.h-2.overflow-hidden.rounded-full > div[style^="width: 8%"]),
+#root main article.relative:has(.h-2.overflow-hidden.rounded-full > div[style^="width: 8."]),
+#root main article.relative:has(.h-2.overflow-hidden.rounded-full > div[style^="width: 9%"]),
+#root main article.relative:has(.h-2.overflow-hidden.rounded-full > div[style^="width: 9."]) {
+  border-color: rgba(248,113,113,.66) !important;
+  background: linear-gradient(145deg, rgba(69,10,10,.7), rgba(17,8,14,.95)) !important;
+  box-shadow: inset 0 0 28px rgba(239,68,68,.18), 0 0 22px rgba(185,28,28,.18);
+  animation: final-examiner-class-danger 1.35s ease-in-out infinite;
+}
+
+#root main article.relative:has(.h-2.overflow-hidden.rounded-full > div[style^="width: 1"]):not(:has(.h-2.overflow-hidden.rounded-full > div[style^="width: 100"])) .absolute.inset-y-0.left-0,
+#root main article.relative:has(.h-2.overflow-hidden.rounded-full > div[style^="width: 2"]):not(:has(.h-2.overflow-hidden.rounded-full > div[style^="width: 26"])):not(:has(.h-2.overflow-hidden.rounded-full > div[style^="width: 27"])):not(:has(.h-2.overflow-hidden.rounded-full > div[style^="width: 28"])):not(:has(.h-2.overflow-hidden.rounded-full > div[style^="width: 29"])) .absolute.inset-y-0.left-0,
+#root main article.relative:has(.h-2.overflow-hidden.rounded-full > div[style^="width: 3% "]) .absolute.inset-y-0.left-0 {
+  background: rgb(248,113,113) !important;
+  box-shadow: 0 0 14px rgba(248,113,113,.86);
+}
+
+@keyframes final-examiner-class-danger {
+  0%, 100% { filter: brightness(.92); }
+  50% { filter: brightness(1.15) saturate(1.24); }
+}
