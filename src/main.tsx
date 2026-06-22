@@ -11,9 +11,13 @@ import "./finalExaminerClassDanger.css";
 import "./finalExaminerImpactEffects.css";
 import "./finalExaminerLiveTicker";
 
+const finalExaminerPath = window.location.pathname
+  .replace(/^\/+|\/+$/g, "")
+  .toLowerCase();
+
 const isFinalExaminerRoute =
-  window.location.pathname.replace(/^\/+|\/+$/g, "").toLowerCase() ===
-  "finalexaminer";
+  finalExaminerPath === "finalexaminer" ||
+  finalExaminerPath === "finalexaminer/teacher";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
