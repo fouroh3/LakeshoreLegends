@@ -13,6 +13,7 @@ import "./finalExaminerTeacherScroll.css";
 import "./finalExaminerTeacherRoute";
 import "./finalExaminerLiveTicker";
 import "./finalExaminerIdentityScale.css";
+import "./finalExaminerSealBreakFix.css";
 
 const finalExaminerPath = window.location.pathname
   .replace(/^\/+|\/+$/g, "")
