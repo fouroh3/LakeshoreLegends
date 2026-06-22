@@ -41,6 +41,13 @@ body {
   border-radius: 9999px;
 }
 
+/* Final Examiner: keep quest-logo watermarks tucked into the upper corner. */
+img.pointer-events-none.absolute.\-right-3.\-top-3 {
+  right: -1.25rem !important;
+  top: -1.25rem !important;
+  opacity: 0.13 !important;
+}
+
 /* Utility for clamping lines in names/badges (fallback for old Tailwind builds) */
 .line-clamp-1 {
   display: -webkit-box;
