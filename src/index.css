@@ -169,6 +169,46 @@ section[class*="border-violet-300/25"] > div:last-child .text-violet-100 { color
   50% { box-shadow: inset 0 0 0 1px rgba(251, 113, 133, 0.24), inset 0 -38px 58px rgba(0, 0, 0, 0.66), 0 0 0 1px rgba(190, 24, 93, 0.42), 0 0 42px rgba(127, 29, 29, 0.36); }
 }
 
+/* Victory: detected from the Final Examiner's own 0% HP bar. */
+section[class*="border-violet-300/25"]:has(> div:last-child .h-2.overflow-hidden.rounded-full > div[style^="width: 0"]) {
+  border-color: rgba(74, 222, 128, 0.82) !important;
+  background:
+    radial-gradient(ellipse at 22% 130%, rgba(20, 83, 45, 0.38), transparent 42%),
+    radial-gradient(ellipse at 86% 12%, rgba(6, 78, 59, 0.30), transparent 34%),
+    linear-gradient(135deg, #06150e 0%, #06100d 52%, #08130d 100%) !important;
+  animation: final-examiner-victory-pulse 2.8s ease-in-out infinite;
+}
+
+section[class*="border-violet-300/25"]:has(> div:last-child .h-2.overflow-hidden.rounded-full > div[style^="width: 0"])::before {
+  content: "✦ THE FINAL EXAMINER HAS FALLEN ✦";
+  z-index: 30;
+  left: 50%;
+  right: auto;
+  top: 0.7rem;
+  bottom: auto;
+  transform: translateX(-50%);
+  width: max-content;
+  border: 1px solid rgba(134, 239, 172, 0.68);
+  border-radius: 9999px;
+  padding: 0.36rem 0.78rem;
+  background: rgba(3, 44, 28, 0.92);
+  box-shadow: 0 0 0 4px rgba(20, 83, 45, 0.16), 0 0 22px rgba(74, 222, 128, 0.25);
+  color: rgb(220, 252, 231);
+  font-size: 0.58rem;
+  letter-spacing: 0.18em;
+  line-height: 1.2;
+}
+
+section[class*="border-violet-300/25"]:has(> div:last-child .h-2.overflow-hidden.rounded-full > div[style^="width: 0"])::after {
+  color: rgba(74, 222, 128, 0.10);
+  text-shadow: 0 0 34px rgba(74, 222, 128, 0.34);
+}
+
+@keyframes final-examiner-victory-pulse {
+  0%, 100% { box-shadow: inset 0 0 0 1px rgba(134, 239, 172, 0.12), inset 0 -38px 58px rgba(0, 0, 0, 0.62), 0 0 0 1px rgba(20, 83, 45, 0.24), 0 0 20px rgba(20, 83, 45, 0.16); }
+  50% { box-shadow: inset 0 0 0 1px rgba(134, 239, 172, 0.26), inset 0 -38px 58px rgba(0, 0, 0, 0.62), 0 0 0 1px rgba(74, 222, 128, 0.42), 0 0 38px rgba(20, 83, 45, 0.30); }
+}
+
 .line-clamp-1 { display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
 .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 
