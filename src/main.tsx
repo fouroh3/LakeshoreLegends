@@ -9,6 +9,7 @@ import "./finalExaminerBossCards.css";
 import "./finalExaminerMinionEffects.css";
 import "./finalExaminerClassDanger.css";
 import "./finalExaminerImpactEffects.css";
+import "./finalExaminerTeacherScroll.css";
 import "./finalExaminerTeacherRoute";
 import "./finalExaminerLiveTicker";
 
