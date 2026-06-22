@@ -1,0 +1,16 @@
+/* The teacher console is a working page, not the fit-to-screen student board. */
+@media (min-width: 1000px) and (min-height: 600px) {
+  #root > div.min-h-\[100dvh\]:has(> main:not(.flex)) {
+    height: auto !important;
+    min-height: 100dvh !important;
+    overflow: visible !important;
+  }
+
+  #root > div.min-h-\[100dvh\] > main:not(.flex) {
+    height: auto !important;
+    min-height: calc(100dvh - 86px) !important;
+    overflow: visible !important;
+    padding-top: 1.25rem !important;
+    padding-bottom: 2rem !important;
+  }
+}
