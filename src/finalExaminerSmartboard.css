@@ -1,4 +1,4 @@
-/* Smartboard layout: let the boss arena own the remaining screen height. */
+/* Smartboard layout: give the minion phase and Final Examiner chamber a deliberate 40 / 60 split. */
 @media (min-width: 1200px) and (min-height: 700px) {
   #root main > section.grid.flex-1 {
     grid-template-columns: minmax(310px, 0.76fr) minmax(0, 1.84fr) !important;
@@ -23,26 +23,34 @@
     font-size: 1.72rem !important;
   }
 
-  /* The arena itself stretches to the bottom edge of the available board. */
+  /* The arena uses its full height: header, 40% minion phase, 60% Examiner phase. */
   #root main > section.grid.flex-1 > div.flex.flex-col {
+    display: grid !important;
+    grid-template-rows: auto minmax(0, 2fr) minmax(0, 3fr) !important;
+    row-gap: .75rem !important;
     height: 100% !important;
     min-height: 0 !important;
   }
 
+  #root main > section.grid.flex-1 > div.flex.flex-col > div.mt-3.grid.grid-cols-5,
+  #root main > section.grid.flex-1 > div.flex.flex-col > section.mt-3 {
+    margin-top: 0 !important;
+    min-height: 0 !important;
+  }
+
   #root main > section.grid.flex-1 > div.flex.flex-col > div.mt-3.grid.grid-cols-5 {
-    flex: 0 0 auto;
+    height: 100% !important;
     gap: .65rem !important;
   }
 
-  /* Give the five-minion phase more presence before the Examiner chamber begins. */
   #root main > section.grid.flex-1 > div.flex.flex-col > div.mt-3.grid.grid-cols-5 > article {
-    min-height: clamp(178px, 20vh, 220px) !important;
+    height: 100% !important;
+    min-height: 0 !important;
   }
 
-  /* The Final Examiner chamber consumes the remaining height. */
+  /* The Final Examiner chamber occupies the remaining 60% with its own responsive content. */
   #root main > section.grid.flex-1 > div.flex.flex-col > section.mt-3 {
-    flex: 1 1 auto !important;
-    min-height: clamp(235px, 33vh, 430px) !important;
+    height: 100% !important;
     max-height: none !important;
     grid-template-columns: minmax(0, 1fr) clamp(260px, 21vw, 345px) !important;
     padding: clamp(1rem, 1.45vw, 1.5rem) !important;
