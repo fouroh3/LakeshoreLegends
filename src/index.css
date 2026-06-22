@@ -7,7 +7,7 @@ html,
 body,
 #root {
   height: 100%;
-  background: #09090b; /* zinc-950 */
+  background: #09090b;
 }
 
 /* Improve font rendering on most platforms */
@@ -19,12 +19,10 @@ body {
   color-scheme: dark;
 }
 
-/* Make horizontal scrolling (fixed grid mode) clean */
 .scroll-smooth {
   scroll-behavior: smooth;
 }
 
-/* Subtle custom scrollbar that suits the dark theme */
 * {
   scrollbar-width: thin;
   scrollbar-color: #3f3f46 #18181b;
@@ -48,7 +46,7 @@ img.pointer-events-none.absolute.\-right-3.\-top-3 {
   opacity: 0.13 !important;
 }
 
-/* Final Examiner: defeated encounter cards use a dark fallen seal, not a celebratory victory stamp. */
+/* Final Examiner: defeated encounter cards use a dark fallen seal. */
 article[class*="from-emerald-950/35"] {
   isolation: isolate;
 }
@@ -77,24 +75,19 @@ article[class*="from-emerald-950/35"] > *:not(:last-child) {
   filter: saturate(0.45) brightness(0.74);
 }
 
-/* Final Examiner: all HP bars use the standard green → amber → red health language. */
+/* Final Examiner: every filled HP bar is a readable green → amber → red health gradient. */
 #root main .h-2.overflow-hidden.rounded-full > div {
-  background-image: linear-gradient(to right, rgb(34, 197, 94), rgb(134, 239, 172)) !important;
+  background-image: linear-gradient(
+    to right,
+    rgb(34, 197, 94) 0%,
+    rgb(132, 204, 22) 42%,
+    rgb(245, 158, 11) 68%,
+    rgb(239, 68, 68) 100%
+  ) !important;
+  background-size: 100% 100% !important;
 }
 
-/* Wounded: 26–49%. */
-#root main .h-2.overflow-hidden.rounded-full > div[style^="width: 26"],
-#root main .h-2.overflow-hidden.rounded-full > div[style^="width: 27"],
-#root main .h-2.overflow-hidden.rounded-full > div[style^="width: 28"],
-#root main .h-2.overflow-hidden.rounded-full > div[style^="width: 29"],
-#root main .h-2.overflow-hidden.rounded-full > div[style^="width: 3"]:not([style^="width: 3%;"]):not([style^="width: 3."]),
-#root main .h-2.overflow-hidden.rounded-full > div[style^="width: 4"]:not([style^="width: 4%;"]):not([style^="width: 4."]) {
-  background-image: linear-gradient(to right, rgb(245, 158, 11), rgb(253, 230, 138)) !important;
-  animation: none;
-  box-shadow: none;
-}
-
-/* Critical: 0–25%, including decimal values. */
+/* Critical bars retain the same gradient but pulse red at 25% HP or lower. */
 #root main .h-2.overflow-hidden.rounded-full > div[style^="width: 0"],
 #root main .h-2.overflow-hidden.rounded-full > div[style^="width: 1"]:not([style^="width: 100"]),
 #root main .h-2.overflow-hidden.rounded-full > div[style^="width: 2"]:not([style^="width: 26"]):not([style^="width: 27"]):not([style^="width: 28"]):not([style^="width: 29"]),
@@ -112,14 +105,13 @@ article[class*="from-emerald-950/35"] > *:not(:last-child) {
 #root main .h-2.overflow-hidden.rounded-full > div[style^="width: 8."],
 #root main .h-2.overflow-hidden.rounded-full > div[style^="width: 9%;"],
 #root main .h-2.overflow-hidden.rounded-full > div[style^="width: 9."] {
-  background-image: linear-gradient(to right, rgb(220, 38, 38), rgb(251, 113, 133)) !important;
   animation: final-examiner-critical-pulse 1.15s ease-in-out infinite;
-  box-shadow: 0 0 10px rgba(239, 68, 68, 0.62);
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.68);
 }
 
 @keyframes final-examiner-critical-pulse {
-  0%, 100% { opacity: 0.68; filter: brightness(0.9); }
-  50% { opacity: 1; filter: brightness(1.28); }
+  0%, 100% { opacity: 0.68; filter: saturate(1.05) brightness(0.9); }
+  50% { opacity: 1; filter: saturate(1.45) brightness(1.26); }
 }
 
 /* Final Examiner: turn the final-boss panel into a looming sealed chamber. */
@@ -176,7 +168,6 @@ section[class*="border-violet-300/25"] h2 {
   text-shadow: 0 0 22px rgba(251, 113, 133, 0.22);
 }
 
-/* Keep the HP module cold, heavy, and readable—not neon or flashy. */
 section[class*="border-violet-300/25"] > div:last-child {
   border-color: rgba(255, 255, 255, 0.12) !important;
   background: rgba(5, 7, 13, 0.72) !important;
@@ -187,7 +178,6 @@ section[class*="border-violet-300/25"] > div:last-child .text-violet-100 {
   color: rgb(244, 244, 245) !important;
 }
 
-/* Utility for clamping lines in names/badges (fallback for old Tailwind builds) */
 .line-clamp-1 {
   display: -webkit-box;
   -webkit-line-clamp: 1;
@@ -201,7 +191,6 @@ section[class*="border-violet-300/25"] > div:last-child .text-violet-100 {
   overflow: hidden;
 }
 
-/* Print: keep the dark background so ability bars remain legible */
 @media print {
   html,
   body,
