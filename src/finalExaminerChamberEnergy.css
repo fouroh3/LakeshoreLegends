@@ -1,4 +1,4 @@
-/* Final Phase: a restrained energy sweep keeps the Examiner chamber feeling alive. */
+/* Final Phase: a faint, slow atmospheric shimmer in the Examiner chamber. */
 #root main section.final-examiner-chamber-active {
   position: relative;
   overflow: hidden;
@@ -9,15 +9,15 @@
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background: linear-gradient(110deg, transparent 34%, rgba(196,181,253,.06) 45%, rgba(255,255,255,.16) 50%, rgba(196,181,253,.06) 55%, transparent 66%);
+  background: linear-gradient(110deg, transparent 39%, rgba(196,181,253,.025) 47%, rgba(255,255,255,.055) 50%, rgba(196,181,253,.025) 53%, transparent 61%);
   transform: translateX(-125%);
-  animation: final-examiner-chamber-sweep 5.5s ease-in-out infinite;
+  animation: final-examiner-chamber-sweep 10s ease-in-out infinite;
 }
 
 @keyframes final-examiner-chamber-sweep {
-  0%, 52% { transform: translateX(-125%); opacity: 0; }
-  58% { opacity: 1; }
-  78% { transform: translateX(125%); opacity: .9; }
+  0%, 68% { transform: translateX(-125%); opacity: 0; }
+  75% { opacity: .6; }
+  91% { transform: translateX(125%); opacity: .42; }
   100% { transform: translateX(125%); opacity: 0; }
 }
 
