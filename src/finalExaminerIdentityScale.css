@@ -1,3 +1,5 @@
+@import "./finalExaminerDeadBadge.css";
+
 /* Force the Examiner identity block to use the empty left-side chamber space. */
 @media (min-width: 1000px) {
   #root main section[class*="border-violet-300/25"] > div.flex.items-center.gap-4 {
