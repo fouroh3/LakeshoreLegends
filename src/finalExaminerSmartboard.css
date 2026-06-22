@@ -1,12 +1,13 @@
-/* Smartboard layout: keep the arena readable without turning the Examiner chamber into empty space. */
+/* Smartboard layout: let the boss arena own the remaining screen height. */
 @media (min-width: 1200px) and (min-height: 700px) {
   #root main > section.grid.flex-1 {
     grid-template-columns: minmax(310px, 0.76fr) minmax(0, 1.84fr) !important;
     gap: 1rem !important;
-    align-items: start !important;
+    align-items: stretch !important;
+    min-height: 0 !important;
   }
 
-  /* Keep class cards compact and readable rather than stretching them to fill the whole arena height. */
+  /* Keep class cards readable and compact on the left. */
   #root main > section.grid.flex-1 > div:first-child > div.mt-3.grid.gap-2 {
     display: grid !important;
     gap: .65rem !important;
@@ -22,13 +23,28 @@
     font-size: 1.72rem !important;
   }
 
-  /* The Examiner chamber stays compact, while its HP readout gets proper end-boss weight. */
+  /* The arena itself stretches to the bottom edge of the available board. */
+  #root main > section.grid.flex-1 > div.flex.flex-col {
+    height: 100% !important;
+    min-height: 0 !important;
+  }
+
+  #root main > section.grid.flex-1 > div.flex.flex-col > div.mt-3.grid.grid-cols-5 {
+    flex: 0 0 auto;
+    gap: .65rem !important;
+  }
+
+  #root main > section.grid.flex-1 > div.flex.flex-col > div.mt-3.grid.grid-cols-5 > article {
+    min-height: clamp(150px, 17vh, 190px) !important;
+  }
+
+  /* The Final Examiner chamber consumes all remaining arena height and scales its HUD with it. */
   #root main > section.grid.flex-1 > div.flex.flex-col > section.mt-3 {
-    flex: 0 0 220px !important;
-    min-height: 220px !important;
-    max-height: 220px !important;
-    grid-template-columns: minmax(0, 1fr) 310px !important;
-    padding: 1.15rem !important;
+    flex: 1 1 auto !important;
+    min-height: clamp(235px, 33vh, 430px) !important;
+    max-height: none !important;
+    grid-template-columns: minmax(0, 1fr) clamp(285px, 24vw, 380px) !important;
+    padding: clamp(1rem, 1.45vw, 1.5rem) !important;
   }
 
   #root main > section.grid.flex-1 > div.flex.flex-col > section.mt-3 > div:first-child {
@@ -36,12 +52,12 @@
   }
 
   #root main > section.grid.flex-1 > div.flex.flex-col > section.mt-3 > div:last-child {
-    min-height: 132px !important;
-    padding: 1rem 1.25rem !important;
+    min-height: clamp(130px, 18vh, 210px) !important;
+    padding: clamp(1rem, 1.5vw, 1.45rem) !important;
   }
 
   #root main > section.grid.flex-1 > div.flex.flex-col > section.mt-3 > div:last-child .text-3xl {
-    font-size: 3rem !important;
-    line-height: 1 !important;
+    font-size: clamp(2.9rem, 4.1vw, 4.8rem) !important;
+    line-height: .96 !important;
   }
 }
