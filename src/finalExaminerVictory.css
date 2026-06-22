@@ -12,6 +12,8 @@ main:has(section[class*="border-violet-300/25"] > div:last-child .h-2.overflow-h
     url("./assets/guilds/scouts.png"),
     url("./assets/guilds/shadows.png"),
     url("./assets/guilds/blades.png"),
+    linear-gradient(90deg, transparent 0%, rgba(250, 204, 21, 0.06) 18%, rgba(254, 240, 138, 0.34) 50%, rgba(250, 204, 21, 0.06) 82%, transparent 100%),
+    radial-gradient(ellipse at 50% 79%, rgba(250, 204, 21, 0.18), transparent 26%),
     linear-gradient(rgba(0, 7, 10, 0.74), rgba(0, 7, 10, 0.84)),
     radial-gradient(circle at 50% 42%, rgba(255, 244, 163, 0.18) 0%, rgba(250, 204, 21, 0.05) 18%, transparent 36%),
     radial-gradient(ellipse at 50% 108%, rgba(16, 185, 129, 0.18), transparent 52%),
@@ -24,6 +26,8 @@ main:has(section[class*="border-violet-300/25"] > div:last-child .h-2.overflow-h
     min(11.5vw, 158px),
     min(11.5vw, 158px),
     min(11.5vw, 158px),
+    min(58vw, 780px) 1px,
+    min(72vw, 980px) 120px,
     auto,
     auto,
     auto,
@@ -35,6 +39,8 @@ main:has(section[class*="border-violet-300/25"] > div:last-child .h-2.overflow-h
     58% 81%,
     74% 81%,
     90% 81%,
+    50% 69%,
+    50% 81%,
     center,
     center,
     center,
@@ -85,8 +91,16 @@ main:has(section[class*="border-violet-300/25"] > div:last-child .h-2.overflow-h
 
 @media (max-width: 760px) {
   main:has(section[class*="border-violet-300/25"] > div:last-child .h-2.overflow-hidden.rounded-full > div[style^="width: 0"])::before {
-    background-size: 14vw, 14vw, 14vw, 14vw, 14vw, 14vw, auto, auto, auto, auto;
-    background-position: 8% 82%, 24% 82%, 40% 82%, 60% 82%, 76% 82%, 92% 82%, center, center, center, center;
+    background-size:
+      14vw, 14vw, 14vw, 14vw, 14vw, 14vw,
+      68vw 1px,
+      84vw 90px,
+      auto, auto, auto, auto;
+    background-position:
+      8% 82%, 24% 82%, 40% 82%, 60% 82%, 76% 82%, 92% 82%,
+      50% 69%,
+      50% 82%,
+      center, center, center, center;
   }
 
   main:has(section[class*="border-violet-300/25"] > div:last-child .h-2.overflow-hidden.rounded-full > div[style^="width: 0"])::after {
