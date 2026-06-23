@@ -69,6 +69,38 @@ function setFinalExaminerNavActive() {
   finalLink.classList.add(...active);
 }
 
+function forceFinalBossTitleFit() {
+  const title = Array.from(document.querySelectorAll<HTMLHeadingElement>("#root h2")).find(
+    (heading) => heading.textContent?.trim() === "The Final Examiner"
+  );
+  if (!title) return;
+
+  const copy = title.parentElement;
+  const leftColumn = copy?.parentElement;
+  const panel = title.closest<HTMLElement>("section");
+
+  if (panel) {
+    panel.style.gridTemplateColumns = "minmax(0, 1fr) 280px";
+  }
+
+  if (leftColumn) {
+    leftColumn.style.minWidth = "0";
+    leftColumn.style.overflow = "hidden";
+  }
+
+  if (copy) {
+    copy.style.minWidth = "0";
+    copy.style.overflow = "hidden";
+  }
+
+  title.style.maxWidth = "100%";
+  title.style.whiteSpace = "normal";
+  title.style.overflowWrap = "anywhere";
+  title.style.wordBreak = "break-word";
+  title.style.fontSize = "clamp(1.45rem, 2vw, 2rem)";
+  title.style.lineHeight = "1.05";
+}
+
 function findCardWithText(text: string) {
   if (!text) return null;
   return Array.from(document.querySelectorAll<HTMLElement>("#root article, #root section")).find((element) =>
@@ -139,10 +171,12 @@ const onFinalExaminerBoard =
 if (onFinalExaminerBoard) {
   window.setTimeout(() => {
     setFinalExaminerNavActive();
+    forceFinalBossTitleFit();
     void refreshTicker();
   }, 450);
   window.setInterval(() => {
     setFinalExaminerNavActive();
+    forceFinalBossTitleFit();
     void refreshTicker();
   }, 2000);
 }
