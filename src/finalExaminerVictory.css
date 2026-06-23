@@ -1,5 +1,5 @@
-/* Full-screen endgame victory tableau: only appears once the Final Examiner is at 0 HP. */
-main:has(section[class*="border-violet-300/25"] > div:last-child .h-2.overflow-hidden.rounded-full > div[style^="width: 0"])::before {
+/* Full-screen endgame victory tableau: only appears once the Final Examiner is at exactly 0 HP. */
+main:has(section[class*="border-violet-300/25"] > div:last-child .h-2.overflow-hidden.rounded-full > div[style="width: 0%;"])::before {
   content: "";
   position: fixed;
   z-index: 90;
@@ -50,7 +50,7 @@ main:has(section[class*="border-violet-300/25"] > div:last-child .h-2.overflow-h
 }
 
 /* Center title block stays completely clear of the guild crest row. */
-main:has(section[class*="border-violet-300/25"] > div:last-child .h-2.overflow-hidden.rounded-full > div[style^="width: 0"])::after {
+main:has(section[class*="border-violet-300/25"] > div:last-child .h-2.overflow-hidden.rounded-full > div[style="width: 0%;"])::after {
   content: "THE FINAL EXAMINER HAS FALLEN\A\A THE LEGENDS RISE";
   position: fixed;
   z-index: 92;
@@ -90,7 +90,7 @@ main:has(section[class*="border-violet-300/25"] > div:last-child .h-2.overflow-h
 }
 
 @media (max-width: 760px) {
-  main:has(section[class*="border-violet-300/25"] > div:last-child .h-2.overflow-hidden.rounded-full > div[style^="width: 0"])::before {
+  main:has(section[class*="border-violet-300/25"] > div:last-child .h-2.overflow-hidden.rounded-full > div[style="width: 0%;"])::before {
     background-size:
       14vw, 14vw, 14vw, 14vw, 14vw, 14vw,
       68vw 1px,
@@ -103,7 +103,7 @@ main:has(section[class*="border-violet-300/25"] > div:last-child .h-2.overflow-h
       center, center, center, center;
   }
 
-  main:has(section[class*="border-violet-300/25"] > div:last-child .h-2.overflow-hidden.rounded-full > div[style^="width: 0"])::after {
+  main:has(section[class*="border-violet-300/25"] > div:last-child .h-2.overflow-hidden.rounded-full > div[style="width: 0%;"])::after {
     top: 10vh;
     width: 86vw;
     min-height: 50vh;
