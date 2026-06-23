@@ -12,7 +12,7 @@ function sizeFinalExaminerBoard() {
   const boardGrid = classColumn?.parentElement as HTMLElement | null;
 
   if (classColumn && boardGrid) {
-    boardGrid.style.gridTemplateColumns = "240px minmax(0, 1fr)";
+    boardGrid.style.gridTemplateColumns = "220px minmax(0, 1fr)";
     classColumn.style.minWidth = "0";
   }
 
@@ -27,19 +27,17 @@ function sizeFinalExaminerBoard() {
 
   if (!title || !copyColumn || !leftColumn || !finalPanel || !hpPanel) return;
 
-  finalPanel.style.gridTemplateColumns = "minmax(0, 1fr) 320px";
-  finalPanel.style.columnGap = "2.5rem";
+  finalPanel.style.gridTemplateColumns = "minmax(0, 1fr) 290px";
+  finalPanel.style.columnGap = "1.75rem";
   finalPanel.style.alignItems = "center";
-  finalPanel.style.minHeight = "228px";
-  finalPanel.style.padding = "1.75rem 2rem";
+  finalPanel.style.minHeight = "252px";
+  finalPanel.style.padding = "1.8rem 2.25rem";
 
   leftColumn.style.minWidth = "0";
   leftColumn.style.display = "flex";
   leftColumn.style.alignItems = "center";
-  leftColumn.style.gap = "1.5rem";
+  leftColumn.style.gap = "1.35rem";
   leftColumn.style.overflow = "visible";
-  leftColumn.style.background = "transparent";
-  leftColumn.style.boxShadow = "none";
 
   copyColumn.style.minWidth = "0";
   copyColumn.style.flex = "1 1 0%";
@@ -49,10 +47,11 @@ function sizeFinalExaminerBoard() {
   copyColumn.style.boxShadow = "none";
   copyColumn.style.filter = "none";
 
-  hpPanel.style.width = "320px";
-  hpPanel.style.minWidth = "320px";
-  hpPanel.style.maxWidth = "320px";
-  hpPanel.style.padding = "1.25rem 1.5rem";
+  hpPanel.style.width = "290px";
+  hpPanel.style.minWidth = "290px";
+  hpPanel.style.maxWidth = "290px";
+  hpPanel.style.minHeight = "164px";
+  hpPanel.style.padding = "1.1rem 1.35rem";
   hpPanel.style.overflow = "hidden";
   hpPanel.style.alignSelf = "center";
 
@@ -68,18 +67,18 @@ function sizeFinalExaminerBoard() {
   title.style.whiteSpace = "nowrap";
   title.style.overflow = "visible";
   title.style.textOverflow = "clip";
-  title.style.fontSize = "clamp(2rem, 2.65vw, 3rem)";
-  title.style.lineHeight = "1";
-  title.style.letterSpacing = "-0.055em";
+  title.style.fontSize = "clamp(3rem, 3.55vw, 4rem)";
+  title.style.lineHeight = ".94";
+  title.style.letterSpacing = "-0.065em";
   title.style.background = "transparent";
   title.style.boxShadow = "none";
   title.style.textShadow = "none";
   title.style.filter = "none";
 
   if (logo) {
-    logo.style.height = "96px";
-    logo.style.width = "96px";
-    logo.style.flex = "0 0 96px";
+    logo.style.height = "104px";
+    logo.style.width = "104px";
+    logo.style.flex = "0 0 104px";
     logo.style.filter = "none";
     logo.style.boxShadow = "none";
     logo.style.opacity = "1";
