@@ -28,23 +28,29 @@ function sizeFinalExaminerBoard() {
 
   if (title && copyColumn && leftColumn && finalPanel && hpPanel) {
     finalPanel.style.gridTemplateColumns = "minmax(0, 1fr) 300px";
-    finalPanel.style.columnGap = "1.25rem";
+    finalPanel.style.columnGap = "2rem";
+    finalPanel.style.alignItems = "center";
+    finalPanel.style.minHeight = "238px";
+    finalPanel.style.flex = "0 0 auto";
 
     leftColumn.style.minWidth = "0";
     leftColumn.style.display = "flex";
     leftColumn.style.alignItems = "center";
-    leftColumn.style.gap = "1rem";
+    leftColumn.style.gap = "1.25rem";
     leftColumn.style.overflow = "hidden";
 
     copyColumn.style.minWidth = "0";
     copyColumn.style.flex = "1 1 0%";
     copyColumn.style.maxWidth = "100%";
     copyColumn.style.overflow = "hidden";
+    copyColumn.style.background = "transparent";
+    copyColumn.style.boxShadow = "none";
 
     hpPanel.style.width = "300px";
     hpPanel.style.minWidth = "300px";
     hpPanel.style.maxWidth = "300px";
     hpPanel.style.overflow = "hidden";
+    hpPanel.style.alignSelf = "center";
 
     if (title.dataset.finalExaminerBrokenTitle !== "true") {
       title.innerHTML = "The Final<br />Examiner";
@@ -59,8 +65,11 @@ function sizeFinalExaminerBoard() {
     title.style.overflow = "hidden";
     title.style.overflowWrap = "normal";
     title.style.wordBreak = "normal";
-    title.style.fontSize = "clamp(1.75rem, 2vw, 2.35rem)";
+    title.style.fontSize = "clamp(1.85rem, 2.35vw, 2.65rem)";
     title.style.lineHeight = "0.98";
+    title.style.background = "transparent";
+    title.style.boxShadow = "none";
+    title.style.textShadow = "none";
 
     if (logo) {
       logo.style.filter = "none";
