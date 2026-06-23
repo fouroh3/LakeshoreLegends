@@ -1,0 +1,21 @@
+/* Correct selectors for the Final Examiner chamber text wrapper. */
+#root main section[class*="border-violet-300/25"] > div.flex.items-center.gap-4 > div:last-child > div:first-child {
+  font-size: 0 !important;
+}
+
+#root main section[class*="border-violet-300/25"] > div.flex.items-center.gap-4 > div:last-child > div:first-child::after {
+  content: "THE TRIAL AWAITS";
+  font-size: clamp(.72rem, .88vw, 1.05rem) !important;
+  font-weight: 900;
+  letter-spacing: .19em;
+}
+
+#root main section[class*="border-violet-300/25"] > div.flex.items-center.gap-4 > div:last-child > p {
+  font-size: 0 !important;
+}
+
+#root main section[class*="border-violet-300/25"] > div.flex.items-center.gap-4 > div:last-child > p::after {
+  content: "Defeat every minion to face the final test.";
+  font-size: clamp(.75rem, .9vw, 1.12rem) !important;
+  color: rgb(212 212 216);
+}
