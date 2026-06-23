@@ -7,9 +7,9 @@
 #final-examiner-chronicle {
   position: fixed;
   z-index: 70;
-  top: 84px;
+  top: 72px;
   right: 14px;
-  bottom: 14px;
+  bottom: 36px;
   width: min(19.5rem, calc(100vw - 28px));
   display: flex;
   flex-direction: column;
