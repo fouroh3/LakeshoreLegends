@@ -1,21 +1,32 @@
-/* Correct selectors for the Final Examiner chamber text wrapper. */
-#root main section[class*="border-violet-300/25"] > div.flex.items-center.gap-4 > div:last-child > div:first-child {
-  font-size: 0 !important;
+/* Replace the rendered chamber copy rather than appending beside it. */
+#root main section[class*="border-violet-300/25"] > div.flex.items-center.gap-4 > div:last-child > div:first-child,
+#root main section[class*="border-violet-300/25"] > div.flex.items-center.gap-4 > div:last-child > p {
+  position: relative !important;
+  overflow: hidden !important;
+  text-indent: -9999px !important;
+  white-space: nowrap !important;
 }
 
 #root main section[class*="border-violet-300/25"] > div.flex.items-center.gap-4 > div:last-child > div:first-child::after {
   content: "THE TRIAL AWAITS";
+  position: absolute !important;
+  inset: 0 auto auto 0 !important;
+  width: max-content !important;
+  text-indent: 0 !important;
+  white-space: nowrap !important;
+  color: rgb(221 214 254) !important;
   font-size: clamp(.72rem, .88vw, 1.05rem) !important;
   font-weight: 900;
   letter-spacing: .19em;
 }
 
-#root main section[class*="border-violet-300/25"] > div.flex.items-center.gap-4 > div:last-child > p {
-  font-size: 0 !important;
-}
-
 #root main section[class*="border-violet-300/25"] > div.flex.items-center.gap-4 > div:last-child > p::after {
   content: "Defeat every minion to face the final test.";
+  position: absolute !important;
+  inset: 0 auto auto 0 !important;
+  width: max-content !important;
+  text-indent: 0 !important;
+  white-space: nowrap !important;
+  color: rgb(212 212 216) !important;
   font-size: clamp(.75rem, .9vw, 1.12rem) !important;
-  color: rgb(212 212 216);
 }
