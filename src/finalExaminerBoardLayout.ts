@@ -31,16 +31,16 @@ function sizeFinalExaminerBoard() {
 
   if (!title || !copyColumn || !leftColumn || !finalPanel || !hpPanel) return;
 
-  important(finalPanel, "grid-template-columns", "minmax(0, 1fr) 290px");
-  important(finalPanel, "column-gap", "1.75rem");
+  important(finalPanel, "grid-template-columns", "minmax(0, 1fr) 270px");
+  important(finalPanel, "column-gap", "1.25rem");
   important(finalPanel, "align-items", "center");
-  important(finalPanel, "min-height", "252px");
-  important(finalPanel, "padding", "1.8rem 2.25rem");
+  important(finalPanel, "min-height", "236px");
+  important(finalPanel, "padding", "1.55rem 2.25rem");
 
   important(leftColumn, "min-width", "0");
   important(leftColumn, "display", "flex");
   important(leftColumn, "align-items", "center");
-  important(leftColumn, "gap", "1.35rem");
+  important(leftColumn, "gap", "1.15rem");
   important(leftColumn, "overflow", "visible");
 
   important(copyColumn, "min-width", "0");
@@ -51,11 +51,11 @@ function sizeFinalExaminerBoard() {
   important(copyColumn, "box-shadow", "none");
   important(copyColumn, "filter", "none");
 
-  important(hpPanel, "width", "290px");
-  important(hpPanel, "min-width", "290px");
-  important(hpPanel, "max-width", "290px");
-  important(hpPanel, "min-height", "164px");
-  important(hpPanel, "padding", "1.1rem 1.35rem");
+  important(hpPanel, "width", "270px");
+  important(hpPanel, "min-width", "270px");
+  important(hpPanel, "max-width", "270px");
+  important(hpPanel, "min-height", "148px");
+  important(hpPanel, "padding", "1rem 1.1rem");
   important(hpPanel, "overflow", "hidden");
   important(hpPanel, "align-self", "center");
 
@@ -67,18 +67,25 @@ function sizeFinalExaminerBoard() {
   important(title, "white-space", "nowrap");
   important(title, "overflow", "visible");
   important(title, "text-overflow", "clip");
-  important(title, "font-size", "3.55rem");
-  important(title, "line-height", ".94");
-  important(title, "letter-spacing", "-0.035em");
+  important(title, "font-size", "4rem");
+  important(title, "line-height", ".92");
+  important(title, "letter-spacing", "-0.028em");
   important(title, "background", "transparent");
   important(title, "box-shadow", "none");
   important(title, "text-shadow", "none");
   important(title, "filter", "none");
 
+  const subtitle = copyColumn.querySelector<HTMLElement>("p");
+  if (subtitle) {
+    important(subtitle, "margin-top", ".6rem");
+    important(subtitle, "font-size", "1rem");
+    important(subtitle, "line-height", "1.25");
+  }
+
   if (logo) {
-    important(logo, "height", "104px");
-    important(logo, "width", "104px");
-    important(logo, "flex", "0 0 104px");
+    important(logo, "height", "112px");
+    important(logo, "width", "112px");
+    important(logo, "flex", "0 0 112px");
     important(logo, "filter", "none");
     important(logo, "box-shadow", "none");
     important(logo, "opacity", "1");
