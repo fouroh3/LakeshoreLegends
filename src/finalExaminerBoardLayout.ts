@@ -9,16 +9,14 @@ function important(element: HTMLElement, property: string, value: string) {
 function sizeFinalExaminerBoard() {
   if (!onFinalExaminerBoard) return;
 
-  // Smartboards keep the larger cinematic version. Laptop-width screens use a
-  // compact composition so the Chronicle, boss arena, title, and HP readout all fit.
   const compact = window.innerWidth < 1700;
   const sizes = compact
     ? {
         classColumn: "190px",
         hpColumn: "238px",
         panelGap: "1rem",
-        panelHeight: "220px",
-        panelPadding: "2.55rem 1.25rem .85rem",
+        panelHeight: "238px",
+        panelPadding: "3rem 1.25rem 1.1rem",
         identityGap: ".8rem",
         logo: "72px",
         title: "2.35rem",
@@ -39,14 +37,6 @@ function sizeFinalExaminerBoard() {
         hpHeight: "150px",
         hpPadding: "1rem 1.15rem",
       };
-
-  const liveFeed = Array.from(document.querySelectorAll<HTMLElement>("#root div")).find(
-    (element) => element.textContent?.includes("LIVE FEED") &&
-      element.textContent?.includes("raid")
-  );
-  if (liveFeed) {
-    important(liveFeed, "display", compact ? "none" : "flex");
-  }
 
   const raidPartiesLabel = Array.from(document.querySelectorAll<HTMLElement>("#root div")).find(
     (element) => element.textContent?.trim() === "RAID PARTIES"
