@@ -97,3 +97,23 @@ export async function submitFinalExaminerAction(args: {
 
   return data;
 }
+
+export async function startFinalExaminerRaid(args: {
+  raidId?: string;
+  requestId: string;
+}) {
+  const data = await readJson(
+    `${API_URL}?action=startfinalexaminerraid&_=${Date.now()}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({
+        action: "startfinalexaminerraid",
+        raidId: args.raidId ?? "final_examiner_2026",
+        requestId: args.requestId,
+      }),
+    }
+  );
+
+  return data;
+}
