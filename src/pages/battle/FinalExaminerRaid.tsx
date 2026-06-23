@@ -201,8 +201,12 @@ export default function FinalExaminerRaid() {
   const [amount, setAmount] = useState("");
   const [busy, setBusy] = useState(false);
   const previousRaid = useRef<FinalExaminerRaidState | null>(null);
+  const refreshInFlight = useRef(false);
 
   const refresh = useCallback(async () => {
+    if (refreshInFlight.current) return;
+    refreshInFlight.current = true;
+
     try {
       const nextRaid = await getFinalExaminerState(RAID_ID);
       setActivity(activityMessage(previousRaid.current, nextRaid));
@@ -210,7 +214,12 @@ export default function FinalExaminerRaid() {
       setRaid(nextRaid);
       setError("");
     } catch (caught: any) {
-      setError(caught?.message || "Final Examiner is not configured yet.");
+      /* Once the board has loaded, a brief polling hiccup should never flash an error over the raid. */
+      if (!previousRaid.current) {
+        setError(caught?.message || "Final Examiner is not configured yet.");
+      }
+    } finally {
+      refreshInFlight.current = false;
     }
   }, []);
 
