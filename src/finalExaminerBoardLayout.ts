@@ -1,3 +1,5 @@
+export {};
+
 const onFinalExaminerBoard =
   window.location.pathname.replace(/^\/+|\/+$/g, "").toLowerCase() === "finalexaminer" &&
   new URLSearchParams(window.location.search).get("teacher") !== "1";
