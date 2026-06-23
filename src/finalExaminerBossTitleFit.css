@@ -21,3 +21,9 @@
     line-height: 1.05 !important;
   }
 }
+
+@media (min-width: 1280px) {
+  #root main > section.mt-4.grid.flex-1 {
+    grid-template-columns: 300px minmax(0, 1fr) !important;
+  }
+}
