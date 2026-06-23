@@ -1,17 +1,23 @@
 @media (min-width: 1024px) {
-  #root main section.lg\:grid-cols-\[1fr_280px\] {
+  #root main section[class*="lg:grid-cols-"] {
     grid-template-columns: minmax(0, 1fr) 280px !important;
   }
 
-  #root main section.lg\:grid-cols-\[1fr_280px\] > div:first-child {
-    min-width: 0;
+  #root main section[class*="lg:grid-cols-"] > div:first-child {
+    min-width: 0 !important;
   }
 
-  #root main section.lg\:grid-cols-\[1fr_280px\] > div:first-child > div:last-child {
-    min-width: 0;
+  #root main section[class*="lg:grid-cols-"] > div:first-child > div:last-child {
+    min-width: 0 !important;
+    max-width: 100% !important;
   }
 
-  #root main section.lg\:grid-cols-\[1fr_280px\] h2 {
-    overflow-wrap: anywhere;
+  #root main section[class*="lg:grid-cols-"] > div:first-child h2 {
+    max-width: 100% !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+    word-break: break-word !important;
+    font-size: clamp(1.5rem, 2vw, 2rem) !important;
+    line-height: 1.05 !important;
   }
 }
