@@ -15,14 +15,14 @@ function sizeFinalExaminerBoard() {
         classColumn: "190px",
         hpColumn: "238px",
         panelGap: "1rem",
-        panelHeight: "222px",
-        panelPadding: "2.8rem 1.25rem .8rem",
-        identityGap: ".8rem",
-        logo: "72px",
-        title: "2.35rem",
-        subtitle: ".82rem",
-        hpHeight: "132px",
-        hpPadding: ".8rem .9rem",
+        panelHeight: "198px",
+        panelPadding: "2.3rem 1.25rem .7rem",
+        identityGap: ".75rem",
+        logo: "64px",
+        title: "2.15rem",
+        subtitle: ".78rem",
+        hpHeight: "112px",
+        hpPadding: ".7rem .85rem",
       }
     : {
         classColumn: "220px",
@@ -106,9 +106,9 @@ function sizeFinalExaminerBoard() {
 
   const subtitle = copyColumn.querySelector<HTMLElement>("p");
   if (subtitle) {
-    important(subtitle, "margin-top", compact ? ".4rem" : ".55rem");
+    important(subtitle, "margin-top", compact ? ".3rem" : ".55rem");
     important(subtitle, "font-size", sizes.subtitle);
-    important(subtitle, "line-height", "1.25");
+    important(subtitle, "line-height", "1.2");
   }
 
   if (logo) {
