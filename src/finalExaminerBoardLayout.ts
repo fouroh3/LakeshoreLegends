@@ -24,21 +24,26 @@ function sizeFinalExaminerBoard() {
   const leftColumn = copyColumn?.parentElement as HTMLElement | null;
   const finalPanel = leftColumn?.parentElement as HTMLElement | null;
   const hpPanel = finalPanel?.lastElementChild as HTMLElement | null;
+  const logo = leftColumn?.querySelector<HTMLImageElement>("img");
 
   if (title && copyColumn && leftColumn && finalPanel && hpPanel) {
-    finalPanel.style.gridTemplateColumns = "minmax(0, 1fr) 220px";
+    finalPanel.style.gridTemplateColumns = "minmax(0, 1fr) 300px";
+    finalPanel.style.columnGap = "1rem";
 
     leftColumn.style.minWidth = "0";
     leftColumn.style.display = "flex";
     leftColumn.style.alignItems = "center";
     leftColumn.style.gap = "1rem";
+    leftColumn.style.overflow = "hidden";
 
     copyColumn.style.minWidth = "0";
     copyColumn.style.flex = "1 1 0%";
-    copyColumn.style.overflow = "visible";
+    copyColumn.style.width = "calc(100% - 88px)";
+    copyColumn.style.maxWidth = "calc(100% - 88px)";
 
-    hpPanel.style.width = "220px";
-    hpPanel.style.minWidth = "220px";
+    hpPanel.style.width = "300px";
+    hpPanel.style.minWidth = "300px";
+    hpPanel.style.overflow = "hidden";
 
     title.style.display = "block";
     title.style.width = "100%";
@@ -48,9 +53,24 @@ function sizeFinalExaminerBoard() {
     title.style.overflow = "visible";
     title.style.overflowWrap = "anywhere";
     title.style.wordBreak = "break-word";
-    title.style.fontSize = "clamp(1.55rem, 2vw, 2.2rem)";
+    title.style.fontSize = "clamp(1.65rem, 2vw, 2.25rem)";
     title.style.lineHeight = "1.04";
+
+    if (logo) {
+      logo.style.filter = "none";
+      logo.style.dropShadow = "none";
+      logo.style.boxShadow = "none";
+    }
   }
+
+  document.querySelectorAll<HTMLElement>("#root article.group[class*='from-emerald-950/35']").forEach((card) => {
+    const deadMark = card.querySelector<HTMLElement>(".final-examiner-dead-badge");
+    if (deadMark) {
+      deadMark.style.border = "0";
+      deadMark.style.background = "transparent";
+      deadMark.style.boxShadow = "none";
+    }
+  });
 }
 
 if (onFinalExaminerBoard) {
