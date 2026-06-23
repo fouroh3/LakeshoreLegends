@@ -1,9 +1,17 @@
 @media (min-width: 1024px) {
-  #root main .flex.items-center.gap-4 > div:last-child {
+  #root main section.lg\:grid-cols-\[1fr_280px\] {
+    grid-template-columns: minmax(0, 1fr) 280px !important;
+  }
+
+  #root main section.lg\:grid-cols-\[1fr_280px\] > div:first-child {
     min-width: 0;
   }
 
-  #root main .flex.items-center.gap-4 > div:last-child h2 {
+  #root main section.lg\:grid-cols-\[1fr_280px\] > div:first-child > div:last-child {
+    min-width: 0;
+  }
+
+  #root main section.lg\:grid-cols-\[1fr_280px\] h2 {
     overflow-wrap: anywhere;
   }
 }
