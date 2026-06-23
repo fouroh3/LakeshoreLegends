@@ -9,6 +9,37 @@ function important(element: HTMLElement, property: string, value: string) {
 function sizeFinalExaminerBoard() {
   if (!onFinalExaminerBoard) return;
 
+  // Smartboards keep the larger cinematic version. Laptop-width screens use a
+  // compact composition so the Chronicle, boss arena, title, and HP readout all fit.
+  const compact = window.innerWidth < 1700;
+  const sizes = compact
+    ? {
+        classColumn: "190px",
+        hpColumn: "238px",
+        panelGap: "1rem",
+        panelHeight: "206px",
+        panelPadding: "1.1rem 1.25rem",
+        identityGap: ".8rem",
+        logo: "72px",
+        title: "2.35rem",
+        subtitle: ".82rem",
+        hpHeight: "132px",
+        hpPadding: ".8rem .9rem",
+      }
+    : {
+        classColumn: "220px",
+        hpColumn: "280px",
+        panelGap: "1.5rem",
+        panelHeight: "236px",
+        panelPadding: "1.55rem 2.1rem",
+        identityGap: "1.1rem",
+        logo: "96px",
+        title: "3.25rem",
+        subtitle: ".95rem",
+        hpHeight: "150px",
+        hpPadding: "1rem 1.15rem",
+      };
+
   const raidPartiesLabel = Array.from(document.querySelectorAll<HTMLElement>("#root div")).find(
     (element) => element.textContent?.trim() === "RAID PARTIES"
   );
@@ -16,7 +47,7 @@ function sizeFinalExaminerBoard() {
   const boardGrid = classColumn?.parentElement as HTMLElement | null;
 
   if (classColumn && boardGrid) {
-    important(boardGrid, "grid-template-columns", "220px minmax(0, 1fr)");
+    important(boardGrid, "grid-template-columns", `${sizes.classColumn} minmax(0, 1fr)`);
     important(classColumn, "min-width", "0");
   }
 
@@ -31,16 +62,16 @@ function sizeFinalExaminerBoard() {
 
   if (!title || !copyColumn || !leftColumn || !finalPanel || !hpPanel) return;
 
-  important(finalPanel, "grid-template-columns", "minmax(0, 1fr) 280px");
-  important(finalPanel, "column-gap", "1.5rem");
+  important(finalPanel, "grid-template-columns", `minmax(0, 1fr) ${sizes.hpColumn}`);
+  important(finalPanel, "column-gap", sizes.panelGap);
   important(finalPanel, "align-items", "center");
-  important(finalPanel, "min-height", "236px");
-  important(finalPanel, "padding", "1.55rem 2.1rem");
+  important(finalPanel, "min-height", sizes.panelHeight);
+  important(finalPanel, "padding", sizes.panelPadding);
 
   important(leftColumn, "min-width", "0");
   important(leftColumn, "display", "flex");
   important(leftColumn, "align-items", "center");
-  important(leftColumn, "gap", "1.1rem");
+  important(leftColumn, "gap", sizes.identityGap);
   important(leftColumn, "overflow", "hidden");
 
   important(copyColumn, "min-width", "0");
@@ -51,11 +82,11 @@ function sizeFinalExaminerBoard() {
   important(copyColumn, "box-shadow", "none");
   important(copyColumn, "filter", "none");
 
-  important(hpPanel, "width", "280px");
-  important(hpPanel, "min-width", "280px");
-  important(hpPanel, "max-width", "280px");
-  important(hpPanel, "min-height", "150px");
-  important(hpPanel, "padding", "1rem 1.15rem");
+  important(hpPanel, "width", sizes.hpColumn);
+  important(hpPanel, "min-width", sizes.hpColumn);
+  important(hpPanel, "max-width", sizes.hpColumn);
+  important(hpPanel, "min-height", sizes.hpHeight);
+  important(hpPanel, "padding", sizes.hpPadding);
   important(hpPanel, "overflow", "hidden");
   important(hpPanel, "align-self", "center");
 
@@ -67,9 +98,9 @@ function sizeFinalExaminerBoard() {
   important(title, "white-space", "nowrap");
   important(title, "overflow", "hidden");
   important(title, "text-overflow", "clip");
-  important(title, "font-size", "3.25rem");
+  important(title, "font-size", sizes.title);
   important(title, "line-height", ".95");
-  important(title, "letter-spacing", "-0.025em");
+  important(title, "letter-spacing", compact ? "-0.02em" : "-0.025em");
   important(title, "background", "transparent");
   important(title, "box-shadow", "none");
   important(title, "text-shadow", "none");
@@ -77,15 +108,15 @@ function sizeFinalExaminerBoard() {
 
   const subtitle = copyColumn.querySelector<HTMLElement>("p");
   if (subtitle) {
-    important(subtitle, "margin-top", ".55rem");
-    important(subtitle, "font-size", ".95rem");
+    important(subtitle, "margin-top", compact ? ".4rem" : ".55rem");
+    important(subtitle, "font-size", sizes.subtitle);
     important(subtitle, "line-height", "1.25");
   }
 
   if (logo) {
-    important(logo, "height", "96px");
-    important(logo, "width", "96px");
-    important(logo, "flex", "0 0 96px");
+    important(logo, "height", sizes.logo);
+    important(logo, "width", sizes.logo);
+    important(logo, "flex", `0 0 ${sizes.logo}`);
     important(logo, "filter", "none");
     important(logo, "box-shadow", "none");
     important(logo, "opacity", "1");
@@ -95,4 +126,5 @@ function sizeFinalExaminerBoard() {
 if (onFinalExaminerBoard) {
   window.setTimeout(sizeFinalExaminerBoard, 200);
   window.setInterval(sizeFinalExaminerBoard, 1000);
+  window.addEventListener("resize", sizeFinalExaminerBoard);
 }
