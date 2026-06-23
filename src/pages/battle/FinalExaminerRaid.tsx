@@ -34,21 +34,8 @@ function bossState(boss: FinalExaminerBossState) {
 }
 
 function bossTheme(boss: FinalExaminerBossState) {
-  if (boss.defeated) {
-    return {
-      edge: "from-emerald-400 to-cyan-300",
-      wash: "from-emerald-950/35 via-black/35 to-cyan-950/20",
-      glow: "shadow-[inset_0_0_40px_rgba(16,185,129,0.10)]",
-    };
-  }
-
-  if (boss.locked) {
-    return {
-      edge: "from-violet-500 to-fuchsia-300",
-      wash: "from-violet-950/45 via-black/35 to-fuchsia-950/20",
-      glow: "shadow-[inset_0_0_40px_rgba(168,85,247,0.10)]",
-    };
-  }
+  if (boss.defeated) return { edge: "from-emerald-400 to-cyan-300", wash: "from-emerald-950/35 via-black/35 to-cyan-950/20", glow: "shadow-[inset_0_0_40px_rgba(16,185,129,0.10)]" };
+  if (boss.locked) return { edge: "from-violet-500 to-fuchsia-300", wash: "from-violet-950/45 via-black/35 to-fuchsia-950/20", glow: "shadow-[inset_0_0_40px_rgba(168,85,247,0.10)]" };
 
   const themes: Record<string, { edge: string; wash: string; glow: string }> = {
     KEEPER_SHADOWS: { edge: "from-sky-400 via-indigo-400 to-violet-300", wash: "from-sky-950/45 via-slate-950/25 to-violet-950/20", glow: "shadow-[inset_0_0_38px_rgba(56,189,248,0.10)]" },
@@ -58,11 +45,7 @@ function bossTheme(boss: FinalExaminerBossState) {
     PRISM_SENTINEL: { edge: "from-fuchsia-400 via-violet-400 to-cyan-300", wash: "from-fuchsia-950/35 via-violet-950/35 to-cyan-950/20", glow: "shadow-[inset_0_0_38px_rgba(217,70,239,0.10)]" },
   };
 
-  return themes[boss.bossKey] || {
-    edge: "from-rose-500 via-pink-400 to-orange-300",
-    wash: "from-rose-950/35 via-black/35 to-orange-950/20",
-    glow: "shadow-[inset_0_0_38px_rgba(244,63,94,0.10)]",
-  };
+  return themes[boss.bossKey] || { edge: "from-rose-500 via-pink-400 to-orange-300", wash: "from-rose-950/35 via-black/35 to-orange-950/20", glow: "shadow-[inset_0_0_38px_rgba(244,63,94,0.10)]" };
 }
 
 function Bar({ current, max, className }: { current: number; max: number; className: string }) {
@@ -166,10 +149,11 @@ export default function FinalExaminerRaid() {
   const defeated = minions.filter((boss) => boss.defeated).length;
   const remaining = minions.reduce((sum, boss) => sum + boss.currentHP, 0);
   const total = minions.reduce((sum, boss) => sum + boss.maxHP, 0);
+  const allMinionsDefeated = minions.length > 0 && minions.every((boss) => boss.defeated || boss.currentHP <= 0);
   const finalBossPercent = finalBoss ? percent(finalBoss.currentHP, finalBoss.maxHP) : 100;
   const finalBossPhase = finalBoss?.defeated
     ? { label: "EXAMINER DEFEATED", subtitle: "The final test is complete." }
-    : finalBoss?.locked
+    : !allMinionsDefeated
       ? { label: "THE TRIAL AWAITS", subtitle: "Defeat every minion to face the final test." }
       : finalBossPercent <= 25
         ? { label: "THE FINAL STAND", subtitle: "The trial is nearly over. End it." }
