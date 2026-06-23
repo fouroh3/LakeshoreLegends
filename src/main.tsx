@@ -15,6 +15,7 @@ import "./finalExaminerLiveTicker";
 import "./finalExaminerVictoryGate";
 import "./finalExaminerIdentityScale.css";
 import "./finalExaminerSealBreakFix.css";
+import "./finalExaminerBoardLayout";
 
 const finalExaminerPath = window.location.pathname
   .replace(/^\/+|\/+$/g, "")
