@@ -39,10 +39,14 @@
   font-size: 1.65rem !important;
 }
 
-/* Compact layout is for laptops only. Large smartboards keep the original bold card hierarchy. */
+/* Compact layout keeps the watermark visible, just smaller and quieter. */
 @media (max-width: 1580px) and (min-height: 600px) {
   #root main > section.mt-4.grid.flex-1 > div:last-child > div.mt-3.grid.grid-cols-5 > article.group > img[draggable="false"] {
-    display: none !important;
+    display: block !important;
+    top: 2.35rem !important;
+    right: -0.45rem !important;
+    height: 5.75rem !important;
+    opacity: 0.13 !important;
   }
 
   #root main > section.mt-4.grid.flex-1 > div:last-child > div.mt-3.grid.grid-cols-5 > article.group > div.relative.flex {
