@@ -3,6 +3,7 @@ import "./finalExaminerSmartboard.css";
 import "./finalExaminerLargeDisplay.css";
 import "./finalExaminerProjector.css";
 import "./finalExaminerWordmark.css";
+import "./finalExaminerBossTitleFit.css";
 import "./finalExaminerTeacherLabels";
 import "./finalExaminerTeacherNotice";
 import "./finalExaminerPhaseMessage";
