@@ -17,8 +17,8 @@ function sizeFinalExaminerBoard() {
         classColumn: "190px",
         hpColumn: "238px",
         panelGap: "1rem",
-        panelHeight: "238px",
-        panelPadding: "3rem 1.25rem 1.1rem",
+        panelHeight: "220px",
+        panelPadding: "2.55rem 1.25rem .85rem",
         identityGap: ".8rem",
         logo: "72px",
         title: "2.35rem",
@@ -39,6 +39,14 @@ function sizeFinalExaminerBoard() {
         hpHeight: "150px",
         hpPadding: "1rem 1.15rem",
       };
+
+  const liveFeed = Array.from(document.querySelectorAll<HTMLElement>("#root div")).find(
+    (element) => element.textContent?.includes("LIVE FEED") &&
+      element.textContent?.includes("raid")
+  );
+  if (liveFeed) {
+    important(liveFeed, "display", compact ? "none" : "flex");
+  }
 
   const raidPartiesLabel = Array.from(document.querySelectorAll<HTMLElement>("#root div")).find(
     (element) => element.textContent?.trim() === "RAID PARTIES"
