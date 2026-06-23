@@ -15,31 +15,31 @@
   animation: final-examiner-minion-aura 1.6s cubic-bezier(.16,.9,.22,1) both;
 }
 
-/* Permanent dashboard-style defeat marker after the burst resolves. */
+/* Permanent dead marker: compact text only, no white container. */
 #root main article.group[class*="from-emerald-950/35"]::after {
-  content: "☠\A DEAD";
-  white-space: pre;
+  content: "☠  DEAD";
+  white-space: nowrap;
   position: absolute;
   z-index: 25;
   left: 50%;
-  top: 52%;
+  top: 54%;
   transform: translate(-50%, -50%) scale(.72);
   pointer-events: none;
-  color: rgba(255,255,255,.96);
-  font-size: clamp(1.3rem, 2.15vw, 2.4rem);
+  color: rgba(255,255,255,.88);
+  font-size: clamp(.86rem, 1.25vw, 1.15rem);
   font-weight: 950;
-  line-height: 1.02;
-  letter-spacing: .14em;
+  line-height: 1;
+  letter-spacing: .12em;
   text-align: center;
-  text-shadow: 0 2px 14px rgba(0,0,0,.95), 0 0 26px rgba(255,255,255,.3);
+  text-shadow: 0 2px 14px rgba(0,0,0,.95), 0 0 18px rgba(255,255,255,.18);
   animation: final-examiner-minion-dead-mark 1.5s cubic-bezier(.12,.9,.26,1) both;
 }
 
-/* Once fallen, strip the card down to its name plus the permanent Dead marker. */
+/* Once fallen, keep the full minion card blacked out. */
 #root main > section.mt-4.grid.flex-1 > div:last-child > div.mt-3.grid.grid-cols-5 > article.group[class*="from-emerald-950/35"] {
-  background: #050609 !important;
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,.05), inset 0 -30px 50px rgba(0,0,0,.86) !important;
-  filter: brightness(.72) saturate(.18) !important;
+  background: #030405 !important;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.05), inset 0 -30px 50px rgba(0,0,0,.92) !important;
+  filter: brightness(.62) saturate(0) !important;
 }
 
 #root main > section.mt-4.grid.flex-1 > div:last-child > div.mt-3.grid.grid-cols-5 > article.group[class*="from-emerald-950/35"] > img[draggable="false"] {
@@ -52,7 +52,7 @@
 }
 
 #root main > section.mt-4.grid.flex-1 > div:last-child > div.mt-3.grid.grid-cols-5 > article.group[class*="from-emerald-950/35"] > div.relative.flex > div:nth-child(2) {
-  color: rgba(255,255,255,.76) !important;
+  color: rgba(255,255,255,.64) !important;
   opacity: 1 !important;
   filter: none !important;
   z-index: 2 !important;
@@ -75,9 +75,9 @@
 
 @keyframes final-examiner-minion-dead-mark {
   0% { opacity: 0; transform: translate(-50%, -50%) scale(.2) rotate(-8deg); }
-  26% { opacity: 1; transform: translate(-50%, -50%) scale(1.13) rotate(2deg); }
-  52% { opacity: 1; transform: translate(-50%, -50%) scale(.96) rotate(0deg); }
-  100% { opacity: .96; transform: translate(-50%, -50%) scale(1) rotate(0deg); }
+  26% { opacity: 1; transform: translate(-50%, -50%) scale(1.08) rotate(2deg); }
+  52% { opacity: 1; transform: translate(-50%, -50%) scale(.94) rotate(0deg); }
+  100% { opacity: .9; transform: translate(-50%, -50%) scale(1) rotate(0deg); }
 }
 
 /* The chamber begins to burn hotter once the minion line starts falling. */

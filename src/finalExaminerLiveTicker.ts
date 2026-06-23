@@ -3,10 +3,12 @@ import "./finalExaminerSmartboard.css";
 import "./finalExaminerLargeDisplay.css";
 import "./finalExaminerProjector.css";
 import "./finalExaminerWordmark.css";
+import "./finalExaminerBossTitleFit.css";
 import "./finalExaminerTeacherLabels";
 import "./finalExaminerTeacherNotice";
 import "./finalExaminerPhaseMessage";
 import "./finalExaminerChamberState";
+import "./finalExaminerEventColumn";
 
 const TICKER_API_URL =
   (import.meta as any).env?.VITE_LL_API_URL ||
@@ -37,9 +39,7 @@ function formatLatestEvent(event: any) {
   const amount = Math.max(0, Math.round(Number(event.appliedAmount || event.requestedAmount || 0))).toLocaleString();
   const action = String(event.action || "").toUpperCase();
 
-  if (action === "STRIKE") {
-    return `${party} struck ${bossNameFromKey(String(event.targetBossKey || ""))} for ${amount}.`;
-  }
+  if (action === "STRIKE") return `${party} struck ${bossNameFromKey(String(event.targetBossKey || ""))} for ${amount}.`;
   if (action === "HEAL") return `${party} restored ${amount} raid HP.`;
   if (action === "DAMAGE") return `${party} took ${amount} raid damage.`;
   return "The raid command board is live. Await the next class action.";
@@ -60,17 +60,8 @@ function setFinalExaminerNavActive() {
   const battleLink = links.find((link) => link.textContent?.trim() === "Battle Mode");
   if (!finalLink || !battleLink) return;
 
-  const active = [
-    "border-cyan-300/30",
-    "bg-cyan-400/14",
-    "text-cyan-100",
-    "shadow-[0_0_18px_rgba(34,211,238,0.12)]",
-  ];
-  const inactive = [
-    "border-white/10",
-    "bg-white/5",
-    "text-white/80",
-  ];
+  const active = ["border-cyan-300/30", "bg-cyan-400/14", "text-cyan-100", "shadow-[0_0_18px_rgba(34,211,238,0.12)]"];
+  const inactive = ["border-white/10", "bg-white/5", "text-white/80"];
 
   battleLink.classList.remove(...active);
   battleLink.classList.add(...inactive);
@@ -78,9 +69,40 @@ function setFinalExaminerNavActive() {
   finalLink.classList.add(...active);
 }
 
+function forceFinalBossTitleFit() {
+  const title = Array.from(document.querySelectorAll<HTMLHeadingElement>("#root h2")).find(
+    (heading) => heading.textContent?.trim() === "The Final Examiner"
+  );
+  if (!title) return;
+
+  const copy = title.parentElement;
+  const leftColumn = copy?.parentElement;
+  const panel = title.closest<HTMLElement>("section");
+
+  if (panel) {
+    panel.style.gridTemplateColumns = "minmax(0, 1fr) 280px";
+  }
+
+  if (leftColumn) {
+    leftColumn.style.minWidth = "0";
+    leftColumn.style.overflow = "hidden";
+  }
+
+  if (copy) {
+    copy.style.minWidth = "0";
+    copy.style.overflow = "hidden";
+  }
+
+  title.style.maxWidth = "100%";
+  title.style.whiteSpace = "normal";
+  title.style.overflowWrap = "anywhere";
+  title.style.wordBreak = "break-word";
+  title.style.fontSize = "clamp(1.45rem, 2vw, 2rem)";
+  title.style.lineHeight = "1.05";
+}
+
 function findCardWithText(text: string) {
   if (!text) return null;
-
   return Array.from(document.querySelectorAll<HTMLElement>("#root article, #root section")).find((element) =>
     element.textContent?.includes(text)
   ) || null;
@@ -138,7 +160,7 @@ async function refreshTicker() {
 
     playImpact(data.latestEvent);
   } catch {
-    // The smartboard stays usable if this optional update is unavailable.
+    // Keep the board usable if this optional update is unavailable.
   }
 }
 
@@ -149,10 +171,12 @@ const onFinalExaminerBoard =
 if (onFinalExaminerBoard) {
   window.setTimeout(() => {
     setFinalExaminerNavActive();
+    forceFinalBossTitleFit();
     void refreshTicker();
   }, 450);
   window.setInterval(() => {
     setFinalExaminerNavActive();
+    forceFinalBossTitleFit();
     void refreshTicker();
   }, 2000);
 }
