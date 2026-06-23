@@ -1,7 +1,7 @@
 @import "./finalExaminerDeadBadge.css";
 
-/* Force the Examiner identity block to use the empty left-side chamber space. */
-@media (min-width: 1000px) {
+/* Force the Examiner identity block to use the empty left-side chamber space on the smartboard. */
+@media (min-width: 1600px) {
   #root main section[class*="border-violet-300/25"] > div.flex.items-center.gap-4 {
     transform: scale(1.32) !important;
     transform-origin: left center !important;
