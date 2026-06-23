@@ -1,0 +1,38 @@
+/* Story copy for the three Final Examiner phases. */
+#root main section[class*="border-violet-300/25"]:not(.final-examiner-chamber-active) > div:first-child > div:last-child > div:first-child {
+  font-size: 0 !important;
+}
+
+#root main section[class*="border-violet-300/25"]:not(.final-examiner-chamber-active) > div:first-child > div:last-child > div:first-child::after {
+  content: "THE TRIAL AWAITS";
+  font-size: inherit;
+}
+
+#root main section[class*="border-violet-300/25"]:not(.final-examiner-chamber-active) > div:first-child > div:last-child > p {
+  font-size: 0 !important;
+}
+
+#root main section[class*="border-violet-300/25"]:not(.final-examiner-chamber-active) > div:first-child > div:last-child > p::after {
+  content: "Defeat every minion to face the final test.";
+  font-size: clamp(.75rem, .9vw, 1.12rem);
+  color: rgb(212 212 216);
+}
+
+#root main section.final-examiner-chamber-active > div:first-child > div:last-child > div:first-child {
+  font-size: 0 !important;
+}
+
+#root main section.final-examiner-chamber-active > div:first-child > div:last-child > div:first-child::after {
+  content: "THE FINAL TRIAL BEGINS";
+  font-size: inherit;
+}
+
+#root main section.final-examiner-chamber-active > div:first-child > div:last-child > p {
+  font-size: 0 !important;
+}
+
+#root main section.final-examiner-chamber-active > div:first-child > div:last-child > p::after {
+  content: "Stand together. Survive the final test.";
+  font-size: clamp(.75rem, .9vw, 1.12rem);
+  color: rgb(212 212 216);
+}

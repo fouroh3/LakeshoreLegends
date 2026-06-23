@@ -30,7 +30,7 @@ section[class*="border-violet-300/25"]:has(> div:last-child .h-2.overflow-hidden
 
 section[class*="border-violet-300/25"]:has(> div:last-child .h-2.overflow-hidden.rounded-full > div[style^="width: 3."])::before,
 section[class*="border-violet-300/25"]:has(> div:last-child .h-2.overflow-hidden.rounded-full > div[style^="width: 2"]):not(:has(> div:last-child .h-2.overflow-hidden.rounded-full > div[style^="width: 26"])):not(:has(> div:last-child .h-2.overflow-hidden.rounded-full > div[style^="width: 27"])):not(:has(> div:last-child .h-2.overflow-hidden.rounded-full > div[style^="width: 28"])):not(:has(> div:last-child .h-2.overflow-hidden.rounded-full > div[style^="width: 29"]))::before {
-  content: "FINAL STAND";
+  content: "THE FINAL STAND";
   z-index: 20;
   left: 50%;
   right: auto;
@@ -58,7 +58,7 @@ section[class*="border-violet-300/25"]:has(> div:last-child .h-2.overflow-hidden
 
 section[class*="border-violet-300/25"]:has(> div:last-child .h-2.overflow-hidden.rounded-full > div[style^="width: 3."]) > div:first-child p::after,
 section[class*="border-violet-300/25"]:has(> div:last-child .h-2.overflow-hidden.rounded-full > div[style^="width: 2"]):not(:has(> div:last-child .h-2.overflow-hidden.rounded-full > div[style^="width: 26"])):not(:has(> div:last-child .h-2.overflow-hidden.rounded-full > div[style^="width: 27"])):not(:has(> div:last-child .h-2.overflow-hidden.rounded-full > div[style^="width: 28"])):not(:has(> div:last-child .h-2.overflow-hidden.rounded-full > div[style^="width: 29"])) > div:first-child p::after {
-  content: "The seal is broken. End the Examiner.";
+  content: "The trial is nearly over. End it.";
   font-size: 0.75rem;
   color: rgb(254, 202, 202);
   text-shadow: 0 0 12px rgba(239, 68, 68, 0.36);

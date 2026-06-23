@@ -1,4 +1,6 @@
 @import "./finalExaminerDeadBadge.css";
+@import "./finalExaminerPhaseCopy.css";
+@import "./finalExaminerPhaseCopyFix.css";
 
 /* Force the Examiner identity block to use the empty left-side chamber space on the smartboard. */
 @media (min-width: 1600px) {
