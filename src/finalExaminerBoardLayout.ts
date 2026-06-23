@@ -18,7 +18,7 @@ function sizeFinalExaminerBoard() {
   }
 
   const title = Array.from(document.querySelectorAll<HTMLHeadingElement>("#root h2")).find(
-    (heading) => heading.textContent?.trim() === "The Final Examiner"
+    (heading) => heading.textContent?.trim().replace(/\s+/g, " ") === "The Final Examiner"
   );
   const copyColumn = title?.parentElement as HTMLElement | null;
   const leftColumn = copyColumn?.parentElement as HTMLElement | null;
@@ -28,7 +28,7 @@ function sizeFinalExaminerBoard() {
 
   if (title && copyColumn && leftColumn && finalPanel && hpPanel) {
     finalPanel.style.gridTemplateColumns = "minmax(0, 1fr) 300px";
-    finalPanel.style.columnGap = "1rem";
+    finalPanel.style.columnGap = "1.25rem";
 
     leftColumn.style.minWidth = "0";
     leftColumn.style.display = "flex";
@@ -38,39 +38,36 @@ function sizeFinalExaminerBoard() {
 
     copyColumn.style.minWidth = "0";
     copyColumn.style.flex = "1 1 0%";
-    copyColumn.style.width = "calc(100% - 88px)";
-    copyColumn.style.maxWidth = "calc(100% - 88px)";
+    copyColumn.style.maxWidth = "100%";
+    copyColumn.style.overflow = "hidden";
 
     hpPanel.style.width = "300px";
     hpPanel.style.minWidth = "300px";
+    hpPanel.style.maxWidth = "300px";
     hpPanel.style.overflow = "hidden";
+
+    if (title.dataset.finalExaminerBrokenTitle !== "true") {
+      title.innerHTML = "The Final<br />Examiner";
+      title.dataset.finalExaminerBrokenTitle = "true";
+    }
 
     title.style.display = "block";
     title.style.width = "100%";
     title.style.maxWidth = "100%";
     title.style.minWidth = "0";
     title.style.whiteSpace = "normal";
-    title.style.overflow = "visible";
-    title.style.overflowWrap = "anywhere";
-    title.style.wordBreak = "break-word";
-    title.style.fontSize = "clamp(1.65rem, 2vw, 2.25rem)";
-    title.style.lineHeight = "1.04";
+    title.style.overflow = "hidden";
+    title.style.overflowWrap = "normal";
+    title.style.wordBreak = "normal";
+    title.style.fontSize = "clamp(1.75rem, 2vw, 2.35rem)";
+    title.style.lineHeight = "0.98";
 
     if (logo) {
       logo.style.filter = "none";
-      logo.style.dropShadow = "none";
       logo.style.boxShadow = "none";
+      logo.style.opacity = "1";
     }
   }
-
-  document.querySelectorAll<HTMLElement>("#root article.group[class*='from-emerald-950/35']").forEach((card) => {
-    const deadMark = card.querySelector<HTMLElement>(".final-examiner-dead-badge");
-    if (deadMark) {
-      deadMark.style.border = "0";
-      deadMark.style.background = "transparent";
-      deadMark.style.boxShadow = "none";
-    }
-  });
 }
 
 if (onFinalExaminerBoard) {
