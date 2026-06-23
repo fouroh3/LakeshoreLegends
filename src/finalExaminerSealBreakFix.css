@@ -1,6 +1,6 @@
-/* Prevent the Final Examiner wordmark styling from turning the seal-break label into a giant clipped banner. */
+/* Keep the Final Examiner phase badge readable after the minions fall. */
 #root main div.flex.flex-col:has(> div.grid.grid-cols-5 > article.group:nth-child(1)[class*="from-emerald-950/35"]):has(> div.grid.grid-cols-5 > article.group:nth-child(2)[class*="from-emerald-950/35"]):has(> div.grid.grid-cols-5 > article.group:nth-child(3)[class*="from-emerald-950/35"]):has(> div.grid.grid-cols-5 > article.group:nth-child(4)[class*="from-emerald-950/35"]):has(> div.grid.grid-cols-5 > article.group:nth-child(5)[class*="from-emerald-950/35"]) > section[class*="border-violet-300/25"]::before {
-  content: "THE SEAL IS BROKEN" !important;
+  content: "THE FINAL EXAM HAS BEGUN" !important;
   left: 50% !important;
   right: auto !important;
   top: .8rem !important;
