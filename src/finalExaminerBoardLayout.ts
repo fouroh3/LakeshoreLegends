@@ -69,7 +69,7 @@ function sizeFinalExaminerBoard() {
   important(title, "text-overflow", "clip");
   important(title, "font-size", "3.55rem");
   important(title, "line-height", ".94");
-  important(title, "letter-spacing", "-0.065em");
+  important(title, "letter-spacing", "-0.035em");
   important(title, "background", "transparent");
   important(title, "box-shadow", "none");
   important(title, "text-shadow", "none");
