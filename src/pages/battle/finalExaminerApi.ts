@@ -6,6 +6,7 @@ const DEFAULT_API_URL =
 const API_URL =
   (import.meta as any).env?.VITE_LL_API_URL ||
   (import.meta as any).env?.VITE_HP_API_URL ||
+  (import.meta as any).env?.VITE_HP_WEB_APP_URL ||
   DEFAULT_API_URL;
 
 export type FinalExaminerClassState = {

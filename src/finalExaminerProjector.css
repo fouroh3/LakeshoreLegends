@@ -1,6 +1,7 @@
 /* FINAL EXAMINER PROJECTOR BOARD
-   The student board is designed first for a classroom display, not a laptop UI. */
-@media (min-width: 1000px) {
+   These larger presentation rules apply only to the smartboard-class viewport.
+   Laptop widths use the compact responsive board rules instead. */
+@media (min-width: 1600px) {
   /* Left column: every class tile has a shared, readable projector rhythm. */
   #root main > section.mt-4.grid.flex-1 > div:first-child > div.mt-3.grid > article {
     display: grid !important;
@@ -23,13 +24,11 @@
     letter-spacing: .15em !important;
   }
 
-  /* Direct child targeting: teacher/class name. */
   #root main > section.mt-4.grid.flex-1 > div:first-child > div.mt-3.grid > article > div.flex.items-center.justify-between.gap-3.pl-1 > div:first-child > div:nth-child(2) {
     font-size: clamp(1.3rem, 1.5vw, 1.7rem) !important;
     line-height: 1.05 !important;
   }
 
-  /* Direct child targeting: current HP and max-HP caption. */
   #root main > section.mt-4.grid.flex-1 > div:first-child > div.mt-3.grid > article > div.flex.items-center.justify-between.gap-3.pl-1 > div.text-right > div:first-child {
     font-size: clamp(2.2rem, 2.55vw, 3rem) !important;
     line-height: .92 !important;
@@ -88,7 +87,6 @@
     font-size: clamp(1rem, 1.05vw, 1.22rem) !important;
   }
 
-  /* Watermarks are decorative only; they never get to compete with readable data. */
   #root main > section.mt-4.grid.flex-1 > div:last-child > div.mt-3.grid.grid-cols-5 > article.group > img[draggable="false"] {
     top: 2rem !important;
     right: -.55rem !important;
