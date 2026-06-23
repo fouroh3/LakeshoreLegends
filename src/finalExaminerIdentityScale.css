@@ -1,26 +1,39 @@
 @import "./finalExaminerDeadBadge.css";
 @import "./finalExaminerExamBadge.css";
 
-/* Force the Examiner identity block to use the empty left-side chamber space on the smartboard. */
-@media (min-width: 1600px) {
+/* Keep the Final Examiner identity block within its own grid column. */
+@media (min-width: 1024px) {
   #root main section[class*="border-violet-300/25"] > div.flex.items-center.gap-4 {
-    transform: scale(1.32) !important;
-    transform-origin: left center !important;
-    width: 72% !important;
-    max-width: 860px !important;
+    min-width: 0 !important;
+    width: auto !important;
+    max-width: none !important;
+    transform: none !important;
   }
 
   #root main section[class*="border-violet-300/25"] > div.flex.items-center.gap-4 > img {
-    height: 112px !important;
+    height: 92px !important;
     width: auto !important;
+    flex: 0 0 auto !important;
+    filter: none !important;
+  }
+
+  #root main section[class*="border-violet-300/25"] > div.flex.items-center.gap-4 > div {
+    min-width: 0 !important;
   }
 
   #root main section[class*="border-violet-300/25"] > div.flex.items-center.gap-4 h2 {
-    font-size: 2.5rem !important;
-    line-height: .98 !important;
+    margin: 0.35rem 0 0 !important;
+    font-size: clamp(2rem, 2.35vw, 2.8rem) !important;
+    line-height: 1.02 !important;
+    letter-spacing: -0.045em !important;
+    background: none !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
   }
 
   #root main section[class*="border-violet-300/25"] > div.flex.items-center.gap-4 p {
+    margin-top: 0.55rem !important;
     font-size: 1rem !important;
+    line-height: 1.35 !important;
   }
 }
