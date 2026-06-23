@@ -20,21 +20,36 @@ function sizeFinalExaminerBoard() {
   const title = Array.from(document.querySelectorAll<HTMLHeadingElement>("#root h2")).find(
     (heading) => heading.textContent?.trim() === "The Final Examiner"
   );
-  const finalPanel = title?.closest<HTMLElement>("section");
-  const titleColumn = title?.parentElement?.parentElement as HTMLElement | null;
+  const copyColumn = title?.parentElement as HTMLElement | null;
+  const leftColumn = copyColumn?.parentElement as HTMLElement | null;
+  const finalPanel = leftColumn?.parentElement as HTMLElement | null;
   const hpPanel = finalPanel?.lastElementChild as HTMLElement | null;
 
-  if (title && finalPanel && titleColumn && hpPanel) {
+  if (title && copyColumn && leftColumn && finalPanel && hpPanel) {
     finalPanel.style.gridTemplateColumns = "minmax(0, 1fr) 220px";
-    titleColumn.style.minWidth = "0";
-    titleColumn.style.overflow = "hidden";
+
+    leftColumn.style.minWidth = "0";
+    leftColumn.style.display = "flex";
+    leftColumn.style.alignItems = "center";
+    leftColumn.style.gap = "1rem";
+
+    copyColumn.style.minWidth = "0";
+    copyColumn.style.flex = "1 1 0%";
+    copyColumn.style.overflow = "visible";
+
     hpPanel.style.width = "220px";
     hpPanel.style.minWidth = "220px";
+
+    title.style.display = "block";
+    title.style.width = "100%";
     title.style.maxWidth = "100%";
+    title.style.minWidth = "0";
     title.style.whiteSpace = "normal";
+    title.style.overflow = "visible";
     title.style.overflowWrap = "anywhere";
-    title.style.fontSize = "clamp(1.65rem, 2.3vw, 2.45rem)";
-    title.style.lineHeight = "1.02";
+    title.style.wordBreak = "break-word";
+    title.style.fontSize = "clamp(1.55rem, 2vw, 2.2rem)";
+    title.style.lineHeight = "1.04";
   }
 }
 
