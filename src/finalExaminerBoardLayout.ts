@@ -12,21 +12,29 @@ function sizeFinalExaminerBoard() {
   const classColumn = raidPartiesLabel?.closest<HTMLElement>("section");
   const boardGrid = classColumn?.parentElement as HTMLElement | null;
 
-  if (!classColumn || !boardGrid) return;
-
-  boardGrid.style.gridTemplateColumns = "280px minmax(0, 1fr)";
-  classColumn.style.minWidth = "0";
+  if (classColumn && boardGrid) {
+    boardGrid.style.gridTemplateColumns = "240px minmax(0, 1fr)";
+    classColumn.style.minWidth = "0";
+  }
 
   const title = Array.from(document.querySelectorAll<HTMLHeadingElement>("#root h2")).find(
     (heading) => heading.textContent?.trim() === "The Final Examiner"
   );
   const finalPanel = title?.closest<HTMLElement>("section");
+  const titleColumn = title?.parentElement?.parentElement as HTMLElement | null;
+  const hpPanel = finalPanel?.lastElementChild as HTMLElement | null;
 
-  if (title && finalPanel) {
-    finalPanel.style.gridTemplateColumns = "minmax(0, 1fr) 280px";
+  if (title && finalPanel && titleColumn && hpPanel) {
+    finalPanel.style.gridTemplateColumns = "minmax(0, 1fr) 220px";
+    titleColumn.style.minWidth = "0";
+    titleColumn.style.overflow = "hidden";
+    hpPanel.style.width = "220px";
+    hpPanel.style.minWidth = "220px";
     title.style.maxWidth = "100%";
     title.style.whiteSpace = "normal";
     title.style.overflowWrap = "anywhere";
+    title.style.fontSize = "clamp(1.65rem, 2.3vw, 2.45rem)";
+    title.style.lineHeight = "1.02";
   }
 }
 
