@@ -29,6 +29,8 @@
   padding-top: 0.05rem;
   font-size: 1rem !important;
   line-height: 1.18 !important;
+  overflow-wrap: anywhere !important;
+  word-break: normal !important;
 }
 
 #root main article.group:has(img[draggable="false"]) > div.relative.flex.min-h-\[182px\] > div:last-child {
@@ -37,6 +39,27 @@
 
 #root main article.group:has(img[draggable="false"]) > div.relative.flex.min-h-\[182px\] > div:last-child .text-2xl {
   font-size: 1.65rem !important;
+}
+
+/* Laptop view: compact titles stay fully inside each of the five minion cards. */
+@media (max-width: 1700px) and (min-width: 1180px) {
+  #root main > section.mt-4.grid.flex-1 > div:last-child > div.mt-3.grid.grid-cols-5 > article.group {
+    min-width: 0 !important;
+    padding: 0.9rem 0.7rem !important;
+  }
+
+  #root main > section.mt-4.grid.flex-1 > div:last-child > div.mt-3.grid.grid-cols-5 > article.group > div.relative.flex > div:nth-child(2) {
+    max-width: 100% !important;
+    padding-right: 0 !important;
+    font-size: 0.84rem !important;
+    line-height: 1.08 !important;
+    overflow-wrap: anywhere !important;
+    word-break: break-word !important;
+  }
+
+  #root main > section.mt-4.grid.flex-1 > div:last-child > div.mt-3.grid.grid-cols-5 > article.group > div.relative.flex > div:first-child {
+    display: none !important;
+  }
 }
 
 /* Compact layout keeps the watermark visible, just smaller and quieter. */
@@ -58,10 +81,7 @@
 
   #root main > section.mt-4.grid.flex-1 > div:last-child > div.mt-3.grid.grid-cols-5 > article.group > div.relative.flex > div:first-child {
     position: static !important;
-    display: flex !important;
-    align-items: start !important;
-    justify-content: flex-end !important;
-    min-height: 0 !important;
+    display: none !important;
   }
 
   #root main > section.mt-4.grid.flex-1 > div:last-child > div.mt-3.grid.grid-cols-5 > article.group > div.relative.flex > div:nth-child(2) {
@@ -69,6 +89,8 @@
     margin-top: .14rem !important;
     max-width: 100% !important;
     padding-right: 0 !important;
+    overflow-wrap: anywhere !important;
+    word-break: break-word !important;
   }
 
   #root main > section.mt-4.grid.flex-1 > div:last-child > div.mt-3.grid.grid-cols-5 > article.group > div.relative.flex > div:last-child {
