@@ -1,6 +1,6 @@
 @media (min-width: 1180px) {
   body:has(#final-examiner-chronicle) #root main {
-    padding-right: min(25rem, 25vw) !important;
+    padding-right: min(21rem, 22vw) !important;
   }
 }
 
@@ -10,7 +10,7 @@
   top: 84px;
   right: 14px;
   bottom: 14px;
-  width: min(23rem, calc(100vw - 28px));
+  width: min(19.5rem, calc(100vw - 28px));
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -99,6 +99,20 @@
   font-size: 0.8rem;
   line-height: 1.45;
   text-align: center;
+}
+
+@media (max-width: 1450px) {
+  body:has(#final-examiner-chronicle) #root main {
+    padding-right: 20.5rem !important;
+  }
+
+  #final-examiner-chronicle {
+    width: 18.25rem;
+  }
+
+  .final-examiner-chronicle-copy {
+    font-size: 0.74rem;
+  }
 }
 
 @media (max-width: 1179px) {
