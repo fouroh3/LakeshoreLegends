@@ -1,0 +1,34 @@
+/* Let the subtle Final Examiner wordmark span the entire chamber width. */
+#root main section[class*="border-violet-300/25"]::before {
+  left: 0 !important;
+  right: 0 !important;
+  width: 100% !important;
+  bottom: -0.2em !important;
+  text-align: center !important;
+  font-size: clamp(3rem, 7.55vw, 8.7rem) !important;
+  letter-spacing: -0.075em !important;
+}
+
+/* Keep the chamber as one scene: wordmark + subtle red haze, with no separate centre pill. */
+#root main section[class*="border-violet-300/25"]::after {
+  content: none !important;
+}
+
+#root main section[class*="border-violet-300/25"] {
+  background:
+    radial-gradient(ellipse at 36% 58%, rgba(190,24,93,.15), transparent 31%),
+    linear-gradient(90deg, transparent 18%, rgba(127,29,29,.10) 42%, rgba(127,29,29,.10) 62%, transparent 84%),
+    radial-gradient(ellipse at 19% 120%, rgba(127,29,29,.44), transparent 42%),
+    radial-gradient(ellipse at 86% 12%, rgba(76,5,25,.42), transparent 34%),
+    linear-gradient(135deg, #21030d 0%, #09060d 52%, #18030b 100%) !important;
+}
+
+/* Keep the victory banner's own centered treatment intact. */
+#root main section[class*="border-violet-300/25"]:has(> div:last-child .h-2.overflow-hidden.rounded-full > div[style^="width: 0"])::before {
+  left: 50% !important;
+  right: auto !important;
+  width: min(91%, 720px) !important;
+  text-align: center !important;
+  font-size: inherit !important;
+  letter-spacing: inherit !important;
+}

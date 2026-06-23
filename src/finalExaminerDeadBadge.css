@@ -1,0 +1,12 @@
+/* Keep the skull and DEAD label inside one neutral dashboard-style badge. */
+#root main article.group[class*="from-emerald-950/35"]::after {
+  top: 64% !important;
+  min-width: 7.8rem !important;
+  padding: .42rem .7rem .48rem !important;
+  border: 1px solid rgba(255,255,255,.24) !important;
+  border-radius: 1rem !important;
+  background: linear-gradient(180deg, rgba(20,22,27,.96), rgba(3,4,7,.98)) !important;
+  box-shadow: 0 10px 22px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.07) !important;
+  color: rgba(255,255,255,.96) !important;
+  text-shadow: 0 2px 12px rgba(0,0,0,.95) !important;
+}

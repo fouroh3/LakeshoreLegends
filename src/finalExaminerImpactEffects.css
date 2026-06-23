@@ -1,0 +1,67 @@
+#root .final-examiner-impact-target {
+  position: relative !important;
+  animation: final-examiner-impact-shake .56s cubic-bezier(.2,.85,.25,1) both;
+}
+
+#root .final-examiner-impact-target::after {
+  content: "";
+  position: absolute;
+  inset: -5px;
+  pointer-events: none;
+  border-radius: inherit;
+  box-shadow: 0 0 0 1px rgba(255,255,255,.28), 0 0 34px rgba(244,63,94,.58);
+  animation: final-examiner-impact-flash .7s ease-out both;
+}
+
+#root .final-examiner-impact-target.final-examiner-impact-heal::after {
+  box-shadow: 0 0 0 1px rgba(207,250,254,.34), 0 0 36px rgba(34,211,238,.62);
+}
+
+#root .final-examiner-impact-number {
+  position: absolute;
+  z-index: 60;
+  left: 50%;
+  top: 44%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  color: rgb(254,226,226);
+  font-size: clamp(1.8rem, 3.3vw, 3.5rem);
+  font-weight: 950;
+  letter-spacing: -.06em;
+  text-shadow: 0 0 8px rgba(255,255,255,.9), 0 0 22px rgba(239,68,68,.95), 0 0 54px rgba(127,29,29,.82);
+  animation: final-examiner-impact-number .95s cubic-bezier(.12,.88,.2,1) both;
+}
+
+#root .final-examiner-impact-heal .final-examiner-impact-number {
+  color: rgb(207,250,254);
+  text-shadow: 0 0 8px rgba(255,255,255,.9), 0 0 22px rgba(34,211,238,.95), 0 0 54px rgba(8,145,178,.78);
+}
+
+@keyframes final-examiner-impact-shake {
+  0% { transform: translateX(0) scale(1); }
+  18% { transform: translateX(-8px) scale(1.025); }
+  38% { transform: translateX(7px) scale(.99); }
+  58% { transform: translateX(-4px) scale(1.012); }
+  100% { transform: translateX(0) scale(1); }
+}
+
+@keyframes final-examiner-impact-flash {
+  0% { opacity: 0; transform: scale(.92); }
+  28% { opacity: 1; transform: scale(1.02); }
+  100% { opacity: 0; transform: scale(1.08); }
+}
+
+@keyframes final-examiner-impact-number {
+  0% { opacity: 0; transform: translate(-50%, -15%) scale(.55); }
+  18% { opacity: 1; transform: translate(-50%, -50%) scale(1.18); }
+  68% { opacity: 1; transform: translate(-50%, -92%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -138%) scale(.92); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #root .final-examiner-impact-target,
+  #root .final-examiner-impact-target::after,
+  #root .final-examiner-impact-number {
+    animation: none !important;
+  }
+}

@@ -1,0 +1,143 @@
+/* A defeated minion gets a ceremonial defeat sequence, then remains visibly marked Dead. */
+#root main article.group[class*="from-emerald-950/35"] {
+  overflow: visible !important;
+  animation: final-examiner-minion-fall 1.75s cubic-bezier(.16,.9,.22,1) both;
+}
+
+#root main article.group[class*="from-emerald-950/35"]::before {
+  content: "";
+  position: absolute;
+  inset: -46%;
+  z-index: 24;
+  pointer-events: none;
+  border-radius: 9999px;
+  background: radial-gradient(circle, rgba(255,255,255,.94) 0%, rgba(254,240,138,.88) 8%, rgba(45,212,191,.52) 22%, rgba(16,185,129,.16) 42%, transparent 68%);
+  animation: final-examiner-minion-aura 1.6s cubic-bezier(.16,.9,.22,1) both;
+}
+
+/* Permanent dashboard-style defeat marker after the burst resolves. */
+#root main article.group[class*="from-emerald-950/35"]::after {
+  content: "☠\A DEAD";
+  white-space: pre;
+  position: absolute;
+  z-index: 25;
+  left: 50%;
+  top: 52%;
+  transform: translate(-50%, -50%) scale(.72);
+  pointer-events: none;
+  color: rgba(255,255,255,.96);
+  font-size: clamp(1.3rem, 2.15vw, 2.4rem);
+  font-weight: 950;
+  line-height: 1.02;
+  letter-spacing: .14em;
+  text-align: center;
+  text-shadow: 0 2px 14px rgba(0,0,0,.95), 0 0 26px rgba(255,255,255,.3);
+  animation: final-examiner-minion-dead-mark 1.5s cubic-bezier(.12,.9,.26,1) both;
+}
+
+/* Once fallen, strip the card down to its name plus the permanent Dead marker. */
+#root main > section.mt-4.grid.flex-1 > div:last-child > div.mt-3.grid.grid-cols-5 > article.group[class*="from-emerald-950/35"] {
+  background: #050609 !important;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.05), inset 0 -30px 50px rgba(0,0,0,.86) !important;
+  filter: brightness(.72) saturate(.18) !important;
+}
+
+#root main > section.mt-4.grid.flex-1 > div:last-child > div.mt-3.grid.grid-cols-5 > article.group[class*="from-emerald-950/35"] > img[draggable="false"] {
+  display: none !important;
+}
+
+#root main > section.mt-4.grid.flex-1 > div:last-child > div.mt-3.grid.grid-cols-5 > article.group[class*="from-emerald-950/35"] > div.relative.flex > div:first-child,
+#root main > section.mt-4.grid.flex-1 > div:last-child > div.mt-3.grid.grid-cols-5 > article.group[class*="from-emerald-950/35"] > div.relative.flex > div:last-child {
+  visibility: hidden !important;
+}
+
+#root main > section.mt-4.grid.flex-1 > div:last-child > div.mt-3.grid.grid-cols-5 > article.group[class*="from-emerald-950/35"] > div.relative.flex > div:nth-child(2) {
+  color: rgba(255,255,255,.76) !important;
+  opacity: 1 !important;
+  filter: none !important;
+  z-index: 2 !important;
+}
+
+@keyframes final-examiner-minion-fall {
+  0% { transform: scale(1) rotate(0deg); filter: brightness(1) saturate(1); }
+  12% { transform: scale(1.055) rotate(-1deg); filter: brightness(1.7) saturate(1.55); }
+  30% { transform: scale(.975) rotate(.7deg); filter: brightness(.72) saturate(.72); }
+  50% { transform: scale(1.03) rotate(-.35deg); filter: brightness(1.34) saturate(1.18); }
+  100% { transform: scale(1) rotate(0deg); filter: brightness(.76) saturate(.58); }
+}
+
+@keyframes final-examiner-minion-aura {
+  0% { opacity: 0; transform: scale(.12); }
+  16% { opacity: 1; transform: scale(.48); }
+  42% { opacity: .72; transform: scale(.92); }
+  100% { opacity: 0; transform: scale(1.48); }
+}
+
+@keyframes final-examiner-minion-dead-mark {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(.2) rotate(-8deg); }
+  26% { opacity: 1; transform: translate(-50%, -50%) scale(1.13) rotate(2deg); }
+  52% { opacity: 1; transform: translate(-50%, -50%) scale(.96) rotate(0deg); }
+  100% { opacity: .96; transform: translate(-50%, -50%) scale(1) rotate(0deg); }
+}
+
+/* The chamber begins to burn hotter once the minion line starts falling. */
+#root main div.flex.flex-col:has(article.group[class*="from-emerald-950/35"]) section[class*="border-violet-300/25"] {
+  box-shadow:
+    inset 0 0 0 1px rgba(251, 113, 133, .25),
+    inset 0 -42px 64px rgba(0, 0, 0, .72),
+    0 0 0 1px rgba(190, 24, 93, .36),
+    0 0 46px rgba(190, 24, 93, .36) !important;
+}
+
+#root main div.flex.flex-col:has(article.group[class*="from-emerald-950/35"]) section[class*="border-violet-300/25"]::after {
+  color: rgba(244, 63, 94, .20) !important;
+  text-shadow: 0 0 52px rgba(225, 29, 72, .62) !important;
+}
+
+/* The fifth Fallen card breaks the seal: one dramatic entrance, then the chamber resumes its normal breath. */
+#root main div.flex.flex-col:has(> div.grid.grid-cols-5 > article.group:nth-child(1)[class*="from-emerald-950/35"]):has(> div.grid.grid-cols-5 > article.group:nth-child(2)[class*="from-emerald-950/35"]):has(> div.grid.grid-cols-5 > article.group:nth-child(3)[class*="from-emerald-950/35"]):has(> div.grid.grid-cols-5 > article.group:nth-child(4)[class*="from-emerald-950/35"]):has(> div.grid.grid-cols-5 > article.group:nth-child(5)[class*="from-emerald-950/35"]) > section[class*="border-violet-300/25"] {
+  animation: final-examiner-seal-break 1.9s cubic-bezier(.14,.92,.22,1) both, final-examiner-chamber-breath 5.8s ease-in-out 1.9s infinite !important;
+}
+
+#root main div.flex.flex-col:has(> div.grid.grid-cols-5 > article.group:nth-child(1)[class*="from-emerald-950/35"]):has(> div.grid.grid-cols-5 > article.group:nth-child(2)[class*="from-emerald-950/35"]):has(> div.grid.grid-cols-5 > article.group:nth-child(3)[class*="from-emerald-950/35"]):has(> div.grid.grid-cols-5 > article.group:nth-child(4)[class*="from-emerald-950/35"]):has(> div.grid.grid-cols-5 > article.group:nth-child(5)[class*="from-emerald-950/35"]) > section[class*="border-violet-300/25"]::before {
+  content: "THE SEAL IS BROKEN";
+  z-index: 20;
+  left: 50%;
+  right: auto;
+  top: .6rem;
+  bottom: auto;
+  transform: translateX(-50%);
+  width: max-content;
+  border: 1px solid rgba(254,202,202,.78);
+  border-radius: 9999px;
+  padding: .36rem .84rem;
+  background: rgba(69,10,10,.94);
+  box-shadow: 0 0 0 5px rgba(127,29,29,.16), 0 0 34px rgba(239,68,68,.62);
+  color: rgb(254,226,226);
+  font-size: .6rem;
+  font-weight: 950;
+  letter-spacing: .22em;
+  white-space: nowrap;
+  animation: final-examiner-seal-label 1.9s ease-out both;
+}
+
+@keyframes final-examiner-seal-break {
+  0% { transform: scale(.97); filter: brightness(.62) saturate(.72); }
+  22% { transform: scale(1.02); filter: brightness(1.65) saturate(1.65); box-shadow: 0 0 94px rgba(239,68,68,.82) !important; }
+  48% { transform: scale(.992); filter: brightness(.9) saturate(1.1); }
+  100% { transform: scale(1); filter: brightness(1) saturate(1); }
+}
+
+@keyframes final-examiner-seal-label {
+  0% { opacity: 0; transform: translateX(-50%) scale(.72); }
+  24% { opacity: 1; transform: translateX(-50%) scale(1.08); }
+  100% { opacity: 1; transform: translateX(-50%) scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #root main article.group[class*="from-emerald-950/35"],
+  #root main article.group[class*="from-emerald-950/35"]::before,
+  #root main article.group[class*="from-emerald-950/35"]::after {
+    animation: none !important;
+  }
+}

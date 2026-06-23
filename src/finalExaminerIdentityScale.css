@@ -1,0 +1,25 @@
+@import "./finalExaminerDeadBadge.css";
+
+/* Force the Examiner identity block to use the empty left-side chamber space. */
+@media (min-width: 1000px) {
+  #root main section[class*="border-violet-300/25"] > div.flex.items-center.gap-4 {
+    transform: scale(1.32) !important;
+    transform-origin: left center !important;
+    width: 72% !important;
+    max-width: 860px !important;
+  }
+
+  #root main section[class*="border-violet-300/25"] > div.flex.items-center.gap-4 > img {
+    height: 112px !important;
+    width: auto !important;
+  }
+
+  #root main section[class*="border-violet-300/25"] > div.flex.items-center.gap-4 h2 {
+    font-size: 2.5rem !important;
+    line-height: .98 !important;
+  }
+
+  #root main section[class*="border-violet-300/25"] > div.flex.items-center.gap-4 p {
+    font-size: 1rem !important;
+  }
+}

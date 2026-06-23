@@ -1,0 +1,196 @@
+/* Final Examiner: one responsive fit-to-screen layout for laptops and smartboards. */
+@media (min-width: 1000px) and (min-height: 600px) {
+  #root > div.min-h-\[100dvh\] {
+    height: 100dvh !important;
+    overflow: hidden !important;
+  }
+
+  #root > div.min-h-\[100dvh\] > main {
+    height: calc(100dvh - 86px) !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+    padding: clamp(.55rem, 1vh, .9rem) clamp(.8rem, 1.1vw, 1.25rem) !important;
+  }
+
+  #root > div.min-h-\[100dvh\] > main > section:first-child {
+    flex: 0 0 auto !important;
+  }
+
+  #root > div.min-h-\[100dvh\] > main > section.mt-4.grid.flex-1 {
+    flex: 1 1 0 !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+    grid-template-columns: minmax(250px, .76fr) minmax(0, 1.84fr) !important;
+    gap: clamp(.65rem, 1vw, 1rem) !important;
+    align-items: stretch !important;
+  }
+
+  /* CLASS VITALITY ----------------------------------------------------- */
+  #root > div.min-h-\[100dvh\] > main > section.mt-4.grid.flex-1 > div:first-child {
+    display: grid !important;
+    grid-template-rows: auto minmax(0, 1fr) !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+    padding: clamp(.7rem, 1.1vw, 1rem) !important;
+  }
+
+  #root > div.min-h-\[100dvh\] > main > section.mt-4.grid.flex-1 > div:first-child > div.mt-3.grid {
+    display: grid !important;
+    grid-auto-rows: minmax(0, 1fr) !important;
+    grid-auto-flow: row !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+    gap: clamp(.35rem, .65vh, .65rem) !important;
+  }
+
+  /* Every class card uses the same content lane plus a fixed bar lane. */
+  #root > div.min-h-\[100dvh\] > main > section.mt-4.grid.flex-1 > div:first-child > div.mt-3.grid > article {
+    display: grid !important;
+    grid-template-rows: minmax(0, 1fr) auto !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+    padding: clamp(.42rem, .75vh, .72rem) clamp(.6rem, .8vw, .85rem) !important;
+  }
+
+  #root > div.min-h-\[100dvh\] > main > section.mt-4.grid.flex-1 > div:first-child > div.mt-3.grid > article > div.flex.items-center.justify-between.gap-3.pl-1 {
+    align-self: start !important;
+    min-height: 0 !important;
+  }
+
+  #root > div.min-h-\[100dvh\] > main > section.mt-4.grid.flex-1 > div:first-child > div.mt-3.grid > article > div.mt-2 {
+    align-self: end !important;
+    margin-top: 0 !important;
+  }
+
+  #root > div.min-h-\[100dvh\] > main > section.mt-4.grid.flex-1 > div:first-child > div.mt-3.grid > article .text-2xl {
+    font-size: clamp(1.18rem, 1.7vw, 1.72rem) !important;
+    line-height: 1 !important;
+  }
+
+  #root > div.min-h-\[100dvh\] > main > section.mt-4.grid.flex-1 > div:first-child > div.mt-3.grid > article .text-base {
+    font-size: clamp(.75rem, 1vw, 1rem) !important;
+    line-height: 1.08 !important;
+  }
+
+  #root > div.min-h-\[100dvh\] > main > section.mt-4.grid.flex-1 > div:first-child > div.mt-3.grid > article .text-\[9px\] {
+    font-size: clamp(.44rem, .55vw, .56rem) !important;
+  }
+
+  #root > div.min-h-\[100dvh\] > main > section.mt-4.grid.flex-1 > div:first-child > div.mt-3.grid > article .mt-2 {
+    margin-top: 0 !important;
+  }
+
+  /* BOSS ARENA --------------------------------------------------------- */
+  #root > div.min-h-\[100dvh\] > main > section.mt-4.grid.flex-1 > div:last-child {
+    display: grid !important;
+    grid-template-rows: auto minmax(0, 2fr) minmax(0, 3fr) !important;
+    min-height: 0 !important;
+    height: 100% !important;
+    overflow: hidden !important;
+    padding: clamp(.7rem, 1.1vw, 1rem) !important;
+    row-gap: clamp(.45rem, .7vh, .7rem) !important;
+  }
+
+  #root > div.min-h-\[100dvh\] > main > section.mt-4.grid.flex-1 > div:last-child > div.mt-3.grid.grid-cols-5,
+  #root > div.min-h-\[100dvh\] > main > section.mt-4.grid.flex-1 > div:last-child > section.mt-3 {
+    margin-top: 0 !important;
+    min-height: 0 !important;
+    height: 100% !important;
+    overflow: hidden !important;
+  }
+
+  /* Five minions evenly use the full Phase 1 row. */
+  #root > div.min-h-\[100dvh\] > main > section.mt-4.grid.flex-1 > div:last-child > div.mt-3.grid.grid-cols-5 {
+    gap: clamp(.4rem, .7vw, .65rem) !important;
+  }
+
+  #root > div.min-h-\[100dvh\] > main > section.mt-4.grid.flex-1 > div:last-child > div.mt-3.grid.grid-cols-5 > article {
+    min-height: 0 !important;
+    height: 100% !important;
+    overflow: hidden !important;
+    padding: clamp(.5rem, .9vh, .9rem) clamp(.5rem, .75vw, .85rem) !important;
+  }
+
+  /* Keep the watermark as a quiet background element at every card height. */
+  #root > div.min-h-\[100dvh\] > main > section.mt-4.grid.flex-1 > div:last-child > div.mt-3.grid.grid-cols-5 > article > img.pointer-events-none.absolute.-right-3.-top-3 {
+    top: clamp(1.45rem, 2.4vh, 2rem) !important;
+    right: -.35rem !important;
+    height: clamp(4.8rem, 6.7vw, 6.6rem) !important;
+    max-height: 56% !important;
+    opacity: .12 !important;
+  }
+
+  #root > div.min-h-\[100dvh\] > main > section.mt-4.grid.flex-1 > div:last-child > div.mt-3.grid.grid-cols-5 > article > div.relative.flex {
+    min-height: 0 !important;
+    height: 100% !important;
+    z-index: 2 !important;
+  }
+
+  #root > div.min-h-\[100dvh\] > main > section.mt-4.grid.flex-1 > div:last-child > div.mt-3.grid.grid-cols-5 > article .text-2xl {
+    font-size: clamp(1.25rem, 2vw, 2rem) !important;
+    line-height: 1 !important;
+  }
+
+  #root > div.min-h-\[100dvh\] > main > section.mt-4.grid.flex-1 > div:last-child > div.mt-3.grid.grid-cols-5 > article .text-\[15px\] {
+    font-size: clamp(.72rem, 1vw, 1rem) !important;
+    line-height: 1.08 !important;
+  }
+
+  #root > div.min-h-\[100dvh\] > main > section.mt-4.grid.flex-1 > div:last-child > div.mt-3.grid.grid-cols-5 > article .mt-3 {
+    margin-top: clamp(.28rem, .5vh, .55rem) !important;
+  }
+
+  /* Final Examiner chamber owns all of Phase 2 and its contents scale together. */
+  #root > div.min-h-\[100dvh\] > main > section.mt-4.grid.flex-1 > div:last-child > section.mt-3 {
+    grid-template-columns: minmax(0, 1fr) clamp(205px, 21vw, 345px) !important;
+    align-items: center !important;
+    gap: clamp(.7rem, 1vw, 1.15rem) !important;
+    padding: clamp(.65rem, 1.1vw, 1.25rem) !important;
+  }
+
+  #root > div.min-h-\[100dvh\] > main > section.mt-4.grid.flex-1 > div:last-child > section.mt-3 > div:first-child {
+    min-width: 0 !important;
+    gap: clamp(.55rem, 1.25vw, 1.5rem) !important;
+    padding-left: clamp(.1rem, .65vw, .75rem) !important;
+  }
+
+  #root > div.min-h-\[100dvh\] > main > section.mt-4.grid.flex-1 > div:last-child > section.mt-3 > div:first-child > img {
+    height: clamp(50px, 6.3vw, 96px) !important;
+    flex: 0 0 auto !important;
+  }
+
+  #root > div.min-h-\[100dvh\] > main > section.mt-4.grid.flex-1 > div:last-child > section.mt-3 > div:first-child .text-\[10px\] {
+    font-size: clamp(.48rem, .66vw, .78rem) !important;
+    letter-spacing: .16em !important;
+  }
+
+  #root > div.min-h-\[100dvh\] > main > section.mt-4.grid.flex-1 > div:last-child > section.mt-3 > div:first-child h2 {
+    margin-top: clamp(.15rem, .3vh, .4rem) !important;
+    font-size: clamp(1.2rem, 2.05vw, 2.75rem) !important;
+    line-height: .98 !important;
+    white-space: nowrap !important;
+  }
+
+  #root > div.min-h-\[100dvh\] > main > section.mt-4.grid.flex-1 > div:last-child > section.mt-3 > div:first-child p {
+    margin-top: clamp(.22rem, .4vh, .5rem) !important;
+    font-size: clamp(.65rem, .86vw, 1rem) !important;
+    line-height: 1.1 !important;
+  }
+
+  #root > div.min-h-\[100dvh\] > main > section.mt-4.grid.flex-1 > div:last-child > section.mt-3 > div:last-child {
+    min-height: 0 !important;
+    height: min(82%, 190px) !important;
+    overflow: hidden !important;
+    padding: clamp(.55rem, .95vw, 1rem) !important;
+  }
+
+  #root > div.min-h-\[100dvh\] > main > section.mt-4.grid.flex-1 > div:last-child > section.mt-3 > div:last-child .text-3xl {
+    font-size: clamp(1.95rem, 3.45vw, 4rem) !important;
+    line-height: .94 !important;
+  }
+
+  #root > div.min-h-\[100dvh\] > main > section.mt-4.grid.flex-1 > div:last-child > section.mt-3 > div:last-child .mt-2 {
+    margin-top: clamp(.25rem, .45vh, .5rem) !important;
+  }
+}

@@ -1,0 +1,48 @@
+/* Large smartboards use a bold hierarchy. This breakpoint stays above the laptop layout. */
+@media (min-width: 1600px) and (min-height: 600px) {
+  /* Class Vitality */
+  #root main > section.mt-4.grid.flex-1 > div:first-child > div.mt-3.grid > article {
+    padding: .85rem 1rem !important;
+  }
+
+  #root main > section.mt-4.grid.flex-1 > div:first-child > div.mt-3.grid > article .mt-0\.5.text-base {
+    font-size: 1.2rem !important;
+    line-height: 1.08 !important;
+  }
+
+  #root main > section.mt-4.grid.flex-1 > div:first-child > div.mt-3.grid > article .text-2xl {
+    font-size: 2.15rem !important;
+    line-height: 1 !important;
+  }
+
+  #root main > section.mt-4.grid.flex-1 > div:first-child > div.mt-3.grid > article .text-\[9px\] {
+    font-size: .66rem !important;
+  }
+
+  /* Five minions */
+  #root main > section.mt-4.grid.flex-1 > div:last-child > div.mt-3.grid.grid-cols-5 > article {
+    padding: 1rem 1.05rem !important;
+  }
+
+  #root main > section.mt-4.grid.flex-1 > div:last-child > div.mt-3.grid.grid-cols-5 > article .text-\[15px\] {
+    font-size: 1.3rem !important;
+    line-height: 1.1 !important;
+  }
+
+  #root main > section.mt-4.grid.flex-1 > div:last-child > div.mt-3.grid.grid-cols-5 > article .text-2xl {
+    font-size: 2.35rem !important;
+  }
+
+  #root main > section.mt-4.grid.flex-1 > div:last-child > div.mt-3.grid.grid-cols-5 > article .text-sm {
+    font-size: 1.1rem !important;
+  }
+
+  #root main > section.mt-4.grid.flex-1 > div:last-child > div.mt-3.grid.grid-cols-5 > article > img[draggable="false"] {
+    display: block !important;
+    top: 2rem !important;
+    right: -.7rem !important;
+    height: 7.8rem !important;
+    max-height: none !important;
+    opacity: .18 !important;
+  }
+}

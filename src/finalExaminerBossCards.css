@@ -1,0 +1,74 @@
+/* Boss title leads each minion card; its state badge stays tucked into the upper-right. */
+#root main article.group:has(img[draggable="false"]) {
+  padding-top: 1rem !important;
+  padding-bottom: 0.9rem !important;
+}
+
+/* Lower and enlarge the boss mark so it fills the visual dead zone between title and HP. */
+#root main article.group > img.pointer-events-none.absolute.-right-3.-top-3 {
+  top: 2rem !important;
+  right: -0.7rem !important;
+  height: 7.8rem !important;
+  opacity: 0.18 !important;
+}
+
+#root main article.group:has(img[draggable="false"]) > div.relative.flex.min-h-\[182px\] {
+  min-height: 158px !important;
+}
+
+#root main article.group:has(img[draggable="false"]) > div.relative.flex.min-h-\[182px\] > div:first-child {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 2;
+}
+
+#root main article.group:has(img[draggable="false"]) > div.relative.flex.min-h-\[182px\] > div:nth-child(2) {
+  margin-top: 0 !important;
+  max-width: calc(100% - 4.35rem) !important;
+  padding-top: 0.05rem;
+  font-size: 1rem !important;
+  line-height: 1.18 !important;
+}
+
+#root main article.group:has(img[draggable="false"]) > div.relative.flex.min-h-\[182px\] > div:last-child {
+  padding-top: 1.35rem !important;
+}
+
+#root main article.group:has(img[draggable="false"]) > div.relative.flex.min-h-\[182px\] > div:last-child .text-2xl {
+  font-size: 1.65rem !important;
+}
+
+/* Compact layout is for laptops only. Large smartboards keep the original bold card hierarchy. */
+@media (max-width: 1580px) and (min-height: 600px) {
+  #root main > section.mt-4.grid.flex-1 > div:last-child > div.mt-3.grid.grid-cols-5 > article.group > img[draggable="false"] {
+    display: none !important;
+  }
+
+  #root main > section.mt-4.grid.flex-1 > div:last-child > div.mt-3.grid.grid-cols-5 > article.group > div.relative.flex {
+    display: grid !important;
+    grid-template-rows: 1.35rem minmax(0, 1fr) auto !important;
+    min-height: 0 !important;
+    height: 100% !important;
+  }
+
+  #root main > section.mt-4.grid.flex-1 > div:last-child > div.mt-3.grid.grid-cols-5 > article.group > div.relative.flex > div:first-child {
+    position: static !important;
+    display: flex !important;
+    align-items: start !important;
+    justify-content: flex-end !important;
+    min-height: 0 !important;
+  }
+
+  #root main > section.mt-4.grid.flex-1 > div:last-child > div.mt-3.grid.grid-cols-5 > article.group > div.relative.flex > div:nth-child(2) {
+    align-self: start !important;
+    margin-top: .14rem !important;
+    max-width: 100% !important;
+    padding-right: 0 !important;
+  }
+
+  #root main > section.mt-4.grid.flex-1 > div:last-child > div.mt-3.grid.grid-cols-5 > article.group > div.relative.flex > div:last-child {
+    align-self: end !important;
+    padding-top: .35rem !important;
+  }
+}
