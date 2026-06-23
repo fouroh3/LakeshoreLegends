@@ -12,6 +12,7 @@ import "./finalExaminerImpactEffects.css";
 import "./finalExaminerTeacherScroll.css";
 import "./finalExaminerTeacherRoute";
 import "./finalExaminerLiveTicker";
+import "./finalExaminerVictoryGate";
 import "./finalExaminerIdentityScale.css";
 import "./finalExaminerSealBreakFix.css";
 
