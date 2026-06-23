@@ -5,6 +5,7 @@ import "./finalExaminerProjector.css";
 import "./finalExaminerWordmark.css";
 import "./finalExaminerTeacherLabels";
 import "./finalExaminerTeacherNotice";
+import "./finalExaminerPhaseMessage";
 import "./finalExaminerChamberState";
 
 const TICKER_API_URL =
