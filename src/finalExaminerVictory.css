@@ -39,7 +39,7 @@ main:has(section[class*="border-violet-300/25"] > div:last-child .h-2.overflow-h
     58% 81%,
     74% 81%,
     90% 81%,
-    50% 69%,
+    50% 67%,
     50% 81%,
     center,
     center,
@@ -98,7 +98,7 @@ main:has(section[class*="border-violet-300/25"] > div:last-child .h-2.overflow-h
       auto, auto, auto, auto;
     background-position:
       8% 82%, 24% 82%, 40% 82%, 60% 82%, 76% 82%, 92% 82%,
-      50% 69%,
+      50% 67%,
       50% 82%,
       center, center, center, center;
   }

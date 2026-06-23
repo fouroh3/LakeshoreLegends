@@ -14,6 +14,7 @@ const TICKER_API_URL =
 
 const RAID_ID = "final_examiner_2026";
 let lastEventId = "";
+let hasPrimedLatestEvent = false;
 
 function bossNameFromKey(key: string) {
   const names: Record<string, string> = {
@@ -83,8 +84,12 @@ function findCardWithText(text: string) {
   ) || null;
 }
 
+function eventIdFrom(event: any) {
+  return String(event?.timestamp || "") + String(event?.classKey || "") + String(event?.action || "") + String(event?.targetBossKey || "") + String(event?.appliedAmount || "");
+}
+
 function playImpact(event: any) {
-  const eventId = String(event?.timestamp || "") + String(event?.classKey || "") + String(event?.action || "") + String(event?.targetBossKey || "") + String(event?.appliedAmount || "");
+  const eventId = eventIdFrom(event);
   if (!eventId || eventId === lastEventId) return;
   lastEventId = eventId;
 
@@ -122,6 +127,13 @@ async function refreshTicker() {
     if (!data?.ok) return;
 
     ticker.innerHTML = `<span class="mr-2 text-[9px] font-black tracking-[0.18em] text-cyan-300">LIVE FEED</span>${formatLatestEvent(data.latestEvent)}`;
+
+    if (!hasPrimedLatestEvent) {
+      lastEventId = eventIdFrom(data.latestEvent);
+      hasPrimedLatestEvent = true;
+      return;
+    }
+
     playImpact(data.latestEvent);
   } catch {
     // The smartboard stays usable if this optional update is unavailable.

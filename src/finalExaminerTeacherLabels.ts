@@ -1,3 +1,5 @@
+export {};
+
 const normalizedPath = window.location.pathname.replace(/^\/+|\/+$/g, "").toLowerCase();
 const isFinalExaminer = normalizedPath === "finalexaminer";
 const isTeacherConsole =
@@ -41,7 +43,8 @@ function updateChamberStoryCopy() {
     card.textContent?.includes("QUEST BOSS") && card.textContent?.includes("DEFEATED")
   ).length;
 
-  const hpFill = Array.from(chamber.querySelectorAll<HTMLElement>("div[style*='width']")).at(-1);
+  const hpFills = Array.from(chamber.querySelectorAll<HTMLElement>("div[style*='width']"));
+  const hpFill = hpFills[hpFills.length - 1];
   const hpPercent = Number.parseFloat(hpFill?.style.width || "100");
   const examinerDefeated = hpPercent <= 0;
 
