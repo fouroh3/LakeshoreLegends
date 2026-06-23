@@ -8,7 +8,6 @@ function sizeFinalExaminerBoard() {
   const raidPartiesLabel = Array.from(document.querySelectorAll<HTMLElement>("#root div")).find(
     (element) => element.textContent?.trim() === "RAID PARTIES"
   );
-
   const classColumn = raidPartiesLabel?.closest<HTMLElement>("section");
   const boardGrid = classColumn?.parentElement as HTMLElement | null;
 
@@ -26,56 +25,64 @@ function sizeFinalExaminerBoard() {
   const hpPanel = finalPanel?.lastElementChild as HTMLElement | null;
   const logo = leftColumn?.querySelector<HTMLImageElement>("img");
 
-  if (title && copyColumn && leftColumn && finalPanel && hpPanel) {
-    finalPanel.style.gridTemplateColumns = "minmax(0, 1fr) 300px";
-    finalPanel.style.columnGap = "2rem";
-    finalPanel.style.alignItems = "center";
-    finalPanel.style.minHeight = "238px";
-    finalPanel.style.flex = "0 0 auto";
+  if (!title || !copyColumn || !leftColumn || !finalPanel || !hpPanel) return;
 
-    leftColumn.style.minWidth = "0";
-    leftColumn.style.display = "flex";
-    leftColumn.style.alignItems = "center";
-    leftColumn.style.gap = "1.25rem";
-    leftColumn.style.overflow = "hidden";
+  finalPanel.style.gridTemplateColumns = "minmax(0, 1fr) 320px";
+  finalPanel.style.columnGap = "2.5rem";
+  finalPanel.style.alignItems = "center";
+  finalPanel.style.minHeight = "228px";
+  finalPanel.style.padding = "1.75rem 2rem";
 
-    copyColumn.style.minWidth = "0";
-    copyColumn.style.flex = "1 1 0%";
-    copyColumn.style.maxWidth = "100%";
-    copyColumn.style.overflow = "hidden";
-    copyColumn.style.background = "transparent";
-    copyColumn.style.boxShadow = "none";
+  leftColumn.style.minWidth = "0";
+  leftColumn.style.display = "flex";
+  leftColumn.style.alignItems = "center";
+  leftColumn.style.gap = "1.5rem";
+  leftColumn.style.overflow = "visible";
+  leftColumn.style.background = "transparent";
+  leftColumn.style.boxShadow = "none";
 
-    hpPanel.style.width = "300px";
-    hpPanel.style.minWidth = "300px";
-    hpPanel.style.maxWidth = "300px";
-    hpPanel.style.overflow = "hidden";
-    hpPanel.style.alignSelf = "center";
+  copyColumn.style.minWidth = "0";
+  copyColumn.style.flex = "1 1 0%";
+  copyColumn.style.maxWidth = "100%";
+  copyColumn.style.overflow = "visible";
+  copyColumn.style.background = "transparent";
+  copyColumn.style.boxShadow = "none";
+  copyColumn.style.filter = "none";
 
-    if (title.dataset.finalExaminerBrokenTitle !== "true") {
-      title.innerHTML = "The Final<br />Examiner";
-      title.dataset.finalExaminerBrokenTitle = "true";
-    }
+  hpPanel.style.width = "320px";
+  hpPanel.style.minWidth = "320px";
+  hpPanel.style.maxWidth = "320px";
+  hpPanel.style.padding = "1.25rem 1.5rem";
+  hpPanel.style.overflow = "hidden";
+  hpPanel.style.alignSelf = "center";
 
-    title.style.display = "block";
-    title.style.width = "100%";
-    title.style.maxWidth = "100%";
-    title.style.minWidth = "0";
-    title.style.whiteSpace = "normal";
-    title.style.overflow = "hidden";
-    title.style.overflowWrap = "normal";
-    title.style.wordBreak = "normal";
-    title.style.fontSize = "clamp(1.85rem, 2.35vw, 2.65rem)";
-    title.style.lineHeight = "0.98";
-    title.style.background = "transparent";
-    title.style.boxShadow = "none";
-    title.style.textShadow = "none";
+  if (title.dataset.finalExaminerSingleLine !== "true") {
+    title.textContent = "The Final Examiner";
+    title.dataset.finalExaminerSingleLine = "true";
+  }
 
-    if (logo) {
-      logo.style.filter = "none";
-      logo.style.boxShadow = "none";
-      logo.style.opacity = "1";
-    }
+  title.style.display = "block";
+  title.style.width = "100%";
+  title.style.maxWidth = "100%";
+  title.style.minWidth = "0";
+  title.style.whiteSpace = "nowrap";
+  title.style.overflow = "visible";
+  title.style.textOverflow = "clip";
+  title.style.fontSize = "clamp(2rem, 2.65vw, 3rem)";
+  title.style.lineHeight = "1";
+  title.style.letterSpacing = "-0.055em";
+  title.style.background = "transparent";
+  title.style.boxShadow = "none";
+  title.style.textShadow = "none";
+  title.style.filter = "none";
+
+  if (logo) {
+    logo.style.height = "96px";
+    logo.style.width = "96px";
+    logo.style.flex = "0 0 96px";
+    logo.style.filter = "none";
+    logo.style.boxShadow = "none";
+    logo.style.opacity = "1";
   }
 }
 
