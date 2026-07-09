@@ -11,9 +11,8 @@ import {
   clearBattleTeacherToken,
   endRegularBattle,
   loginBattleTeacher,
-  pauseRegularBattle,
-  resumeRegularBattle,
   setRegularBattleTurn,
+  startRegularBattle,
   syncRegularBattle,
 } from "./battleTeacherApi";
 import { useBattleControl } from "./hooks/useBattleControl";
@@ -29,6 +28,16 @@ const GUILDS = [
   "Shadows",
   "Scholars",
   "Diplomats",
+];
+
+const QUEST_OPTIONS = [
+  "The Lake of Shadows",
+  "The Alchemists Lair",
+  "The Ensnaring Crypt",
+  "The Plagueborn Woods",
+  "The Prism Tower",
+  "Hotel Of Despair",
+  "Webs Of Chance",
 ];
 
 type GuildActionMap = Record<string, string>;
@@ -239,6 +248,34 @@ export default function BattleTeacherConsole() {
   const [guildActionsMap, setGuildActionsMap] = useState<GuildActionMap>({});
   const [notice, setNotice] = useState<Notice>(null);
   const [busyAction, setBusyAction] = useState("");
+
+  const homeroomOptions = useMemo(() => {
+    const set = new Set<string>();
+    for (const row of battleRows) {
+      const homeroom = String((row as any).homeroom || "").trim();
+      if (homeroom) set.add(homeroom);
+    }
+    return Array.from(set).sort((a, b) =>
+      a.localeCompare(b, "en", { numeric: true })
+    );
+  }, [battleRows]);
+
+  const [setupHomeroom, setSetupHomeroom] = useState("");
+  const [setupPairTo, setSetupPairTo] = useState("");
+  const [setupQuest, setSetupQuest] = useState(QUEST_OPTIONS[0]);
+  const [setupTurn, setSetupTurn] = useState<"BOSS" | "GUILD">("GUILD");
+
+  useEffect(() => {
+    if (!setupHomeroom && homeroomOptions.length) {
+      setSetupHomeroom(homeroomOptions[0]);
+    }
+  }, [homeroomOptions, setupHomeroom]);
+
+  useEffect(() => {
+    if (setupPairTo && setupPairTo === setupHomeroom) {
+      setSetupPairTo("");
+    }
+  }, [setupHomeroom, setupPairTo]);
 
   const activeRows = useMemo(() => {
     return battleRows.filter(
@@ -551,14 +588,109 @@ export default function BattleTeacherConsole() {
               subtitle={
                 primaryBattle
                   ? `${selectedOption?.label || "Active battle"} · setup minimized`
-                  : "Start/setup controls will live here next."
+                  : "Choose quest/class and start a battle."
               }
               defaultOpen={!primaryBattle}
             >
-              <div className="rounded-2xl border border-amber-300/20 bg-amber-950/15 p-4 text-sm leading-6 text-zinc-300">
-                Safe setup controls go here next: choose quest, choose
-                class/double class, confirm guilds, and start battle through
-                Apps Script instead of direct sheet editing.
+              <div className="grid gap-3">
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <label className="block">
+                    <div className="mb-1 text-[9px] font-black uppercase tracking-[0.2em] text-zinc-500">
+                      Class
+                    </div>
+                    <select
+                      value={setupHomeroom}
+                      onChange={(event) => setSetupHomeroom(event.target.value)}
+                      className="w-full rounded-xl border border-zinc-800/70 bg-black/45 px-3 py-2 text-sm font-bold text-zinc-100 outline-none focus:border-cyan-300/50"
+                    >
+                      {homeroomOptions.map((hr) => (
+                        <option key={hr} value={hr}>
+                          {hr}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label className="block">
+                    <div className="mb-1 text-[9px] font-black uppercase tracking-[0.2em] text-zinc-500">
+                      Pair With
+                    </div>
+                    <select
+                      value={setupPairTo}
+                      onChange={(event) => setSetupPairTo(event.target.value)}
+                      className="w-full rounded-xl border border-zinc-800/70 bg-black/45 px-3 py-2 text-sm font-bold text-zinc-100 outline-none focus:border-cyan-300/50"
+                    >
+                      <option value="">Single Class</option>
+                      {homeroomOptions
+                        .filter((hr) => hr !== setupHomeroom)
+                        .map((hr) => (
+                          <option key={hr} value={hr}>
+                            {hr}
+                          </option>
+                        ))}
+                    </select>
+                  </label>
+                </div>
+
+                <label className="block">
+                  <div className="mb-1 text-[9px] font-black uppercase tracking-[0.2em] text-zinc-500">
+                    Quest
+                  </div>
+                  <select
+                    value={setupQuest}
+                    onChange={(event) => setSetupQuest(event.target.value)}
+                    className="w-full rounded-xl border border-zinc-800/70 bg-black/45 px-3 py-2 text-sm font-bold text-zinc-100 outline-none focus:border-cyan-300/50"
+                  >
+                    {QUEST_OPTIONS.map((quest) => (
+                      <option key={quest} value={quest}>
+                        {quest}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <div className="grid gap-2 sm:grid-cols-[1fr_auto] sm:items-end">
+                  <label className="block">
+                    <div className="mb-1 text-[9px] font-black uppercase tracking-[0.2em] text-zinc-500">
+                      Starting Turn
+                    </div>
+                    <select
+                      value={setupTurn}
+                      onChange={(event) =>
+                        setSetupTurn(event.target.value as "BOSS" | "GUILD")
+                      }
+                      className="w-full rounded-xl border border-zinc-800/70 bg-black/45 px-3 py-2 text-sm font-bold text-zinc-100 outline-none focus:border-cyan-300/50"
+                    >
+                      <option value="GUILD">Guild Turn</option>
+                      <option value="BOSS">Boss Turn</option>
+                    </select>
+                  </label>
+
+                  <button
+                    type="button"
+                    disabled={!setupHomeroom || !setupQuest || isActionBusy}
+                    onClick={() => {
+                      const label = setupPairTo
+                        ? `${setupHomeroom} + ${setupPairTo}`
+                        : setupHomeroom;
+                      const ok = window.confirm(
+                        `Start ${setupQuest} for ${label}? This will update Battle_Control.`
+                      );
+                      if (!ok) return;
+                      void runTeacherAction("Start Battle", () =>
+                        startRegularBattle({
+                          homeroom: setupHomeroom,
+                          pairTo: setupPairTo,
+                          quest: setupQuest,
+                          turn: setupTurn,
+                        })
+                      );
+                    }}
+                    className="rounded-xl border border-emerald-300/25 bg-emerald-400/10 px-5 py-2 text-xs font-black text-emerald-100 transition hover:border-emerald-200/60 disabled:cursor-not-allowed disabled:border-zinc-800 disabled:bg-black/30 disabled:text-zinc-500 disabled:opacity-70"
+                  >
+                    {busyAction === "Start Battle" ? "Starting…" : "Start Battle"}
+                  </button>
+                </div>
               </div>
             </CompactSection>
 
@@ -685,7 +817,7 @@ export default function BattleTeacherConsole() {
 
                 <button
                   type="button"
-                  disabled={!hasBattle || isActionBusy}
+                  disabled={isActionBusy}
                   onClick={() =>
                     void runTeacherAction("Sync Battle", () => syncRegularBattle())
                   }
@@ -698,7 +830,7 @@ export default function BattleTeacherConsole() {
 
             <CompactSection
               title="Emergency Tools"
-              subtitle="Manual corrections and reset tools."
+              subtitle="Only use these when something needs manual correction."
               defaultOpen={false}
             >
               <div className="grid gap-2 sm:grid-cols-2">
@@ -706,26 +838,16 @@ export default function BattleTeacherConsole() {
                   type="button"
                   disabled={!hasBattle || isActionBusy}
                   onClick={() =>
-                    void runTeacherAction("Pause Battle", () =>
-                      pauseRegularBattle(selectedSessionKey)
+                    void runTeacherAction("Force Advance", () =>
+                      advanceRegularBattle({
+                        sessionId: selectedSessionKey,
+                        turn: "GUILD",
+                      })
                     )
                   }
-                  className="rounded-xl border border-amber-300/25 bg-amber-400/10 px-3 py-2 text-xs font-black text-amber-100 transition hover:border-amber-200/60 disabled:cursor-not-allowed disabled:border-zinc-800 disabled:bg-black/30 disabled:text-zinc-500 disabled:opacity-70"
+                  className="rounded-xl border border-zinc-700 bg-black/30 px-3 py-2 text-xs font-black text-zinc-300 transition hover:border-zinc-500 disabled:cursor-not-allowed disabled:text-zinc-500 disabled:opacity-70"
                 >
-                  Pause Battle
-                </button>
-
-                <button
-                  type="button"
-                  disabled={!hasBattle || isActionBusy}
-                  onClick={() =>
-                    void runTeacherAction("Resume Battle", () =>
-                      resumeRegularBattle(selectedSessionKey)
-                    )
-                  }
-                  className="rounded-xl border border-emerald-300/25 bg-emerald-400/10 px-3 py-2 text-xs font-black text-emerald-100 transition hover:border-emerald-200/60 disabled:cursor-not-allowed disabled:border-zinc-800 disabled:bg-black/30 disabled:text-zinc-500 disabled:opacity-70"
-                >
-                  Resume Battle
+                  Force Advance
                 </button>
 
                 <button
@@ -743,22 +865,6 @@ export default function BattleTeacherConsole() {
                   className="rounded-xl border border-red-300/25 bg-red-500/10 px-3 py-2 text-xs font-black text-red-100 transition hover:border-red-200/60 disabled:cursor-not-allowed disabled:border-zinc-800 disabled:bg-black/30 disabled:text-zinc-500 disabled:opacity-70"
                 >
                   End Battle
-                </button>
-
-                <button
-                  type="button"
-                  disabled={!hasBattle || isActionBusy}
-                  onClick={() =>
-                    void runTeacherAction("Force Advance", () =>
-                      advanceRegularBattle({
-                        sessionId: selectedSessionKey,
-                        turn: "GUILD",
-                      })
-                    )
-                  }
-                  className="rounded-xl border border-zinc-700 bg-black/30 px-3 py-2 text-xs font-black text-zinc-300 transition hover:border-zinc-500 disabled:cursor-not-allowed disabled:text-zinc-500 disabled:opacity-70"
-                >
-                  Force Advance
                 </button>
 
                 <button
