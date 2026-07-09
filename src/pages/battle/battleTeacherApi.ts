@@ -83,6 +83,7 @@ export async function startRegularBattle(args: {
   pairTo?: string;
   quest: string;
   turn?: "BOSS" | "GUILD";
+  bossHP?: number | string;
 }) {
   return postTeacherAction("battleteacherstart", {
     teacherToken: getBattleTeacherToken(),
@@ -90,6 +91,7 @@ export async function startRegularBattle(args: {
     pairTo: args.pairTo || "",
     quest: args.quest,
     turn: args.turn || "GUILD",
+    bossHP: args.bossHP || "",
   });
 }
 
