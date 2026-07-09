@@ -607,7 +607,6 @@ export default function BattleTeacherConsole() {
                 <div className="grid gap-2 sm:grid-cols-2">
                   <button type="button" disabled={!hasBattle || isActionBusy} onClick={() => void runTeacherAction("Force Advance", () => advanceRegularBattle({ sessionId: selectedSessionKey, turn: "GUILD" }))} className="rounded-xl border border-zinc-700 bg-black/30 px-3 py-2 text-xs font-black text-zinc-300 disabled:cursor-not-allowed disabled:text-zinc-500">Force Advance</button>
                   <button type="button" disabled={!hasBattle || isActionBusy} onClick={() => { if (window.confirm("End this battle and clear it from Battle_Control?")) void runTeacherAction("End Battle", () => endRegularBattle(selectedSessionKey)); }} className="rounded-xl border border-red-300/25 bg-red-500/10 px-3 py-2 text-xs font-black text-red-100 disabled:cursor-not-allowed disabled:border-zinc-800 disabled:bg-black/30 disabled:text-zinc-500">End Battle</button>
-                  <button type="button" disabled className="rounded-xl border border-zinc-800 bg-black/30 px-3 py-2 text-xs font-black text-zinc-500 opacity-70">Edit Guild HP</button>
                 </div>
               </div>
             </MiniSection>
