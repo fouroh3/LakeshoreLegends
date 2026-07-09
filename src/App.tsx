@@ -12,6 +12,7 @@ import type { Student } from "./types";
 import "./index.css";
 import { fetchHpMap } from "./hpApi";
 import BossDisplayPage from "./pages/battle/BossDisplayPage";
+import BattleTeacherConsole from "./pages/battle/BattleTeacherConsole";
 
 function normId(id: string | undefined | null) {
   return String(id ?? "")
@@ -22,7 +23,13 @@ function normId(id: string | undefined | null) {
     .toUpperCase();
 }
 
-type ViewMode = "" | "store" | "battle" | "cards" | "boss-display";
+type ViewMode =
+  | ""
+  | "store"
+  | "battle"
+  | "battle-teacher"
+  | "cards"
+  | "boss-display";
 
 export default function App() {
   const view = useMemo<ViewMode>(() => {
@@ -32,6 +39,7 @@ export default function App() {
 
     if (path === "store") return "store";
     if (path === "battle") return "battle";
+    if (path === "battle/teacher") return "battle-teacher";
     if (path === "cards") return "cards";
     if (path === "bossdisplay") return "boss-display";
 
@@ -41,6 +49,11 @@ export default function App() {
   useEffect(() => {
     if (view === "battle") {
       document.title = "Battle Mode";
+      return;
+    }
+
+    if (view === "battle-teacher") {
+      document.title = "Battle Teacher Console";
       return;
     }
 
@@ -67,6 +80,7 @@ export default function App() {
       "": "/",
       store: "/store",
       battle: "/battle",
+      "battle-teacher": "/battle/teacher",
       cards: "/cards",
       "boss-display": "/bossdisplay",
     };
@@ -349,6 +363,10 @@ export default function App() {
 
   if (view === "battle") {
     return <BattlePage onBack={() => goToView("")} />;
+  }
+
+  if (view === "battle-teacher") {
+    return <BattleTeacherConsole />;
   }
 
   if (view === "boss-display") {
