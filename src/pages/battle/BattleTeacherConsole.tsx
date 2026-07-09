@@ -6,12 +6,21 @@ import { collection, onSnapshot, query } from "firebase/firestore";
 import AppTopBar from "../../components/AppTopBar";
 import { db } from "../../firebase";
 import { getBossMeta } from "./battleBossMeta";
+import {
+  advanceRegularBattle,
+  clearBattleTeacherToken,
+  endRegularBattle,
+  loginBattleTeacher,
+  pauseRegularBattle,
+  resumeRegularBattle,
+  setRegularBattleTurn,
+  syncRegularBattle,
+} from "./battleTeacherApi";
 import { useBattleControl } from "./hooks/useBattleControl";
 import { useBossState } from "./hooks/useBossState";
 import { usePageActive } from "./hooks/usePageActive";
 
 const TEACHER_UNLOCK_KEY = "ll:battleTeacherUnlocked";
-const TEACHER_PASSCODE = "legends";
 
 const GUILDS = [
   "Scouts",
@@ -23,6 +32,7 @@ const GUILDS = [
 ];
 
 type GuildActionMap = Record<string, string>;
+type Notice = { type: "ok" | "err"; msg: string } | null;
 
 function getRowSessionKey(row: any) {
   return (
@@ -38,8 +48,14 @@ function percent(current: number, max: number) {
 }
 
 function hpBarClass(pct: number) {
-  if (pct <= 20) return "bg-red-500 shadow-[0_0_22px_rgba(239,68,68,0.45)]";
-  if (pct <= 60) return "bg-amber-400 shadow-[0_0_18px_rgba(251,191,36,0.32)]";
+  if (pct <= 20) {
+    return "bg-red-500 shadow-[0_0_22px_rgba(239,68,68,0.45)]";
+  }
+
+  if (pct <= 60) {
+    return "bg-amber-400 shadow-[0_0_18px_rgba(251,191,36,0.32)]";
+  }
+
   return "bg-emerald-400 shadow-[0_0_18px_rgba(74,222,128,0.28)]";
 }
 
@@ -104,6 +120,7 @@ function CompactSection({
           <div className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-300/75">
             {title}
           </div>
+
           {subtitle ? (
             <div className="mt-0.5 truncate text-xs text-zinc-400">
               {subtitle}
@@ -116,7 +133,9 @@ function CompactSection({
         </div>
       </button>
 
-      {open ? <div className="border-t border-zinc-800/70 p-4">{children}</div> : null}
+      {open ? (
+        <div className="border-t border-zinc-800/70 p-4">{children}</div>
+      ) : null}
     </section>
   );
 }
@@ -124,16 +143,29 @@ function CompactSection({
 function PasscodeGate({ onUnlock }: { onUnlock: () => void }) {
   const [value, setValue] = useState("");
   const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
 
-  function submit() {
-    if (value.trim() === TEACHER_PASSCODE) {
-      localStorage.setItem(TEACHER_UNLOCK_KEY, "1");
-      setError("");
-      onUnlock();
+  async function submit() {
+    if (busy) return;
+
+    const passcode = value.trim();
+    if (!passcode) {
+      setError("Enter the teacher passcode.");
       return;
     }
 
-    setError("Incorrect passcode.");
+    setBusy(true);
+    setError("");
+
+    try {
+      await loginBattleTeacher(passcode);
+      localStorage.setItem(TEACHER_UNLOCK_KEY, "1");
+      onUnlock();
+    } catch (caught: any) {
+      setError(caught?.message || "Teacher login failed.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
@@ -167,7 +199,7 @@ function PasscodeGate({ onUnlock }: { onUnlock: () => void }) {
                 setError("");
               }}
               onKeyDown={(event) => {
-                if (event.key === "Enter") submit();
+                if (event.key === "Enter") void submit();
               }}
               type="password"
               autoFocus
@@ -177,10 +209,11 @@ function PasscodeGate({ onUnlock }: { onUnlock: () => void }) {
 
             <button
               type="button"
-              onClick={submit}
-              className="rounded-2xl border border-cyan-200/35 bg-cyan-400/15 px-6 py-3 text-sm font-black text-cyan-50 transition hover:border-cyan-100/70 hover:bg-cyan-400/20"
+              disabled={busy}
+              onClick={() => void submit()}
+              className="rounded-2xl border border-cyan-200/35 bg-cyan-400/15 px-6 py-3 text-sm font-black text-cyan-50 transition hover:border-cyan-100/70 hover:bg-cyan-400/20 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Unlock Console
+              {busy ? "Unlocking…" : "Unlock Console"}
             </button>
           </div>
 
@@ -197,13 +230,15 @@ function PasscodeGate({ onUnlock }: { onUnlock: () => void }) {
 
 export default function BattleTeacherConsole() {
   const pageActive = usePageActive();
-  const { battleRows } = useBattleControl(pageActive, true);
+  const { battleRows, refreshOnce } = useBattleControl(pageActive, true);
 
   const [unlocked, setUnlocked] = useState(
     () => localStorage.getItem(TEACHER_UNLOCK_KEY) === "1"
   );
   const [selectedSessionKey, setSelectedSessionKey] = useState("");
   const [guildActionsMap, setGuildActionsMap] = useState<GuildActionMap>({});
+  const [notice, setNotice] = useState<Notice>(null);
+  const [busyAction, setBusyAction] = useState("");
 
   const activeRows = useMemo(() => {
     return battleRows.filter(
@@ -261,6 +296,12 @@ export default function BattleTeacherConsole() {
       setSelectedSessionKey(battleOptions[0].sessionKey);
     }
   }, [battleOptions, selectedSessionKey]);
+
+  useEffect(() => {
+    if (!notice) return;
+    const timer = window.setTimeout(() => setNotice(null), 4500);
+    return () => window.clearTimeout(timer);
+  }, [notice]);
 
   const selectedOption =
     battleOptions.find((option) => option.sessionKey === selectedSessionKey) ||
@@ -330,6 +371,26 @@ export default function BattleTeacherConsole() {
     ? percent(submittedCount, totalGuildSlots)
     : 0;
 
+  const hasBattle = Boolean(selectedSessionKey && primaryBattle);
+  const isActionBusy = Boolean(busyAction);
+
+  async function runTeacherAction(label: string, fn: () => Promise<any>) {
+    if (busyAction) return;
+
+    setBusyAction(label);
+    setNotice(null);
+
+    try {
+      await fn();
+      await refreshOnce();
+      setNotice({ type: "ok", msg: `${label} complete.` });
+    } catch (caught: any) {
+      setNotice({ type: "err", msg: caught?.message || `${label} failed.` });
+    } finally {
+      setBusyAction("");
+    }
+  }
+
   if (!unlocked) {
     return <PasscodeGate onUnlock={() => setUnlocked(true)} />;
   }
@@ -375,6 +436,7 @@ export default function BattleTeacherConsole() {
                 type="button"
                 onClick={() => {
                   localStorage.removeItem(TEACHER_UNLOCK_KEY);
+                  clearBattleTeacherToken();
                   setUnlocked(false);
                 }}
                 className="rounded-xl border border-zinc-700 bg-black/30 px-4 py-2 text-sm font-bold text-zinc-300 transition hover:border-zinc-500"
@@ -384,6 +446,19 @@ export default function BattleTeacherConsole() {
             </div>
           </div>
         </section>
+
+        {notice ? (
+          <div
+            className={[
+              "mt-3 rounded-xl border px-4 py-2 text-sm font-bold",
+              notice.type === "ok"
+                ? "border-emerald-400/25 bg-emerald-950/30 text-emerald-100"
+                : "border-red-400/25 bg-red-950/30 text-red-100",
+            ].join(" ")}
+          >
+            {notice.msg}
+          </div>
+        ) : null}
 
         <section className="mt-3 grid gap-3 xl:grid-cols-[1.1fr_0.9fr]">
           <div className="rounded-[18px] border border-rose-300/15 bg-[linear-gradient(145deg,rgba(36,8,18,0.62),rgba(9,10,18,0.98))] p-4 shadow-[0_14px_34px_rgba(0,0,0,0.22)]">
@@ -427,7 +502,10 @@ export default function BattleTeacherConsole() {
 
                 <div className="mt-3 overflow-hidden rounded-full border border-zinc-700 bg-black/45 p-1">
                   <div
-                    className={["h-4 rounded-full transition-all duration-700", hpBarClass(bossPct)].join(" ")}
+                    className={[
+                      "h-4 rounded-full transition-all duration-700",
+                      hpBarClass(bossPct),
+                    ].join(" ")}
                     style={{ width: `${bossPct}%` }}
                   />
                 </div>
@@ -536,9 +614,15 @@ export default function BattleTeacherConsole() {
                     ["Class", selectedOption?.label || primaryBattle.homeroom],
                     ["Round", primaryBattle.round || 1],
                     ["Turn", String(primaryBattle.turn || "BOSS").toUpperCase()],
-                    ["Guild Attacks", String(primaryBattle.guildAttacks || "CLOSED").toUpperCase()],
+                    [
+                      "Guild Attacks",
+                      String(primaryBattle.guildAttacks || "CLOSED").toUpperCase(),
+                    ],
                   ].map(([label, value]) => (
-                    <div key={label} className="rounded-xl border border-zinc-800/70 bg-black/25 p-3">
+                    <div
+                      key={label}
+                      className="rounded-xl border border-zinc-800/70 bg-black/25 p-3"
+                    >
                       <div className="text-[9px] font-black uppercase tracking-[0.18em] text-zinc-500">
                         {label}
                       </div>
@@ -550,17 +634,65 @@ export default function BattleTeacherConsole() {
                 </div>
               )}
 
-              <div className="mt-3 grid grid-cols-3 gap-2">
-                {["Advance", "Pause", "End"].map((label) => (
-                  <button
-                    key={label}
-                    type="button"
-                    disabled
-                    className="rounded-xl border border-zinc-800 bg-black/30 px-3 py-2 text-xs font-black text-zinc-500 opacity-70"
-                  >
-                    {label}
-                  </button>
-                ))}
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  disabled={!hasBattle || isActionBusy}
+                  onClick={() =>
+                    void runTeacherAction("Advance Round", () =>
+                      advanceRegularBattle({
+                        sessionId: selectedSessionKey,
+                        turn: "GUILD",
+                      })
+                    )
+                  }
+                  className="rounded-xl border border-cyan-300/25 bg-cyan-400/10 px-3 py-2 text-xs font-black text-cyan-100 transition hover:border-cyan-200/60 disabled:cursor-not-allowed disabled:border-zinc-800 disabled:bg-black/30 disabled:text-zinc-500 disabled:opacity-70"
+                >
+                  {busyAction === "Advance Round" ? "Advancing…" : "Advance Round"}
+                </button>
+
+                <button
+                  type="button"
+                  disabled={!hasBattle || isActionBusy}
+                  onClick={() =>
+                    void runTeacherAction("Boss Turn", () =>
+                      setRegularBattleTurn({
+                        sessionId: selectedSessionKey,
+                        turn: "BOSS",
+                      })
+                    )
+                  }
+                  className="rounded-xl border border-amber-300/25 bg-amber-400/10 px-3 py-2 text-xs font-black text-amber-100 transition hover:border-amber-200/60 disabled:cursor-not-allowed disabled:border-zinc-800 disabled:bg-black/30 disabled:text-zinc-500 disabled:opacity-70"
+                >
+                  Boss Turn
+                </button>
+
+                <button
+                  type="button"
+                  disabled={!hasBattle || isActionBusy}
+                  onClick={() =>
+                    void runTeacherAction("Guild Turn", () =>
+                      setRegularBattleTurn({
+                        sessionId: selectedSessionKey,
+                        turn: "GUILD",
+                      })
+                    )
+                  }
+                  className="rounded-xl border border-emerald-300/25 bg-emerald-400/10 px-3 py-2 text-xs font-black text-emerald-100 transition hover:border-emerald-200/60 disabled:cursor-not-allowed disabled:border-zinc-800 disabled:bg-black/30 disabled:text-zinc-500 disabled:opacity-70"
+                >
+                  Guild Turn
+                </button>
+
+                <button
+                  type="button"
+                  disabled={!hasBattle || isActionBusy}
+                  onClick={() =>
+                    void runTeacherAction("Sync Battle", () => syncRegularBattle())
+                  }
+                  className="rounded-xl border border-violet-300/25 bg-violet-400/10 px-3 py-2 text-xs font-black text-violet-100 transition hover:border-violet-200/60 disabled:cursor-not-allowed disabled:border-zinc-800 disabled:bg-black/30 disabled:text-zinc-500 disabled:opacity-70"
+                >
+                  Sync Battle
+                </button>
               </div>
             </section>
 
@@ -570,23 +702,80 @@ export default function BattleTeacherConsole() {
               defaultOpen={false}
             >
               <div className="grid gap-2 sm:grid-cols-2">
-                {[
-                  "Force Advance",
-                  "Clear Round",
-                  "Unlock Round",
-                  "Sync Battle",
-                  "Edit Boss HP",
-                  "Edit Guild HP",
-                ].map((label) => (
-                  <button
-                    key={label}
-                    type="button"
-                    disabled
-                    className="rounded-xl border border-zinc-800 bg-black/30 px-3 py-2 text-xs font-black text-zinc-500 opacity-70"
-                  >
-                    {label}
-                  </button>
-                ))}
+                <button
+                  type="button"
+                  disabled={!hasBattle || isActionBusy}
+                  onClick={() =>
+                    void runTeacherAction("Pause Battle", () =>
+                      pauseRegularBattle(selectedSessionKey)
+                    )
+                  }
+                  className="rounded-xl border border-amber-300/25 bg-amber-400/10 px-3 py-2 text-xs font-black text-amber-100 transition hover:border-amber-200/60 disabled:cursor-not-allowed disabled:border-zinc-800 disabled:bg-black/30 disabled:text-zinc-500 disabled:opacity-70"
+                >
+                  Pause Battle
+                </button>
+
+                <button
+                  type="button"
+                  disabled={!hasBattle || isActionBusy}
+                  onClick={() =>
+                    void runTeacherAction("Resume Battle", () =>
+                      resumeRegularBattle(selectedSessionKey)
+                    )
+                  }
+                  className="rounded-xl border border-emerald-300/25 bg-emerald-400/10 px-3 py-2 text-xs font-black text-emerald-100 transition hover:border-emerald-200/60 disabled:cursor-not-allowed disabled:border-zinc-800 disabled:bg-black/30 disabled:text-zinc-500 disabled:opacity-70"
+                >
+                  Resume Battle
+                </button>
+
+                <button
+                  type="button"
+                  disabled={!hasBattle || isActionBusy}
+                  onClick={() => {
+                    const ok = window.confirm(
+                      "End this battle and clear it from Battle_Control?"
+                    );
+                    if (!ok) return;
+                    void runTeacherAction("End Battle", () =>
+                      endRegularBattle(selectedSessionKey)
+                    );
+                  }}
+                  className="rounded-xl border border-red-300/25 bg-red-500/10 px-3 py-2 text-xs font-black text-red-100 transition hover:border-red-200/60 disabled:cursor-not-allowed disabled:border-zinc-800 disabled:bg-black/30 disabled:text-zinc-500 disabled:opacity-70"
+                >
+                  End Battle
+                </button>
+
+                <button
+                  type="button"
+                  disabled={!hasBattle || isActionBusy}
+                  onClick={() =>
+                    void runTeacherAction("Force Advance", () =>
+                      advanceRegularBattle({
+                        sessionId: selectedSessionKey,
+                        turn: "GUILD",
+                      })
+                    )
+                  }
+                  className="rounded-xl border border-zinc-700 bg-black/30 px-3 py-2 text-xs font-black text-zinc-300 transition hover:border-zinc-500 disabled:cursor-not-allowed disabled:text-zinc-500 disabled:opacity-70"
+                >
+                  Force Advance
+                </button>
+
+                <button
+                  type="button"
+                  disabled
+                  className="rounded-xl border border-zinc-800 bg-black/30 px-3 py-2 text-xs font-black text-zinc-500 opacity-70"
+                >
+                  Edit Boss HP
+                </button>
+
+                <button
+                  type="button"
+                  disabled
+                  className="rounded-xl border border-zinc-800 bg-black/30 px-3 py-2 text-xs font-black text-zinc-500 opacity-70"
+                >
+                  Edit Guild HP
+                </button>
               </div>
             </CompactSection>
           </div>
@@ -631,7 +820,8 @@ export default function BattleTeacherConsole() {
 
                     <div className="grid gap-1.5">
                       {GUILDS.map((guild) => {
-                        const action = guildActionsMap[`${hr}_${guild}`] || "WAITING";
+                        const action =
+                          guildActionsMap[`${hr}_${guild}`] || "WAITING";
                         const display = actionDisplay(action);
 
                         return (
