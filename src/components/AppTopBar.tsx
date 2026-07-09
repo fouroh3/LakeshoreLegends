@@ -63,7 +63,6 @@ export default function AppTopBar({
             <RouteLink href="/store" active={activeView === "store"}>Store</RouteLink>
             <RouteLink href="/cards" active={activeView === "cards"}>Cards</RouteLink>
             <RouteLink href="/battle" active={activeView === "battle"}>Battle Mode</RouteLink>
-            <RouteLink href="/finalexaminer">Final Examiner</RouteLink>
 
             {shownText ? (
               <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold text-white/70">
