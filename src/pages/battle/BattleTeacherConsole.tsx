@@ -817,8 +817,8 @@ export default function BattleTeacherConsole() {
           <section className="rounded-[18px] border border-cyan-300/15 bg-[linear-gradient(145deg,rgba(8,28,38,0.58),rgba(9,10,18,0.98))] p-4">
             <div className="flex items-end justify-between gap-3">
               <div>
-                <div className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-300/75">Guild Submission Status</div>
-                <div className="mt-0.5 text-xl font-black tracking-[-0.03em] text-white">Waiting Room</div>
+                <div className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-300/75">Guild Action Status</div>
+                <div className="mt-0.5 text-xl font-black tracking-[-0.03em] text-white">Submitted This Round</div>
               </div>
               <div className="rounded-full border border-cyan-300/20 bg-cyan-400/10 px-3 py-1 text-xs font-black text-cyan-100">{submittedCount} / {totalGuildSlots || 0}</div>
             </div>
