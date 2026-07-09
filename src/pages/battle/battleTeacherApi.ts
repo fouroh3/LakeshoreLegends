@@ -6,6 +6,7 @@ export const BATTLE_TEACHER_TOKEN_KEY = "ll:battleTeacherToken";
 
 type BattleTeacherAction =
   | "battleteacherlogin"
+  | "battleteacherstart"
   | "battleteacheradvance"
   | "battleteachersetturn"
   | "battleteacherpause"
@@ -38,16 +39,19 @@ async function postTeacherAction(
   action: BattleTeacherAction,
   body: Record<string, any>
 ): Promise<BattleTeacherResponse> {
-  const res = await fetch(`${HP_API_URL}?action=${encodeURIComponent(action)}&_=${Date.now()}`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "text/plain;charset=utf-8",
-    },
-    body: JSON.stringify({
-      action,
-      ...body,
-    }),
-  });
+  const res = await fetch(
+    `${HP_API_URL}?action=${encodeURIComponent(action)}&_=${Date.now()}`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "text/plain;charset=utf-8",
+      },
+      body: JSON.stringify({
+        action,
+        ...body,
+      }),
+    }
+  );
 
   const text = await res.text();
   let data: BattleTeacherResponse | null = null;
@@ -72,6 +76,21 @@ async function postTeacherAction(
 
 export async function loginBattleTeacher(passcode: string) {
   return postTeacherAction("battleteacherlogin", { passcode });
+}
+
+export async function startRegularBattle(args: {
+  homeroom: string;
+  pairTo?: string;
+  quest: string;
+  turn?: "BOSS" | "GUILD";
+}) {
+  return postTeacherAction("battleteacherstart", {
+    teacherToken: getBattleTeacherToken(),
+    homeroom: args.homeroom,
+    pairTo: args.pairTo || "",
+    quest: args.quest,
+    turn: args.turn || "GUILD",
+  });
 }
 
 export async function advanceRegularBattle(args: {
