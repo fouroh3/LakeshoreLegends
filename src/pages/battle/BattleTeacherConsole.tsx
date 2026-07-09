@@ -5,7 +5,9 @@ import { collection, onSnapshot, query } from "firebase/firestore";
 
 import AppTopBar from "../../components/AppTopBar";
 import { submitBossDelta } from "../../bossApi";
+import { loadStudents } from "../../data";
 import { db } from "../../firebase";
+import { fetchHpMap, submitHpDelta } from "../../hpApi";
 import { getBossMeta } from "./battleBossMeta";
 import {
   advanceRegularBattle,
@@ -34,6 +36,7 @@ const QUEST_OPTIONS = [
 
 type Notice = { type: "ok" | "err"; msg: string } | null;
 type GuildActionMap = Record<string, string>;
+type HpMap = Map<string, { baseHP: number; currentHP: number }>;
 
 type BattleOption = {
   sessionKey: string;
@@ -56,6 +59,21 @@ function toPositiveInt(value: string | number) {
   return Number.isFinite(n) && n > 0 ? n : 0;
 }
 
+function toNonNegativeInt(value: string | number) {
+  const text = String(value ?? "").trim();
+  if (!text) return -1;
+  const n = Math.round(Number(text));
+  return Number.isFinite(n) && n >= 0 ? n : -1;
+}
+
+function normStudentId(value: any) {
+  return String(value ?? "")
+    .replace(/[–—]/g, "-")
+    .replace(/\s+/g, "")
+    .trim()
+    .toUpperCase();
+}
+
 function pct(current: number, max: number) {
   if (!max) return 0;
   return Math.max(0, Math.min(100, (current / max) * 100));
@@ -76,6 +94,13 @@ function actionStyle(raw: string) {
     return { label: "ATTACK", icon: "⚔️", className: "border-red-400/25 bg-red-500/10 text-red-200" };
   }
   return { label: "WAITING", icon: "⌛", className: "border-zinc-800/70 bg-black/30 text-zinc-500" };
+}
+
+function studentLabel(student: any) {
+  const first = String(student?.first || "").trim();
+  const last = String(student?.last || "").trim();
+  const name = [first, last].filter(Boolean).join(" ").trim();
+  return name || String(student?.id || "Unnamed Legend");
 }
 
 function go(next: string) {
@@ -215,6 +240,10 @@ export default function BattleTeacherConsole() {
   const [setupTurn, setSetupTurn] = useState<"BOSS" | "GUILD">("GUILD");
   const [setupBossHP, setSetupBossHP] = useState("2000");
   const [bossHpOverride, setBossHpOverride] = useState("");
+  const [students, setStudents] = useState<any[]>([]);
+  const [hpByStudent, setHpByStudent] = useState<HpMap>(new Map());
+  const [selectedStudentId, setSelectedStudentId] = useState("");
+  const [studentHpOverride, setStudentHpOverride] = useState("");
 
   const homeroomOptions = useMemo(() => {
     const set = new Set<string>();
@@ -232,6 +261,37 @@ export default function BattleTeacherConsole() {
   useEffect(() => {
     if (setupPairTo === setupHomeroom) setSetupPairTo("");
   }, [setupHomeroom, setupPairTo]);
+
+  useEffect(() => {
+    if (!unlocked) return;
+    let cancelled = false;
+
+    async function loadTeacherData() {
+      try {
+        const [nextStudents, nextHp] = await Promise.all([
+          loadStudents(),
+          fetchHpMap(),
+        ]);
+
+        if (!cancelled) {
+          setStudents(nextStudents);
+          setHpByStudent(nextHp);
+        }
+      } catch (caught: any) {
+        if (!cancelled) {
+          setNotice({
+            type: "err",
+            msg: caught?.message || "Failed to load student HP data.",
+          });
+        }
+      }
+    }
+
+    void loadTeacherData();
+    return () => {
+      cancelled = true;
+    };
+  }, [unlocked]);
 
   const activeRows = useMemo(() => {
     return battleRows.filter((row: any) => String(row?.status || "").toUpperCase() === "ACTIVE");
@@ -283,6 +343,48 @@ export default function BattleTeacherConsole() {
   const selectedOption = battleOptions.find((option) => option.sessionKey === selectedSessionKey) || battleOptions[0] || null;
   const primaryBattle = selectedOption?.leader || null;
 
+  const studentOptions = useMemo(() => {
+    const activeHomerooms = new Set(selectedOption?.homerooms || []);
+    return students
+      .filter((student) => activeHomerooms.has(String(student?.homeroom || "").trim()))
+      .sort((a, b) => {
+        const last = String(a?.last || "").localeCompare(String(b?.last || ""));
+        return last !== 0 ? last : String(a?.first || "").localeCompare(String(b?.first || ""));
+      });
+  }, [selectedOption?.homerooms, students]);
+
+  const selectedStudent = useMemo(() => {
+    const wantedId = normStudentId(selectedStudentId);
+    return studentOptions.find((student) => normStudentId(student?.id) === wantedId) || null;
+  }, [selectedStudentId, studentOptions]);
+
+  const selectedStudentHp = selectedStudent
+    ? hpByStudent.get(normStudentId(selectedStudent.id)) || null
+    : null;
+
+  useEffect(() => {
+    if (!studentOptions.length) {
+      setSelectedStudentId("");
+      return;
+    }
+
+    const exists = studentOptions.some(
+      (student) => normStudentId(student?.id) === normStudentId(selectedStudentId)
+    );
+
+    if (!selectedStudentId || !exists) {
+      setSelectedStudentId(String(studentOptions[0]?.id || ""));
+    }
+  }, [selectedStudentId, studentOptions]);
+
+  useEffect(() => {
+    if (selectedStudentHp) {
+      setStudentHpOverride(String(Math.round(selectedStudentHp.currentHP)));
+    } else {
+      setStudentHpOverride("");
+    }
+  }, [selectedStudentId, selectedStudentHp?.currentHP]);
+
   useEffect(() => {
     if (!selectedSessionKey || !primaryBattle?.round) {
       setGuildActionsMap({});
@@ -331,6 +433,12 @@ export default function BattleTeacherConsole() {
       setBossHpOverride("");
     }
   }, [boss?.bossInstanceId, currentHP]);
+
+  async function refreshStudentHp() {
+    const nextHp = await fetchHpMap();
+    setHpByStudent(nextHp);
+    return nextHp;
+  }
 
   async function runTeacherAction(label: string, fn: () => Promise<any>) {
     if (busyAction) return null;
@@ -409,6 +517,47 @@ export default function BattleTeacherConsole() {
         actionType: delta > 0 ? "TEACHER_HEAL" : "TEACHER_DAMAGE",
       })
     );
+  }
+
+  async function handleApplyStudentHpOverride() {
+    if (!selectedStudent || !selectedStudentHp || !selectedSessionKey) return;
+
+    const targetHP = toNonNegativeInt(studentHpOverride);
+    if (targetHP < 0) {
+      setNotice({ type: "err", msg: "Enter a valid student HP value." });
+      return;
+    }
+
+    if (targetHP > selectedStudentHp.baseHP) {
+      setNotice({
+        type: "err",
+        msg: `Student HP cannot be higher than ${selectedStudentHp.baseHP}.`,
+      });
+      return;
+    }
+
+    const before = Math.round(selectedStudentHp.currentHP);
+    const delta = targetHP - before;
+
+    if (delta === 0) {
+      setNotice({ type: "ok", msg: "Student HP is already set to that value." });
+      return;
+    }
+
+    const label = studentLabel(selectedStudent);
+    const ok = window.confirm(`Set ${label}'s HP from ${before} to ${targetHP}?`);
+    if (!ok) return;
+
+    await runTeacherAction("Set Student HP", async () => {
+      await submitHpDelta({
+        studentId: selectedStudent.id,
+        sessionId: selectedSessionKey,
+        delta,
+        note: `Teacher override: set HP to ${targetHP}`,
+        requestId: `teacher-student-hp-${normStudentId(selectedStudent.id)}-${Date.now()}`,
+      });
+      await refreshStudentHp();
+    });
   }
 
   if (!unlocked) return <PasscodeGate onUnlock={() => setUnlocked(true)} />;
@@ -602,6 +751,59 @@ export default function BattleTeacherConsole() {
                     </button>
                   </div>
                   <div className="mt-2 text-[11px] text-zinc-400">Use this to weaken or boost the selected boss mid-battle.</div>
+                </div>
+
+                <div className="rounded-2xl border border-emerald-300/15 bg-emerald-500/[0.06] p-3">
+                  <div className="mb-1 text-[9px] font-black uppercase tracking-[0.2em] text-emerald-200/80">Set Student HP</div>
+
+                  <div className="grid gap-2">
+                    {studentOptions.length ? (
+                      <select
+                        value={selectedStudentId}
+                        onChange={(event) => setSelectedStudentId(event.target.value)}
+                        disabled={!hasBattle || isActionBusy}
+                        className="w-full rounded-xl border border-zinc-800/70 bg-black/45 px-3 py-2 text-sm font-bold text-zinc-100 outline-none focus:border-emerald-300/50 disabled:opacity-50"
+                      >
+                        {studentOptions.map((student) => {
+                          const id = normStudentId(student?.id);
+                          const hp = hpByStudent.get(id);
+                          const hpLabel = hp ? ` · ${hp.currentHP}/${hp.baseHP}` : "";
+
+                          return (
+                            <option key={id} value={student.id}>
+                              {student.homeroom} · {studentLabel(student)}{hpLabel}
+                            </option>
+                          );
+                        })}
+                      </select>
+                    ) : (
+                      <div className="rounded-xl border border-zinc-800/70 bg-black/25 px-3 py-2 text-sm font-bold text-zinc-500">No students loaded for this battle.</div>
+                    )}
+
+                    <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
+                      <input
+                        value={studentHpOverride}
+                        onChange={(event) => setStudentHpOverride(event.target.value.replace(/[^0-9]/g, ""))}
+                        inputMode="numeric"
+                        disabled={!hasBattle || !selectedStudent || !selectedStudentHp || isActionBusy}
+                        className="w-full rounded-xl border border-zinc-800/70 bg-black/45 px-3 py-2 text-sm font-bold text-zinc-100 outline-none focus:border-emerald-300/50 disabled:opacity-50"
+                      />
+                      <button
+                        type="button"
+                        disabled={!hasBattle || !selectedStudent || !selectedStudentHp || isActionBusy}
+                        onClick={() => void handleApplyStudentHpOverride()}
+                        className="rounded-xl border border-emerald-300/25 bg-emerald-500/10 px-4 py-2 text-xs font-black text-emerald-100 disabled:cursor-not-allowed disabled:border-zinc-800 disabled:bg-black/30 disabled:text-zinc-500"
+                      >
+                        Apply HP
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="mt-2 text-[11px] text-zinc-400">
+                    {selectedStudent && selectedStudentHp
+                      ? `${studentLabel(selectedStudent)} is currently ${selectedStudentHp.currentHP}/${selectedStudentHp.baseHP} HP.`
+                      : "Choose a student from the selected battle, then set their current HP."}
+                  </div>
                 </div>
 
                 <div className="grid gap-2 sm:grid-cols-2">
