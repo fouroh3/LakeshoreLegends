@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { collection, onSnapshot, query } from "firebase/firestore";
 
 import AppTopBar from "../../components/AppTopBar";
+import { submitBossDelta } from "../../bossApi";
 import { db } from "../../firebase";
 import { getBossMeta } from "./battleBossMeta";
 import {
@@ -48,6 +49,11 @@ function getRowSessionKey(row: any) {
     String(row?.sessionId || "").trim() ||
     String(row?.bossInstanceId || "").trim()
   );
+}
+
+function toPositiveInt(value: string | number) {
+  const n = Math.round(Number(value));
+  return Number.isFinite(n) && n > 0 ? n : 0;
 }
 
 function pct(current: number, max: number) {
@@ -207,6 +213,8 @@ export default function BattleTeacherConsole() {
   const [setupPairTo, setSetupPairTo] = useState("");
   const [setupQuest, setSetupQuest] = useState(QUEST_OPTIONS[0]);
   const [setupTurn, setSetupTurn] = useState<"BOSS" | "GUILD">("GUILD");
+  const [setupBossHP, setSetupBossHP] = useState("2000");
+  const [bossHpOverride, setBossHpOverride] = useState("");
 
   const homeroomOptions = useMemo(() => {
     const set = new Set<string>();
@@ -316,6 +324,14 @@ export default function BattleTeacherConsole() {
   const hasBattle = Boolean(selectedSessionKey && primaryBattle);
   const isActionBusy = Boolean(busyAction);
 
+  useEffect(() => {
+    if (boss?.bossInstanceId) {
+      setBossHpOverride(String(Math.round(currentHP)));
+    } else {
+      setBossHpOverride("");
+    }
+  }, [boss?.bossInstanceId, currentHP]);
+
   async function runTeacherAction(label: string, fn: () => Promise<any>) {
     if (busyAction) return null;
     setBusyAction(label);
@@ -335,8 +351,14 @@ export default function BattleTeacherConsole() {
 
   async function handleStartBattle() {
     if (!setupHomeroom || !setupQuest || isActionBusy) return;
+    const startingHp = toPositiveInt(setupBossHP);
+    if (!startingHp) {
+      setNotice({ type: "err", msg: "Enter a valid starting boss HP." });
+      return;
+    }
+
     const label = setupPairTo ? `${setupHomeroom} + ${setupPairTo}` : setupHomeroom;
-    const ok = window.confirm(`Start ${setupQuest} for ${label}? This will update Battle_Control.`);
+    const ok = window.confirm(`Start ${setupQuest} for ${label} with ${startingHp} boss HP?`);
     if (!ok) return;
 
     const result = await runTeacherAction("Start Battle", () =>
@@ -345,6 +367,7 @@ export default function BattleTeacherConsole() {
         pairTo: setupPairTo,
         quest: setupQuest,
         turn: setupTurn,
+        bossHP: startingHp,
       })
     );
 
@@ -354,6 +377,38 @@ export default function BattleTeacherConsole() {
       setSelectedSessionKey(newSessionKey);
       setNotice({ type: "ok", msg: `Started ${setupQuest} for ${label}. Now controlling ${label}.` });
     }
+  }
+
+  async function handleApplyBossHpOverride() {
+    if (!bossKey || !bossInstanceId) return;
+    const targetHP = toPositiveInt(bossHpOverride);
+    if (!targetHP) {
+      setNotice({ type: "err", msg: "Enter a valid boss HP value." });
+      return;
+    }
+
+    const delta = targetHP - currentHP;
+    if (delta === 0) {
+      setNotice({ type: "ok", msg: "Boss HP is already set to that value." });
+      return;
+    }
+
+    const ok = window.confirm(`Set current boss HP from ${currentHP} to ${targetHP}?`);
+    if (!ok) return;
+
+    await runTeacherAction("Set Boss HP", () =>
+      submitBossDelta({
+        bossKey,
+        bossInstanceId,
+        delta,
+        source: "teacher-console",
+        requestId: `teacher-hp-${bossInstanceId}-${Date.now()}`,
+        round: Number(primaryBattle?.round || 1),
+        homeroom: selectedOption?.label || "teacher",
+        guild: "Teacher",
+        actionType: delta > 0 ? "TEACHER_HEAL" : "TEACHER_DAMAGE",
+      })
+    );
   }
 
   if (!unlocked) return <PasscodeGate onUnlock={() => setUnlocked(true)} />;
@@ -454,7 +509,7 @@ export default function BattleTeacherConsole() {
                     {QUEST_OPTIONS.map((quest) => <option key={quest} value={quest}>{quest}</option>)}
                   </select>
                 </label>
-                <div className="grid gap-2 sm:grid-cols-[1fr_auto] sm:items-end">
+                <div className="grid gap-2 sm:grid-cols-2">
                   <label>
                     <div className="mb-1 text-[9px] font-black uppercase tracking-[0.2em] text-zinc-500">Starting Turn</div>
                     <select value={setupTurn} onChange={(event) => setSetupTurn(event.target.value as "BOSS" | "GUILD")} className="w-full rounded-xl border border-zinc-800/70 bg-black/45 px-3 py-2 text-sm font-bold text-zinc-100">
@@ -462,10 +517,19 @@ export default function BattleTeacherConsole() {
                       <option value="BOSS">Boss Turn</option>
                     </select>
                   </label>
-                  <button type="button" disabled={!setupHomeroom || !setupQuest || isActionBusy} onClick={() => void handleStartBattle()} className="rounded-xl border border-emerald-300/25 bg-emerald-400/10 px-5 py-2 text-xs font-black text-emerald-100 disabled:cursor-not-allowed disabled:border-zinc-800 disabled:bg-black/30 disabled:text-zinc-500">
-                    {busyAction === "Start Battle" ? "Starting…" : "Start Battle"}
-                  </button>
+                  <label>
+                    <div className="mb-1 text-[9px] font-black uppercase tracking-[0.2em] text-zinc-500">Starting Boss HP</div>
+                    <input
+                      value={setupBossHP}
+                      onChange={(event) => setSetupBossHP(event.target.value.replace(/[^0-9]/g, ""))}
+                      inputMode="numeric"
+                      className="w-full rounded-xl border border-zinc-800/70 bg-black/45 px-3 py-2 text-sm font-bold text-zinc-100 outline-none focus:border-cyan-300/50"
+                    />
+                  </label>
                 </div>
+                <button type="button" disabled={!setupHomeroom || !setupQuest || !setupBossHP || isActionBusy} onClick={() => void handleStartBattle()} className="rounded-xl border border-emerald-300/25 bg-emerald-400/10 px-5 py-2 text-xs font-black text-emerald-100 disabled:cursor-not-allowed disabled:border-zinc-800 disabled:bg-black/30 disabled:text-zinc-500">
+                  {busyAction === "Start Battle" ? "Starting…" : "Start Battle"}
+                </button>
               </div>
             </MiniSection>
 
@@ -517,11 +581,34 @@ export default function BattleTeacherConsole() {
             </section>
 
             <MiniSection title="Emergency Tools" subtitle="Only use these when something needs manual correction." defaultOpen={false}>
-              <div className="grid gap-2 sm:grid-cols-2">
-                <button type="button" disabled={!hasBattle || isActionBusy} onClick={() => void runTeacherAction("Force Advance", () => advanceRegularBattle({ sessionId: selectedSessionKey, turn: "GUILD" }))} className="rounded-xl border border-zinc-700 bg-black/30 px-3 py-2 text-xs font-black text-zinc-300 disabled:cursor-not-allowed disabled:text-zinc-500">Force Advance</button>
-                <button type="button" disabled={!hasBattle || isActionBusy} onClick={() => { if (window.confirm("End this battle and clear it from Battle_Control?")) void runTeacherAction("End Battle", () => endRegularBattle(selectedSessionKey)); }} className="rounded-xl border border-red-300/25 bg-red-500/10 px-3 py-2 text-xs font-black text-red-100 disabled:cursor-not-allowed disabled:border-zinc-800 disabled:bg-black/30 disabled:text-zinc-500">End Battle</button>
-                <button type="button" disabled className="rounded-xl border border-zinc-800 bg-black/30 px-3 py-2 text-xs font-black text-zinc-500 opacity-70">Edit Boss HP</button>
-                <button type="button" disabled className="rounded-xl border border-zinc-800 bg-black/30 px-3 py-2 text-xs font-black text-zinc-500 opacity-70">Edit Guild HP</button>
+              <div className="grid gap-3">
+                <div className="rounded-2xl border border-rose-300/15 bg-rose-500/[0.06] p-3">
+                  <div className="mb-1 text-[9px] font-black uppercase tracking-[0.2em] text-rose-200/80">Set Current Boss HP</div>
+                  <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
+                    <input
+                      value={bossHpOverride}
+                      onChange={(event) => setBossHpOverride(event.target.value.replace(/[^0-9]/g, ""))}
+                      inputMode="numeric"
+                      disabled={!hasBattle || !bossInstanceId || isActionBusy}
+                      className="w-full rounded-xl border border-zinc-800/70 bg-black/45 px-3 py-2 text-sm font-bold text-zinc-100 outline-none focus:border-rose-300/50 disabled:opacity-50"
+                    />
+                    <button
+                      type="button"
+                      disabled={!hasBattle || !bossInstanceId || isActionBusy}
+                      onClick={() => void handleApplyBossHpOverride()}
+                      className="rounded-xl border border-rose-300/25 bg-rose-500/10 px-4 py-2 text-xs font-black text-rose-100 disabled:cursor-not-allowed disabled:border-zinc-800 disabled:bg-black/30 disabled:text-zinc-500"
+                    >
+                      Apply HP
+                    </button>
+                  </div>
+                  <div className="mt-2 text-[11px] text-zinc-400">Use this to weaken or boost the selected boss mid-battle.</div>
+                </div>
+
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <button type="button" disabled={!hasBattle || isActionBusy} onClick={() => void runTeacherAction("Force Advance", () => advanceRegularBattle({ sessionId: selectedSessionKey, turn: "GUILD" }))} className="rounded-xl border border-zinc-700 bg-black/30 px-3 py-2 text-xs font-black text-zinc-300 disabled:cursor-not-allowed disabled:text-zinc-500">Force Advance</button>
+                  <button type="button" disabled={!hasBattle || isActionBusy} onClick={() => { if (window.confirm("End this battle and clear it from Battle_Control?")) void runTeacherAction("End Battle", () => endRegularBattle(selectedSessionKey)); }} className="rounded-xl border border-red-300/25 bg-red-500/10 px-3 py-2 text-xs font-black text-red-100 disabled:cursor-not-allowed disabled:border-zinc-800 disabled:bg-black/30 disabled:text-zinc-500">End Battle</button>
+                  <button type="button" disabled className="rounded-xl border border-zinc-800 bg-black/30 px-3 py-2 text-xs font-black text-zinc-500 opacity-70">Edit Guild HP</button>
+                </div>
               </div>
             </MiniSection>
           </div>
