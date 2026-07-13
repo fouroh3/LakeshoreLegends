@@ -38,7 +38,7 @@ export default function StatBar({
     (density === "ultra" ? "h-2" : density === "compact" ? "h-2.5" : "h-3");
 
   return (
-    <div className="w-full">
+    <div className="ll-stat-bar w-full">
       <div className="mb-1 flex items-center justify-between">
         <span className="flex items-center gap-1 text-[11px] text-zinc-400">
           {icon}
@@ -49,12 +49,12 @@ export default function StatBar({
         </span>
       </div>
 
-      <div className="rounded-full border border-zinc-800 bg-zinc-950/80 p-[2px] shadow-[inset_0_0_8px_rgba(0,0,0,0.55)]">
+      <div className="ll-stat-bar-shell rounded-full border border-zinc-800 bg-zinc-950/80 p-[2px] shadow-[inset_0_0_8px_rgba(0,0,0,0.55)]">
         <div
-          className={`w-full overflow-hidden rounded-full bg-zinc-900/70 ${trackHeight}`}
+          className={`ll-stat-bar-track w-full overflow-hidden rounded-full bg-zinc-900/70 ${trackHeight}`}
         >
           <div
-            className={`rounded-full transition-[width] duration-300 ${trackHeight}`}
+            className={`ll-stat-bar-fill rounded-full transition-[width] duration-300 ${trackHeight}`}
             style={{
               width: `${Math.round(pct * 100)}%`,
               background: statFillColor(pct),
