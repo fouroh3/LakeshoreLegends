@@ -23,13 +23,15 @@ type Props = {
 };
 
 const chip =
-  "rounded-xl border border-zinc-800/70 bg-zinc-950/25 px-3 py-2 text-sm text-zinc-100";
+  "rounded-full border border-cyan-300/15 bg-cyan-400/[0.06] px-3 py-1.5 text-xs font-black text-cyan-100";
 const select =
-  "rounded-xl bg-black/40 border border-zinc-800/70 px-3 py-2 text-sm text-white outline-none focus:border-white/25";
+  "rounded-xl border border-cyan-300/20 bg-black/45 px-3 py-2 text-sm font-bold text-white outline-none focus:border-cyan-300/55";
 const btn =
-  "rounded-xl px-3 py-2 text-sm font-semibold border transition disabled:opacity-50 disabled:cursor-not-allowed";
-const btnSoft = "border-zinc-800/70 bg-zinc-950/25 hover:bg-zinc-950/35";
-const btnCyan = "border-cyan-300/40 bg-cyan-500/15 hover:bg-cyan-500/20";
+  "rounded-xl border px-3 py-2 text-sm font-black transition disabled:cursor-not-allowed disabled:opacity-50";
+const btnSoft =
+  "border-zinc-800/70 bg-black/25 text-zinc-300 hover:border-white/15 hover:bg-white/[0.06]";
+const btnCyan =
+  "border-cyan-300/35 bg-cyan-400/12 text-cyan-50 shadow-[0_0_18px_rgba(34,211,238,0.08)]";
 
 export default function BattleTopControls({
   isTeacher,
@@ -45,11 +47,10 @@ export default function BattleTopControls({
   clearSelection,
 }: Props) {
   return (
-    <div className="rounded-2xl border border-zinc-900/60 bg-zinc-950/15 p-2">
+    <section className="rounded-[22px] border border-cyan-300/15 bg-[linear-gradient(135deg,rgba(8,28,38,0.68),rgba(10,10,16,0.96))] p-3 shadow-[0_14px_38px_rgba(0,0,0,0.28)]">
       <div className="flex flex-wrap items-center gap-2">
-        {/* Homeroom */}
-        <div className="flex items-center gap-2">
-          <div className="text-[10px] uppercase tracking-widest text-zinc-500">
+        <div className="flex items-center gap-2 rounded-2xl border border-zinc-800/70 bg-black/20 px-3 py-2">
+          <div className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-300/70">
             Homeroom
           </div>
           <select
@@ -69,9 +70,8 @@ export default function BattleTopControls({
           </select>
         </div>
 
-        {/* Guild */}
-        <div className="flex items-center gap-2">
-          <div className="text-[10px] uppercase tracking-widest text-zinc-500">
+        <div className="flex items-center gap-2 rounded-2xl border border-zinc-800/70 bg-black/20 px-3 py-2">
+          <div className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-300/70">
             Guild
           </div>
           <select
@@ -92,7 +92,7 @@ export default function BattleTopControls({
 
         <div className={chip}>
           Selected{" "}
-          <span className="tabular-nums font-semibold text-white">
+          <span className="tabular-nums text-white">
             {selectedCount}
           </span>
         </div>
@@ -116,11 +116,11 @@ export default function BattleTopControls({
         </button>
 
         {isTeacher && (
-          <span className="text-[10px] uppercase tracking-widest text-zinc-500 border border-zinc-800/70 bg-zinc-950/25 rounded-xl px-2 py-2">
+          <span className="rounded-full border border-amber-300/25 bg-amber-400/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.18em] text-amber-100">
             Teacher
           </span>
         )}
       </div>
-    </div>
+    </section>
   );
 }
