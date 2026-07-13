@@ -13,11 +13,8 @@ type Props = {
   className?: string;
 };
 
-function statFillColor(pct: number) {
-  if (pct <= 0.2) return "linear-gradient(90deg, #0ea5e9 0%, #06b6d4 100%)";
-  if (pct <= 0.5) return "linear-gradient(90deg, #06b6d4 0%, #22d3ee 100%)";
-  if (pct <= 0.8) return "linear-gradient(90deg, #22c55e 0%, #84cc16 100%)";
-  return "linear-gradient(90deg, #84cc16 0%, #eab308 100%)";
+function statFillColor() {
+  return "linear-gradient(90deg, #0891b2 0%, #22d3ee 52%, #67e8f9 100%)";
 }
 
 export default function StatBar({
@@ -49,7 +46,7 @@ export default function StatBar({
         </span>
       </div>
 
-      <div className="ll-stat-bar-shell rounded-full border border-zinc-800 bg-zinc-950/80 p-[2px] shadow-[inset_0_0_8px_rgba(0,0,0,0.55)]">
+      <div className="ll-stat-bar-shell rounded-full border border-cyan-300/20 bg-zinc-950/80 p-[2px] shadow-[inset_0_0_8px_rgba(0,0,0,0.55)]">
         <div
           className={`ll-stat-bar-track w-full overflow-hidden rounded-full bg-zinc-900/70 ${trackHeight}`}
         >
@@ -57,7 +54,7 @@ export default function StatBar({
             className={`ll-stat-bar-fill rounded-full transition-[width] duration-300 ${trackHeight}`}
             style={{
               width: `${Math.round(pct * 100)}%`,
-              background: statFillColor(pct),
+              background: statFillColor(),
             }}
           />
         </div>
