@@ -8,25 +8,25 @@ import { Eye } from "lucide-react";
 
 const guildGlowMap: Record<string, string> = {
   Scouts:
-    "shadow-[0_0_8px_rgba(34,211,238,0.15)] hover:shadow-[0_0_14px_rgba(34,211,238,0.35)]",
+    "shadow-[0_0_0_1px_rgba(34,211,238,0.08),0_14px_28px_rgba(0,0,0,0.28)] hover:shadow-[0_0_0_1px_rgba(34,211,238,0.16),0_18px_34px_rgba(0,0,0,0.34)]",
   Guardians:
-    "shadow-[0_0_8px_rgba(34,197,94,0.15)] hover:shadow-[0_0_14px_rgba(34,197,94,0.35)]",
+    "shadow-[0_0_0_1px_rgba(34,197,94,0.08),0_14px_28px_rgba(0,0,0,0.28)] hover:shadow-[0_0_0_1px_rgba(34,197,94,0.16),0_18px_34px_rgba(0,0,0,0.34)]",
   Blades:
-    "shadow-[0_0_8px_rgba(239,68,68,0.15)] hover:shadow-[0_0_14px_rgba(239,68,68,0.35)]",
+    "shadow-[0_0_0_1px_rgba(239,68,68,0.08),0_14px_28px_rgba(0,0,0,0.28)] hover:shadow-[0_0_0_1px_rgba(239,68,68,0.16),0_18px_34px_rgba(0,0,0,0.34)]",
   Shadows:
-    "shadow-[0_0_8px_rgba(168,85,247,0.15)] hover:shadow-[0_0_14px_rgba(168,85,247,0.35)]",
+    "shadow-[0_0_0_1px_rgba(168,85,247,0.08),0_14px_28px_rgba(0,0,0,0.28)] hover:shadow-[0_0_0_1px_rgba(168,85,247,0.16),0_18px_34px_rgba(0,0,0,0.34)]",
   Scholars:
-    "shadow-[0_0_8px_rgba(234,179,8,0.15)] hover:shadow-[0_0_14px_rgba(234,179,8,0.35)]",
+    "shadow-[0_0_0_1px_rgba(234,179,8,0.08),0_14px_28px_rgba(0,0,0,0.28)] hover:shadow-[0_0_0_1px_rgba(234,179,8,0.16),0_18px_34px_rgba(0,0,0,0.34)]",
   Diplomats:
-    "shadow-[0_0_8px_rgba(59,130,246,0.15)] hover:shadow-[0_0_14px_rgba(59,130,246,0.35)]",
+    "shadow-[0_0_0_1px_rgba(59,130,246,0.08),0_14px_28px_rgba(0,0,0,0.28)] hover:shadow-[0_0_0_1px_rgba(59,130,246,0.16),0_18px_34px_rgba(0,0,0,0.34)]",
 };
 
 const tileBase =
-  "relative text-left rounded-2xl transition p-3 h-full flex flex-col overflow-hidden bg-zinc-950/25 shadow-[0_10px_40px_rgb(0,0,0,0.45)]";
-const tileHover = "hover:border hover:border-zinc-800/70 hover:bg-zinc-950/30";
+  "relative flex h-full flex-col overflow-hidden rounded-[20px] border p-3 text-left transition bg-[linear-gradient(145deg,rgba(18,24,34,0.72),rgba(7,9,15,0.96))]";
+const tileHover = "hover:-translate-y-[2px] hover:border-cyan-300/18 hover:bg-zinc-950/45";
 const tileSelected =
-  "ring-2 ring-cyan-300/35 bg-cyan-400/5 border border-cyan-300/70";
-const tileUnselected = "border border-transparent";
+  "border-cyan-300/70 bg-cyan-400/[0.07] ring-2 ring-cyan-300/35";
+const tileUnselected = "border-zinc-800/70";
 
 function StatPill({
   label,
@@ -40,10 +40,10 @@ function StatPill({
   return (
     <div
       className={[
-        "flex items-center justify-between rounded-lg px-2 py-1 border",
+        "flex items-center justify-between rounded-lg border px-2 py-1",
         muted
           ? "border-zinc-900 bg-zinc-950/15"
-          : "border-zinc-800/70 bg-zinc-950/30",
+          : "border-zinc-800/70 bg-black/20",
       ].join(" ")}
     >
       <span
@@ -56,7 +56,7 @@ function StatPill({
       </span>
       <span
         className={[
-          "text-[11px] leading-none font-semibold tabular-nums",
+          "text-[11px] font-semibold leading-none tabular-nums",
           muted ? "text-zinc-600" : "text-zinc-100",
         ].join(" ")}
       >
@@ -68,27 +68,28 @@ function StatPill({
 
 function TileSkills({ student, muted }: { student: Student; muted?: boolean }) {
   const skills = useMemo(() => {
-  const baseSkills = skillsToArray(student.skills);
+    const baseSkills = skillsToArray(student.skills);
 
-  const hasCompanion = !!String(student.companionUrl || "").trim();
-  const companionStatus = String(student.companionStatus || "")
-    .trim()
-    .toLowerCase();
+    const hasCompanion = !!String(student.companionUrl || "").trim();
+    const companionStatus = String(student.companionStatus || "")
+      .trim()
+      .toLowerCase();
 
-  const companionIsActive = hasCompanion && companionStatus === "active";
+    const companionIsActive = hasCompanion && companionStatus === "active";
 
-  return [
-    ...baseSkills,
-    ...(companionIsActive ? ["Companion Bond"] : []),
-  ];
-}, [student.skills, student.companionUrl, student.companionStatus]);
+    return [
+      ...baseSkills,
+      ...(companionIsActive ? ["Companion Bond"] : []),
+    ];
+  }, [student.skills, student.companionUrl, student.companionStatus]);
+
   if (skills.length === 0) return null;
 
   const top = skills.slice(0, 5);
   const extra = skills.length - top.length;
 
   return (
-    <div className="mt-2 flex flex-wrap gap-1.5 min-h-[42px]">
+    <div className="mt-2 flex min-h-[42px] flex-wrap gap-1.5">
       {top.map((sk) => (
         <span
           key={sk}
@@ -145,7 +146,7 @@ function BattleStudentCardInner({
   const guild = (student as any).guild ?? "";
   const glow =
     guildGlowMap[guild] ??
-    "shadow-[0_0_8px_rgba(34,211,238,0.15)] hover:shadow-[0_0_14px_rgba(34,211,238,0.35)]";
+    "shadow-[0_0_0_1px_rgba(34,211,238,0.08),0_14px_28px_rgba(0,0,0,0.28)] hover:shadow-[0_0_0_1px_rgba(34,211,238,0.16),0_18px_34px_rgba(0,0,0,0.34)]";
 
   const barColor = hpBarColorFromPct(pct);
   const lowHpPulse = !isDead && pct > 0 && pct <= 0.25;
@@ -162,14 +163,14 @@ function BattleStudentCardInner({
         glow,
       ].join(" ")}
     >
-      <div className="pointer-events-none absolute inset-0 z-0 rounded-2xl">
-        <div className="absolute -inset-10 opacity-70 bg-[radial-gradient(60%_60%_at_20%_10%,rgba(255,255,255,0.10),rgba(0,0,0,0)_60%)]" />
-        <div className="absolute inset-0 opacity-90 bg-gradient-to-br from-zinc-900/35 via-zinc-950/10 to-black/0 rounded-2xl" />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-transparent rounded-2xl" />
+      <div className="pointer-events-none absolute inset-0 z-0 rounded-[20px]">
+        <div className="absolute inset-x-0 top-0 h-20 bg-[linear-gradient(180deg,rgba(34,211,238,0.08),transparent)]" />
+        <div className="absolute -inset-10 bg-[radial-gradient(60%_60%_at_20%_10%,rgba(255,255,255,0.10),rgba(0,0,0,0)_60%)] opacity-60" />
+        <div className="absolute inset-0 rounded-[20px] bg-gradient-to-t from-black/30 via-transparent to-transparent" />
       </div>
 
       {isDead && (
-        <div className="pointer-events-none absolute inset-0 z-50 rounded-2xl bg-zinc-950/60 flex flex-col items-center justify-center">
+        <div className="pointer-events-none absolute inset-0 z-50 flex flex-col items-center justify-center rounded-[20px] bg-zinc-950/65">
           <div className="text-4xl leading-none">💀</div>
           <div className="mt-1 text-base font-extrabold tracking-widest text-zinc-100">
             DEAD
@@ -179,13 +180,13 @@ function BattleStudentCardInner({
 
       <div className="relative z-10 flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
-          <div className="text-[12px] leading-[14px] font-semibold text-zinc-100 truncate">
+          <div className="truncate text-[12px] font-semibold leading-[14px] text-zinc-100">
             {fullName(student)}
           </div>
 
           <div
             className={[
-              "mt-0.5 text-[10px] leading-[12px] truncate",
+              "mt-0.5 truncate text-[10px] leading-[12px]",
               muted ? "text-zinc-700" : "text-zinc-400",
             ].join(" ")}
           >
@@ -193,18 +194,14 @@ function BattleStudentCardInner({
           </div>
         </div>
 
-        <div className="flex items-center gap-1.5 shrink-0">
+        <div className="flex shrink-0 items-center gap-1.5">
           <button
             type="button"
             onClick={(e) => {
               e.stopPropagation();
               onOpenProfile(student);
             }}
-            className={[
-              "flex h-5 w-5 items-center justify-center rounded-full border border-zinc-800/70 bg-zinc-950/70 text-zinc-400 transition active:scale-[0.97]",
-              glow,
-              "hover:border-cyan-300/40 hover:bg-cyan-500/[0.10] hover:text-cyan-200",
-            ].join(" ")}
+            className="flex h-5 w-5 items-center justify-center rounded-full border border-zinc-800/70 bg-zinc-950/70 text-zinc-400 transition hover:border-cyan-300/40 hover:bg-cyan-500/[0.10] hover:text-cyan-200 active:scale-[0.97]"
             title="Open character profile"
             aria-label="Open character profile"
           >
@@ -212,7 +209,7 @@ function BattleStudentCardInner({
           </button>
 
           <span
-            className={`px-2 py-0.5 rounded-full text-[10px] leading-[12px] shrink-0 ${status.pillClass}`}
+            className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] leading-[12px] ${status.pillClass}`}
           >
             {status.label}
           </span>
@@ -222,7 +219,7 @@ function BattleStudentCardInner({
       <div className="relative z-10 mt-1.5">
         <div
           className={[
-            "flex items-center justify-between text-[10px] mb-1",
+            "mb-1 flex items-center justify-between text-[10px]",
             muted ? "text-zinc-700" : "text-zinc-500",
           ].join(" ")}
         >
@@ -237,7 +234,7 @@ function BattleStudentCardInner({
           </span>
         </div>
 
-        <div className="h-2 w-full rounded-full bg-zinc-900/70 border border-zinc-800/65 overflow-hidden">
+        <div className="h-2 w-full overflow-hidden rounded-full border border-zinc-800/65 bg-zinc-900/70">
           <div
             className={[
               "h-full transition-[width] duration-300",
