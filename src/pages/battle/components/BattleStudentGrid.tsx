@@ -36,16 +36,21 @@ export default function BattleStudentGrid({
   }, [students]);
 
   return (
-    <div className="min-h-0 overflow-auto px-1">
-      <div className="flex items-center gap-2 mb-2 px-1 h-[22px]">
-        <div className="text-[10px] uppercase tracking-widest text-zinc-500 truncate">
-          Students ({activeHomeroom || "—"}) ·{" "}
-          {guildFilter === "ALL" ? "All guilds" : `Guild: ${guildFilter}`}
+    <section className="min-h-0 overflow-auto rounded-[22px] border border-zinc-800/70 bg-zinc-950/35 p-3 shadow-[0_14px_34px_rgba(0,0,0,0.22)]">
+      <div className="mb-3 flex items-center gap-3">
+        <div className="min-w-0">
+          <div className="text-[10px] font-black uppercase tracking-[0.22em] text-cyan-300/75">
+            Student Roster
+          </div>
+          <div className="mt-0.5 truncate text-sm font-black text-white">
+            {activeHomeroom || "—"} · {guildFilter === "ALL" ? "All guilds" : guildFilter}
+          </div>
         </div>
         <div className="flex-1" />
+        <div className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[11px] font-black text-zinc-300">
+          {visible.length} shown
+        </div>
       </div>
-
-      <div className="mb-2 border-t border-zinc-900/60" />
 
       <div className="grid auto-rows-fr grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-4">
         {visible.map((s) => {
@@ -65,6 +70,6 @@ export default function BattleStudentGrid({
           );
         })}
       </div>
-    </div>
+    </section>
   );
 }
