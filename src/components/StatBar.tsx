@@ -49,22 +49,15 @@ export default function StatBar({
         </span>
       </div>
 
-      {/* outer shell */}
       <div className="rounded-full border border-zinc-800 bg-zinc-950/80 p-[2px] shadow-[inset_0_0_8px_rgba(0,0,0,0.55)]">
-        {/* track */}
         <div
           className={`w-full overflow-hidden rounded-full bg-zinc-900/70 ${trackHeight}`}
         >
-          {/* fill */}
           <div
             className={`rounded-full transition-[width] duration-300 ${trackHeight}`}
             style={{
               width: `${Math.round(pct * 100)}%`,
               background: statFillColor(pct),
-              boxShadow:
-                pct > 0
-                  ? "0 0 10px rgba(34,211,238,0.18), 0 0 6px rgba(132,204,22,0.10)"
-                  : "none",
             }}
           />
         </div>
