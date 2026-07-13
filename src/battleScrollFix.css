@@ -1,0 +1,18 @@
+/* src/battleScrollFix.css */
+
+/*
+  Battle Mode uses nested full-height wrappers. After the visual refresh,
+  the outer overflow-hidden wrapper could trap the page and prevent normal
+  browser scrolling on some screens. Keep horizontal clipping, but allow
+  vertical scrolling.
+*/
+#root > div[class*="min-h-[100dvh]"][class*="overflow-hidden"][class*="bg-[#05070d]"] {
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+}
+
+#root > div[class*="min-h-[100dvh]"][class*="overflow-hidden"][class*="bg-[#05070d]"]
+  > div[class*="min-h-[100dvh]"][class*="flex"][class*="flex-col"]
+  > div[class*="overflow-auto"] {
+  overflow: visible !important;
+}
