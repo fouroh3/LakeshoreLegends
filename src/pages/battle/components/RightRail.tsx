@@ -55,27 +55,27 @@ const NO_STRIKE_BOSS_KEYS = new Set([
 ]);
 
 const card =
-  "rounded-2xl border border-zinc-900/60 bg-zinc-950/15 shadow-[0_10px_40px_rgb(0,0,0,0.35)]";
-const label = "text-[10px] uppercase tracking-widest text-zinc-500";
+  "rounded-[22px] border border-zinc-800/70 bg-zinc-950/45 shadow-[0_14px_34px_rgba(0,0,0,0.24)]";
+const label = "text-[10px] font-black uppercase tracking-[0.2em] text-cyan-300/75";
 const input =
-  "w-full rounded-xl bg-black/40 border border-zinc-800/70 px-3 py-2 text-sm text-white outline-none focus:border-white/25";
+  "w-full rounded-xl border border-zinc-800/70 bg-black/45 px-3 py-2 text-sm font-bold text-white outline-none placeholder:text-zinc-600 focus:border-cyan-300/55";
 const btn =
-  "w-full rounded-xl px-3 py-2 text-sm font-semibold border transition disabled:opacity-50 disabled:cursor-not-allowed";
-const btnPrimary = "bg-cyan-500/15 border-cyan-300/40 hover:bg-cyan-500/20";
-const btnDanger = "bg-red-500/10 border-red-400/30 hover:bg-red-500/15";
+  "w-full rounded-xl border px-3 py-2 text-sm font-black transition disabled:cursor-not-allowed disabled:opacity-50";
+const btnPrimary = "border-cyan-300/35 bg-cyan-400/12 text-cyan-50 hover:bg-cyan-400/18";
+const btnDanger = "border-red-400/30 bg-red-500/10 text-red-100 hover:bg-red-500/15";
 const pill =
-  "px-2 py-1 rounded-full text-[11px] border border-zinc-800/70 bg-zinc-950/30";
+  "rounded-full border border-zinc-800/70 bg-black/25 px-2 py-1 text-[11px] font-bold text-zinc-300";
 
 function BannerBox({ banner }: { banner: Banner }) {
   if (!banner) return null;
 
   const cls =
     banner.type === "ok"
-      ? "border-emerald-500/30 bg-emerald-950/20 text-emerald-100"
-      : "border-red-500/30 bg-red-950/20 text-red-100";
+      ? "border-emerald-400/25 bg-emerald-950/30 text-emerald-100"
+      : "border-red-400/25 bg-red-950/30 text-red-100";
 
   return (
-    <div className={`mt-2 rounded-xl border px-3 py-2 text-sm ${cls}`}>
+    <div className={`mt-2 rounded-xl border px-3 py-2 text-sm font-bold ${cls}`}>
       {banner.msg}
     </div>
   );
@@ -230,7 +230,7 @@ export default function RightRail({
 
       <div className="sticky top-0 z-20">
         <div
-          className={`${card} relative overflow-hidden p-3 backdrop-blur bg-zinc-950/60`}
+          className={`${card} relative overflow-hidden p-3 backdrop-blur bg-[linear-gradient(145deg,rgba(36,8,18,0.62),rgba(9,10,18,0.98))]`}
         >
           <div className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-amber-400/20 to-transparent" />
 
@@ -270,12 +270,12 @@ export default function RightRail({
 
             <div className="min-w-0 flex-1">
               {(bossMeta?.questName || questName) && (
-                <div className="truncate text-[11px] font-semibold uppercase tracking-[0.28em] text-amber-300/90 drop-shadow-[0_0_6px_rgba(251,191,36,0.35)]">
+                <div className="truncate text-[11px] font-black uppercase tracking-[0.24em] text-amber-300/90 drop-shadow-[0_0_6px_rgba(251,191,36,0.35)]">
                   {bossMeta?.questName || questName}
                 </div>
               )}
 
-              <div className="truncate text-lg font-extrabold tracking-wide text-zinc-100">
+              <div className="truncate text-lg font-black tracking-[-0.03em] text-zinc-100">
                 {bossMeta?.bossName || boss?.bossName || bossName || "Boss"}
               </div>
 
@@ -290,13 +290,13 @@ export default function RightRail({
 
                 {!isTeacher && !bossDefeated && (
                   <span className={pill}>
-                    Guild Attacks:{" "}
+                    Turn: {" "}
                     <span
                       className={
                         guildAttacksOpen ? "text-emerald-300" : "text-red-300"
                       }
                     >
-                      {guildAttacksOpen ? "OPEN" : "CLOSED"}
+                      {guildAttacksOpen ? "Guild" : "Boss"}
                     </span>
                   </span>
                 )}
@@ -344,7 +344,7 @@ export default function RightRail({
 
       {!isTeacher && (
         <div className={`${card} mb-2 p-3`}>
-          <div className={label}>Group Action</div>
+          <div className={label}>Guild Action</div>
 
           <div
             className={[
@@ -356,10 +356,10 @@ export default function RightRail({
               <button
                 type="button"
                 className={[
-                  "rounded-xl border px-3 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50",
+                  "rounded-xl border px-3 py-2 text-sm font-black transition disabled:cursor-not-allowed disabled:opacity-50",
                   groupAction === "ATTACK"
                     ? "border-red-400/45 bg-red-500/10 text-white"
-                    : "border-zinc-800/70 bg-zinc-950/25 hover:bg-zinc-950/35 text-zinc-300",
+                    : "border-zinc-800/70 bg-black/25 text-zinc-300 hover:bg-white/[0.06]",
                 ].join(" ")}
                 onClick={() => setGroupAction("ATTACK")}
                 disabled={guildActionLocked}
@@ -371,10 +371,10 @@ export default function RightRail({
             <button
               type="button"
               className={[
-                "rounded-xl border px-3 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50",
+                "rounded-xl border px-3 py-2 text-sm font-black transition disabled:cursor-not-allowed disabled:opacity-50",
                 !canStrikeBoss || groupAction === "HEAL"
                   ? "border-cyan-300/50 bg-cyan-500/15 text-white"
-                  : "border-zinc-800/70 bg-zinc-950/25 hover:bg-zinc-950/35 text-zinc-300",
+                  : "border-zinc-800/70 bg-black/25 text-zinc-300 hover:bg-white/[0.06]",
               ].join(" ")}
               onClick={() => setGroupAction("HEAL")}
               disabled={guildActionLocked}
@@ -415,13 +415,13 @@ export default function RightRail({
 
             <div className="mt-1 flex flex-wrap items-center gap-2">
               <span className={pill}>
-                Round:{" "}
+                Round: {" "}
                 <span className="tabular-nums text-zinc-100">
                   {activeRound || "—"}
                 </span>
               </span>
               <span className={pill}>
-                Guild:{" "}
+                Guild: {" "}
                 <span className="truncate text-zinc-100">
                   {activeGuild || "—"}
                 </span>
@@ -464,7 +464,7 @@ export default function RightRail({
           <div className="flex items-center justify-between">
             <div className={label}>Student Controls</div>
             <span className={pill}>
-              Selected:{" "}
+              Selected: {" "}
               <span className="tabular-nums text-zinc-100">
                 {selectedCount}
               </span>
@@ -472,13 +472,11 @@ export default function RightRail({
           </div>
 
           {!isTeacher && (
-            <div className="mt-2 text-xs text-zinc-400">
-              Mode:{" "}
-              {studentAttackMode
-                ? "Damage"
-                : studentHealMode
-                ? "Heal"
-                : "Mixed"}
+            <div className="mt-2 rounded-xl border border-zinc-800/70 bg-black/25 px-3 py-2 text-xs font-bold text-zinc-300">
+              Mode: {" "}
+              <span className={studentAttackMode ? "text-red-200" : "text-cyan-200"}>
+                {studentAttackMode ? "Damage" : studentHealMode ? "Heal" : "Mixed"}
+              </span>
             </div>
           )}
 
@@ -506,12 +504,12 @@ export default function RightRail({
                     key={o.v}
                     type="button"
                     className={[
-                      "rounded-xl border px-3 py-2 text-sm font-semibold transition",
+                      "rounded-xl border px-3 py-2 text-sm font-black transition",
                       active
                         ? isHeal
-                          ? "border-cyan-300/50 bg-cyan-500/15"
-                          : "border-red-400/45 bg-red-500/10"
-                        : "border-zinc-800/70 bg-zinc-950/25 hover:bg-zinc-950/35",
+                          ? "border-cyan-300/50 bg-cyan-500/15 text-cyan-50"
+                          : "border-red-400/45 bg-red-500/10 text-red-100"
+                        : "border-zinc-800/70 bg-black/25 text-zinc-300 hover:bg-white/[0.06]",
                       studentControlsDisabled
                         ? "cursor-not-allowed opacity-50"
                         : "",
