@@ -1,0 +1,13 @@
+/* Attribute point bars are not HP bars. Keep global health-bar effects off them. */
+.ll-stat-bar .ll-stat-bar-fill,
+#root main .ll-stat-bar .ll-stat-bar-fill {
+  animation: none !important;
+  filter: none !important;
+  box-shadow: none !important;
+}
+
+#root main .ll-stat-bar .ll-stat-bar-track > .ll-stat-bar-fill {
+  animation: none !important;
+  filter: none !important;
+  box-shadow: none !important;
+}
