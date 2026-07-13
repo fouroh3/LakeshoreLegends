@@ -3,6 +3,7 @@ import ReactDOM from "react-dom/client";
 import App from "./App";
 import FinalExaminerRaid from "./pages/battle/FinalExaminerRaid";
 import "./index.css";
+import "./battleScrollFix.css";
 import "./finalExaminerVictory.css";
 import "./finalExaminerCritical.css";
 import "./finalExaminerBossCards.css";
