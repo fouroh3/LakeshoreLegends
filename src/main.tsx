@@ -4,7 +4,6 @@ import App from "./App";
 import FinalExaminerRaid from "./pages/battle/FinalExaminerRaid";
 import "./index.css";
 import "./battleScrollFix.css";
-import "./statBarFix.css";
 import "./finalExaminerVictory.css";
 import "./finalExaminerCritical.css";
 import "./finalExaminerBossCards.css";
@@ -18,6 +17,7 @@ import "./finalExaminerVictoryGate";
 import "./finalExaminerIdentityScale.css";
 import "./finalExaminerSealBreakFix.css";
 import "./finalExaminerBoardLayout";
+import "./statBarFix.css";
 
 const finalExaminerPath = window.location.pathname
   .replace(/^\/+|\/+$/g, "")
