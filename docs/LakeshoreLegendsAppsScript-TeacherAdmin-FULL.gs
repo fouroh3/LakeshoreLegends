@@ -31,7 +31,7 @@
  *   overwritten by the Teacher Admin importer.
  * ========================================================= */
 
-const ADMIN_API_VERSION = "2026-09-01.1";
+const ADMIN_API_VERSION = "2026-09-01.2";
 
 const CFG = {
   // Master
@@ -2690,7 +2690,7 @@ function finalExaminerAction_(args) {
 // =========================================================
 const TEACHER_AUTH = {
   PASSCODE_PROP: "LL_TEACHER_PASSCODE",
-  TOKEN_PREFIX: "teacherToken:v1:",
+  TOKEN_PREFIX: "LL_TEACHER_TOKEN_V2_",
   TOKEN_TTL_SECONDS: 60 * 60 * 12,
 };
 
@@ -2722,22 +2722,56 @@ function teacherTokenKey_(token) {
   return `${TEACHER_AUTH.TOKEN_PREFIX}${String(token || "")}`;
 }
 
+function pruneExpiredTeacherTokens_() {
+  const props = PropertiesService.getScriptProperties();
+  const all = props.getProperties();
+  const now = Date.now();
+
+  Object.keys(all).forEach((key) => {
+    if (!key.startsWith(TEACHER_AUTH.TOKEN_PREFIX)) return;
+    const expiresAt = Number(all[key] || 0);
+    if (!Number.isFinite(expiresAt) || expiresAt <= now) {
+      props.deleteProperty(key);
+    }
+  });
+}
+
+function rememberTeacherToken_(token) {
+  const expiresAt = Date.now() + TEACHER_AUTH.TOKEN_TTL_SECONDS * 1000;
+  PropertiesService.getScriptProperties().setProperty(
+    teacherTokenKey_(token),
+    String(expiresAt)
+  );
+  return expiresAt;
+}
+
+function teacherTokenIsValid_(token) {
+  if (!token) return false;
+
+  const props = PropertiesService.getScriptProperties();
+  const key = teacherTokenKey_(token);
+  const expiresAt = Number(props.getProperty(key) || 0);
+
+  if (!Number.isFinite(expiresAt) || expiresAt <= Date.now()) {
+    if (expiresAt) props.deleteProperty(key);
+    return false;
+  }
+
+  return true;
+}
+
 function verifyTeacher_(args) {
   const token = norm_(args.teacherToken || "");
   const passcode = norm_(args.passcode || "");
 
-  if (token) {
-    const cached = CacheService.getScriptCache().get(teacherTokenKey_(token));
-    if (cached === "1") return { ok: true, token };
+  if (teacherTokenIsValid_(token)) {
+    return { ok: true, token };
   }
 
   if (passcode && teacherPasscodeMatches_(passcode)) {
+    pruneExpiredTeacherTokens_();
     const nextToken = makeTeacherToken_();
-    CacheService.getScriptCache().put(
-      teacherTokenKey_(nextToken),
-      "1",
-      TEACHER_AUTH.TOKEN_TTL_SECONDS
-    );
+    rememberTeacherToken_(nextToken);
     return { ok: true, token: nextToken };
   }
 

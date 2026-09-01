@@ -207,7 +207,21 @@ export default function AdminPage() {
     try {
       const result = await adminSystemStatus();
       setSystemStatus(result);
-    } catch {
+    } catch (err: any) {
+      const message = String(err?.message || "");
+
+      if (/teacher authorization failed/i.test(message)) {
+        clearBattleTeacherToken();
+        setSystemStatus(null);
+        setSystemStatusError(false);
+        setUnlocked(false);
+        setNotice({
+          type: "err",
+          msg: "Teacher session expired. Unlock Global Manager again.",
+        });
+        return;
+      }
+
       // Keep migration-dependent tools locked, but distinguish a failed
       // health check from a confirmed Player_State migration requirement.
       setSystemStatus(null);

@@ -2,7 +2,7 @@
 
 import { HP_API_URL } from "../battle/battleConstants";
 import { getBattleTeacherToken } from "../battle/battleTeacherApi";
-export const ADMIN_API_VERSION = "2026-09-01.1";
+export const ADMIN_API_VERSION = "2026-09-01.2";
 
 import type {
   AdminAttributeValues,
