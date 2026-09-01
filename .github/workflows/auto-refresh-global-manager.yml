@@ -95,6 +95,7 @@ jobs:
           old = '''      if (Array.isArray(result.results)) {\n        setInventories((prev) => {\n          const next = new Map(prev);\n          result.results?.forEach((row) => {\n            next.set(\n              normId(row.studentId),\n              Array.isArray(row.inventory) ? row.inventory : []\n            );\n          });\n          return next;\n        });\n      } else {\n        await loadInventories();\n      }\n\n      setSelectedIds([]);'''
           new = '''      await loadInventories();\n\n      setSelectedIds([]);'''
           s = once(s, old, new, "inventory authoritative refresh")
+          s = once(s, '      const result = await onAdjust({', '      await onAdjust({', "inventory unused result")
           p.write_text(s, encoding="utf-8")
 
           # Currency: same rule for balances.
@@ -106,6 +107,7 @@ jobs:
           if start < 0 or end < 0:
               raise RuntimeError("Missing currency optimistic update block")
           s = s[:start] + '      await loadBalances();\n\n' + s[end:]
+          s = once(s, '      const result = await onAdjust({', '      await onAdjust({', "currency unused result")
           p.write_text(s, encoding="utf-8")
 
           # Abilities: re-read the selected student after each write instead of
@@ -120,6 +122,8 @@ jobs:
           '''      applySnapshot(result);\n      setReason("");''',
           '''      await loadSnapshot(selectedId);\n      setReason("");''',
           "skill adjustment refresh")
+          s = once(s, '      const result = await onSave({', '      await onSave({', "ability unused result")
+          s = once(s, '      const result = await onAdjustSkill({', '      await onAdjustSkill({', "skill unused result")
           p.write_text(s, encoding="utf-8")
 
           # Store: save, then immediately read the live control sheet back.
