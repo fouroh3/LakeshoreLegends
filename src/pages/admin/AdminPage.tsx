@@ -680,7 +680,25 @@ export default function AdminPage() {
 
     try {
       const result = await adminUpdateAbilities(args);
-      await reloadStudents();
+      const id = normId(args.studentId);
+      setStudents((prev) =>
+        prev.map((student) =>
+          normId(student.id) === id
+            ? {
+                ...student,
+                str: result.baseAttributes.str + result.bonusAttributes.str,
+                dex: result.baseAttributes.dex + result.bonusAttributes.dex,
+                con: result.baseAttributes.con + result.bonusAttributes.con,
+                int: result.baseAttributes.int + result.bonusAttributes.int,
+                wis: result.baseAttributes.wis + result.bonusAttributes.wis,
+                cha: result.baseAttributes.cha + result.bonusAttributes.cha,
+                baseAttributes: result.baseAttributes,
+                bonusAttributes: result.bonusAttributes,
+                skills: result.rosterSkills,
+              }
+            : student
+        )
+      );
       setNotice({
         type: "ok",
         msg: "Updated attributes and roster skills. Changes were recorded in the ability audit log.",
@@ -708,7 +726,14 @@ export default function AdminPage() {
 
     try {
       const result = await adminAdjustSkill(args);
-      await reloadStudents();
+      const id = normId(args.studentId);
+      setStudents((prev) =>
+        prev.map((student) =>
+          normId(student.id) === id
+            ? { ...student, purchasedSkills: result.purchasedSkills }
+            : student
+        )
+      );
       setNotice({
         type: "ok",
         msg: `${args.mode === "GRANT" ? "Granted" : "Revoked"} ${args.skillName}.`,

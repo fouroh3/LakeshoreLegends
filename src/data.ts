@@ -452,6 +452,22 @@ function rowsToStudents(rows: string[][]): Student[] {
       int,
       wis,
       cha,
+      baseAttributes: {
+        str: baseStr,
+        dex: baseDex,
+        con: baseCon,
+        int: baseInt,
+        wis: baseWis,
+        cha: baseCha,
+      },
+      bonusAttributes: {
+        str: bonusStr,
+        dex: bonusDex,
+        con: bonusCon,
+        int: bonusInt,
+        wis: bonusWis,
+        cha: bonusCha,
+      },
 
       skills: skills.length
         ? skills

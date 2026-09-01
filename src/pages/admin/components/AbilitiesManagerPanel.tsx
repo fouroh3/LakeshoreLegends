@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { Student } from "../../../types";
 import { skillLibrary } from "../../../data/skillLibrary";
 import {
-  adminAbilitySnapshot,
+  adminPurchasedSkillsSnapshot,
   type AdminAbilitySnapshotResult,
   type AdminAbilityUpdateResult,
   type AdminSkillAdjustmentResult,
@@ -108,6 +108,7 @@ export default function AbilitiesManagerPanel({
   const [snapshot, setSnapshot] = useState<AdminAbilitySnapshotResult | null>(
     null
   );
+  const [purchasedSkillsById, setPurchasedSkillsById] = useState<Record<string, string[]>>({});
   const [baseAttributes, setBaseAttributes] =
     useState<AdminAttributeValues>(EMPTY_ATTRIBUTES);
   const [bonusAttributes, setBonusAttributes] =
@@ -115,7 +116,7 @@ export default function AbilitiesManagerPanel({
   const [rosterSkills, setRosterSkills] = useState<string[]>([]);
   const [reason, setReason] = useState("");
   const [grantSkill, setGrantSkill] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [skillsLoading, setSkillsLoading] = useState(false);
   const [error, setError] = useState("");
 
   const homerooms = useMemo(() => {
@@ -165,30 +166,77 @@ export default function AbilitiesManagerPanel({
     setGrantSkill("");
   };
 
-  const loadSnapshot = async (studentId: string) => {
-    if (!studentId) {
-      setSnapshot(null);
-      return;
-    }
+  const snapshotFromStudent = (student: Student): AdminAbilitySnapshotResult => {
+    const studentId = normId(student.id);
+    const base = student.baseAttributes
+      ? normalizeAttributes(student.baseAttributes)
+      : {
+          str: Number(student.str || 0),
+          dex: Number(student.dex || 0),
+          con: Number(student.con || 0),
+          int: Number(student.int || 0),
+          wis: Number(student.wis || 0),
+          cha: Number(student.cha || 0),
+        };
+    const bonus = student.bonusAttributes
+      ? normalizeAttributes(student.bonusAttributes)
+      : { ...EMPTY_ATTRIBUTES };
+    const roster = Array.isArray(student.skills)
+      ? student.skills
+      : String(student.skills || "")
+          .split(/[;,|]/g)
+          .map((value) => value.trim())
+          .filter(Boolean);
 
-    setLoading(true);
+    return {
+      ok: true,
+      studentId,
+      studentName: fullName(student),
+      baseAttributes: base,
+      bonusAttributes: bonus,
+      rosterSkills: normalizeSkills(roster),
+      purchasedSkills: normalizeSkills(purchasedSkillsById[studentId]),
+    };
+  };
+
+  const selectStudent = (student: Student) => {
+    const studentId = normId(student.id);
+    setSelectedId(studentId);
     setError("");
+    applySnapshot(snapshotFromStudent(student));
+  };
+
+  const loadPurchasedSkills = async () => {
+    setSkillsLoading(true);
 
     try {
-      const result = await adminAbilitySnapshot(studentId);
-      applySnapshot(result);
+      const result = await adminPurchasedSkillsSnapshot();
+      const next: Record<string, string[]> = {};
+
+      (result.purchasedSkills || []).forEach((row) => {
+        const studentId = normId(row.studentId);
+        if (studentId) next[studentId] = normalizeSkills(row.skills);
+      });
+
+      setPurchasedSkillsById(next);
+      setSnapshot((current) =>
+        current
+          ? {
+              ...current,
+              purchasedSkills: normalizeSkills(next[normId(current.studentId)]),
+            }
+          : current
+      );
     } catch (err: any) {
-      setSnapshot(null);
-      setError(err?.message || "Failed to load student abilities.");
+      setError(err?.message || "Could not refresh purchased/granted skills.");
     } finally {
-      setLoading(false);
+      setSkillsLoading(false);
     }
   };
 
   useEffect(() => {
-    if (!selectedId) return;
-    loadSnapshot(selectedId);
-  }, [selectedId]);
+    void loadPurchasedSkills();
+  }, []);
 
   const purchasedSkills = normalizeSkills(snapshot?.purchasedSkills);
   const effectiveSkillKeys = new Set(
@@ -239,14 +287,18 @@ export default function AbilitiesManagerPanel({
     if (!confirmed) return;
 
     try {
-      await onSave({
+      const result = await onSave({
         studentId: selectedId,
         baseAttributes,
         bonusAttributes,
         rosterSkills,
         reason: reason.trim(),
       });
-      await loadSnapshot(selectedId);
+      applySnapshot(result);
+      setPurchasedSkillsById((prev) => ({
+        ...prev,
+        [normId(result.studentId)]: normalizeSkills(result.purchasedSkills),
+      }));
       setReason("");
     } catch {
       // Parent displays the write failure; keep edits for retry.
@@ -267,13 +319,17 @@ export default function AbilitiesManagerPanel({
     if (!confirmed) return;
 
     try {
-      await onAdjustSkill({
+      const result = await onAdjustSkill({
         studentId: selectedId,
         mode,
         skillName,
         reason: reason.trim(),
       });
-      await loadSnapshot(selectedId);
+      applySnapshot(result);
+      setPurchasedSkillsById((prev) => ({
+        ...prev,
+        [normId(result.studentId)]: normalizeSkills(result.purchasedSkills),
+      }));
       setReason("");
     } catch {
       // Parent displays the write failure.
@@ -322,8 +378,13 @@ export default function AbilitiesManagerPanel({
               Click a student to edit attributes and skills.
             </div>
           </div>
-          <div className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-semibold text-cyan-100/80">
-            {visibleStudents.length} shown
+          <div className="flex items-center gap-2">
+            {skillsLoading && (
+              <div className="text-[11px] font-semibold text-zinc-500">Syncing granted skills…</div>
+            )}
+            <div className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-semibold text-cyan-100/80">
+              {visibleStudents.length} shown
+            </div>
           </div>
         </div>
 
@@ -336,7 +397,7 @@ export default function AbilitiesManagerPanel({
               <button
                 key={studentId}
                 type="button"
-                onClick={() => setSelectedId(studentId)}
+                onClick={() => selectStudent(student)}
                 className={[
                   "grid w-full grid-cols-[minmax(0,1fr)_100px_130px] items-center gap-3 border-t border-white/5 px-4 py-3 text-left transition first:border-t-0",
                   selected
@@ -379,10 +440,6 @@ export default function AbilitiesManagerPanel({
       {!selectedId ? (
         <div className="rounded-[24px] border border-dashed border-white/10 bg-black/20 px-5 py-12 text-center text-sm text-zinc-500">
           Select a student from the roster above to edit attributes and skills.
-        </div>
-      ) : loading ? (
-        <div className="rounded-[24px] border border-white/10 bg-black/20 px-5 py-12 text-center text-sm text-zinc-400">
-          Loading abilities...
         </div>
       ) : snapshot ? (
         <>

@@ -196,6 +196,17 @@ export type AdminAbilityUpdateResult = AdminAbilitySnapshotResult & {
   updated?: boolean;
 };
 
+export type AdminPurchasedSkillsSnapshotResult = {
+  ok?: boolean;
+  error?: string;
+  purchasedSkills?: Array<{
+    studentId: string;
+    studentName: string;
+    skills: string[];
+  }>;
+  [key: string]: any;
+};
+
 export type AdminSkillAdjustmentResult = AdminAbilitySnapshotResult & {
   mode?: AdminSkillMode;
   skillName?: string;
@@ -442,6 +453,44 @@ export async function adminAbilitySnapshot(studentId: string) {
     "adminabilitysnapshot",
     { studentId }
   );
+}
+
+export async function adminPurchasedSkillsSnapshot() {
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const res = await fetch(
+        `${HP_API_URL}?action=skillsnapshot&_=${Date.now()}-${attempt}`,
+        { cache: "no-store" }
+      );
+      const text = await res.text();
+      let data: any = null;
+
+      try {
+        data = text ? JSON.parse(text) : null;
+      } catch {
+        throw new Error(
+          `Skill snapshot returned non-JSON (${res.status}). ${text
+            .slice(0, 140)
+            .replace(/\s+/g, " ")}`
+        );
+      }
+
+      if (!res.ok || !data?.ok) {
+        throw new Error(data?.error || `Skill snapshot failed: ${res.status}`);
+      }
+
+      return data as AdminPurchasedSkillsSnapshotResult;
+    } catch (err: any) {
+      lastError = err instanceof Error ? err : new Error(String(err || "Skill snapshot failed."));
+      if (attempt === 0) {
+        await new Promise((resolve) => window.setTimeout(resolve, 250));
+      }
+    }
+  }
+
+  throw lastError || new Error("Skill snapshot failed.");
 }
 
 export async function adminUpdateAbilities(args: {

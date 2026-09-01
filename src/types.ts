@@ -9,6 +9,15 @@ export type Guild =
   | "Diplomats"
   | string;
 
+export type AttributeValues = {
+  str: number;
+  dex: number;
+  con: number;
+  int: number;
+  wis: number;
+  cha: number;
+};
+
 export type Student = {
   id: string;
   first: string;
@@ -22,6 +31,10 @@ export type Student = {
   int: number;
   wis: number;
   cha: number;
+
+  // Admin/editor source values from Master. Core stats above remain totals.
+  baseAttributes?: AttributeValues;
+  bonusAttributes?: AttributeValues;
 
   // gameplay data
   skills: string[] | string;
