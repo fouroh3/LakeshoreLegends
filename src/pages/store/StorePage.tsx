@@ -586,10 +586,13 @@ export default function StorePage({ onBack }: Props) {
 
                   {storeMode === "skills" && (
                     <SkillTrainingPanel
+                      studentId={selectedStudentId}
                       selectedSkillId={pendingSkillId}
                       setSelectedSkillId={setPendingSkillId}
                       ownedSkillIds={ownedSkillIds}
-                      skillTokens={null}
+                      storeLocked={storeLocked}
+                      pin={pin}
+                      confirmOk={confirmOk}
                       guildTheme={guildTheme}
                     />
                   )}
