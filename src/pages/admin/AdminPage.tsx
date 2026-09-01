@@ -20,6 +20,7 @@ import {
 import { loadStudents } from "../../data";
 import type { Student } from "../../types";
 import {
+  ADMIN_API_VERSION,
   adminAdjustCurrency,
   adminAdjustInventory,
   adminAdjustSkill,
@@ -278,6 +279,9 @@ export default function AdminPage() {
     !statusLoading && systemStatus !== null
   );
   const systemStatusProblem = systemStatusResolved && !playerStateReady;
+  const backendVersionMismatch = Boolean(
+    systemStatusResolved && systemStatus?.adminApiVersion !== ADMIN_API_VERSION
+  );
   const systemStatusUnavailable = !statusLoading && systemStatusError;
 
   const handleLogin = async () => {
@@ -827,6 +831,15 @@ export default function AdminPage() {
               : "border-red-400/20 bg-red-950/30 text-red-100",
           ].join(" ")}>
             {notice.msg}
+          </div>
+        )}
+
+        {backendVersionMismatch && (
+          <div className="mb-5 rounded-[26px] border border-red-300/25 bg-red-950/20 p-4 sm:p-5">
+            <div className="font-black text-red-100">Global Manager backend update required</div>
+            <p className="mt-1 max-w-4xl text-sm leading-6 text-red-100/70">
+              This browser is running Admin API {ADMIN_API_VERSION}, but the deployed Apps Script reports {systemStatus?.adminApiVersion || "an older build"}. Replace the Web App with the current full Apps Script file and deploy a new version before using management tools.
+            </p>
           </div>
         )}
 

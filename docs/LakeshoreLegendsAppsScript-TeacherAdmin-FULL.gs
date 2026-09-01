@@ -31,6 +31,8 @@
  *   overwritten by the Teacher Admin importer.
  * ========================================================= */
 
+const ADMIN_API_VERSION = "2026-09-01.1";
+
 const CFG = {
   // Master
   STUDENTS_SHEET: "Master",
@@ -4282,7 +4284,9 @@ function playerStateStatusPayload_(teacherToken) {
 
 function adminSystemStatus_(args) {
   const verified = verifyTeacher_(args || {});
-  return playerStateStatusPayload_(verified.token);
+  const payload = playerStateStatusPayload_(verified.token);
+  payload.adminApiVersion = ADMIN_API_VERSION;
+  return payload;
 }
 
 function migratePlayerStateFromMaster_(args) {

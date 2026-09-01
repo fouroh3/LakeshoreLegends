@@ -2,6 +2,8 @@
 
 import { HP_API_URL } from "../battle/battleConstants";
 import { getBattleTeacherToken } from "../battle/battleTeacherApi";
+export const ADMIN_API_VERSION = "2026-09-01.1";
+
 import type {
   AdminAttributeValues,
   AdminCompanionStatus,
@@ -114,6 +116,7 @@ export type AdminSystemStatusResult = {
   mediaConfigured?: boolean;
   mediaRepo?: string;
   mediaBranch?: string;
+  adminApiVersion?: string;
   [key: string]: any;
 };
 
@@ -269,43 +272,66 @@ type AdminAction =
   | "adminstoresnapshot"
   | "adminupdatestore";
 
+const RETRYABLE_ADMIN_READS = new Set<AdminAction>([
+  "admincurrencysnapshot",
+  "admininventorysnapshot",
+  "adminsystemstatus",
+  "adminarchivedstudents",
+  "adminabilitysnapshot",
+  "adminstoresnapshot",
+]);
+
 async function postAdminAction<T>(
   action: AdminAction,
   body: Record<string, any>
 ): Promise<T> {
-  const res = await fetch(
-    `${HP_API_URL}?action=${encodeURIComponent(action)}&_=${Date.now()}`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "text/plain;charset=utf-8",
-      },
-      body: JSON.stringify({
-        action,
-        teacherToken: getBattleTeacherToken(),
-        ...body,
-      }),
+  const maxAttempts = RETRYABLE_ADMIN_READS.has(action) ? 2 : 1;
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    try {
+      const res = await fetch(
+        `${HP_API_URL}?action=${encodeURIComponent(action)}&_=${Date.now()}-${attempt}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "text/plain;charset=utf-8",
+          },
+          body: JSON.stringify({
+            action,
+            teacherToken: getBattleTeacherToken(),
+            ...body,
+          }),
+        }
+      );
+
+      const text = await res.text();
+      let data: any = null;
+
+      try {
+        data = text ? JSON.parse(text) : null;
+      } catch {
+        throw new Error(
+          `Admin API returned non-JSON (${res.status}). ${text
+            .slice(0, 160)
+            .replace(/\s+/g, " ")}`
+        );
+      }
+
+      if (!res.ok || !data?.ok) {
+        throw new Error(data?.error || `Admin API failed: ${res.status}`);
+      }
+
+      return data as T;
+    } catch (err: any) {
+      lastError = err instanceof Error ? err : new Error(String(err || "Admin API failed."));
+      if (attempt + 1 < maxAttempts) {
+        await new Promise((resolve) => window.setTimeout(resolve, 300));
+      }
     }
-  );
-
-  const text = await res.text();
-  let data: any = null;
-
-  try {
-    data = text ? JSON.parse(text) : null;
-  } catch {
-    throw new Error(
-      `Admin API returned non-JSON (${res.status}). ${text
-        .slice(0, 160)
-        .replace(/\s+/g, " ")}`
-    );
   }
 
-  if (!res.ok || !data?.ok) {
-    throw new Error(data?.error || `Admin API failed: ${res.status}`);
-  }
-
-  return data as T;
+  throw lastError || new Error("Admin API failed.");
 }
 
 export async function adminImportStudents(students: AdminImportedStudent[]) {
