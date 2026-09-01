@@ -7,22 +7,22 @@ Frontend support has been added for:
 
 Add the Apps Script helpers below to the main web app script, then add the routing cases shown at the bottom.
 
-## Suggested sheets
+## Sheets
 
 ### Skill_State
 
-| StudentID | SkillTokens | UpdatedAt |
-| --- | ---: | --- |
+| StudentID | StudentName | SkillTokens | UpdatedAt |
+| --- | --- | ---: | --- |
 
 ### Purchased_Skills
 
-| Timestamp | StudentID | SkillId | SkillName | Cost | Source | RequestId |
-| --- | --- | --- | --- | ---: | --- | --- |
+| Timestamp | StudentID | StudentName | SkillId | SkillName | Cost | Source | RequestId |
+| --- | --- | --- | --- | --- | ---: | --- | --- |
 
 ### Skill_Transactions
 
-| Timestamp | StudentID | Type | SkillId | SkillName | Tokens | BeforeTokens | AfterTokens | Source | RequestId | Note |
-| --- | --- | --- | --- | --- | ---: | ---: | ---: | --- | --- | --- |
+| Timestamp | StudentID | StudentName | Type | SkillId | SkillName | Tokens | BeforeTokens | AfterTokens | Source | RequestId | Note |
+| --- | --- | --- | --- | --- | --- | ---: | ---: | ---: | --- | --- | --- |
 
 ## Apps Script helpers
 
@@ -74,10 +74,60 @@ function canonicalSkillName_(skillIdOrName) {
   return found || "";
 }
 
+function skillHeaderNorm_(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "");
+}
+
+function skillFindHeader_(headers, names) {
+  const wanted = names.map(skillHeaderNorm_);
+  for (let i = 0; i < headers.length; i++) {
+    if (wanted.indexOf(skillHeaderNorm_(headers[i])) >= 0) return i;
+  }
+  return -1;
+}
+
+function studentDisplayName_(studentIdRaw) {
+  const studentId = normId_(studentIdRaw);
+  if (!studentId) return "";
+
+  const sh = getSheet_("Master");
+  const values = sh.getDataRange().getValues();
+  if (values.length < 2) return "";
+
+  const headers = values[0];
+  const idCol = skillFindHeader_(headers, ["StudentID", "Student ID", "ID"]);
+  const nameCol = skillFindHeader_(headers, ["Name", "Student Name"]);
+  const firstCol = skillFindHeader_(headers, ["First", "First Name", "FirstName"]);
+  const lastCol = skillFindHeader_(headers, ["Last", "Last Name", "LastName"]);
+
+  if (idCol < 0) return "";
+
+  for (let r = 1; r < values.length; r++) {
+    if (normId_(values[r][idCol]) !== studentId) continue;
+
+    const name = nameCol >= 0 ? String(values[r][nameCol] || "").trim() : "";
+    if (name) return name;
+
+    const first = firstCol >= 0 ? String(values[r][firstCol] || "").trim() : "";
+    const last = lastCol >= 0 ? String(values[r][lastCol] || "").trim() : "";
+    return [first, last].filter(Boolean).join(" ");
+  }
+
+  return "";
+}
+
 function ensureSkillStateSheet_() {
   const sh = getSheet_(SKILL_STORE.STATE_SHEET);
   if (sh.getLastRow() < 1) {
-    sh.getRange(1, 1, 1, 3).setValues([["StudentID", "SkillTokens", "UpdatedAt"]]);
+    sh.getRange(1, 1, 1, 4).setValues([[
+      "StudentID",
+      "StudentName",
+      "SkillTokens",
+      "UpdatedAt",
+    ]]);
   }
   return sh;
 }
@@ -85,9 +135,10 @@ function ensureSkillStateSheet_() {
 function ensurePurchasedSkillsSheet_() {
   const sh = getSheet_(SKILL_STORE.PURCHASED_SHEET);
   if (sh.getLastRow() < 1) {
-    sh.getRange(1, 1, 1, 7).setValues([[
+    sh.getRange(1, 1, 1, 8).setValues([[
       "Timestamp",
       "StudentID",
+      "StudentName",
       "SkillId",
       "SkillName",
       "Cost",
@@ -101,9 +152,10 @@ function ensurePurchasedSkillsSheet_() {
 function ensureSkillTxnSheet_() {
   const sh = getSheet_(SKILL_STORE.TXN_SHEET);
   if (sh.getLastRow() < 1) {
-    sh.getRange(1, 1, 1, 11).setValues([[
+    sh.getRange(1, 1, 1, 12).setValues([[
       "Timestamp",
       "StudentID",
+      "StudentName",
       "Type",
       "SkillId",
       "SkillName",
@@ -129,7 +181,8 @@ function loadSkillStateIndex_() {
     index.set(studentId, {
       row: r + 1,
       studentId,
-      skillTokens: Math.max(0, Math.round(asNum_(values[r][1], 0))),
+      studentName: String(values[r][1] || "").trim(),
+      skillTokens: Math.max(0, Math.round(asNum_(values[r][2], 0))),
     });
   }
 
@@ -145,8 +198,8 @@ function purchasedSkillIdsForStudent_(studentIdRaw) {
 
   for (let r = 1; r < values.length; r++) {
     if (normId_(values[r][1]) !== studentId) continue;
-    const skillName = String(values[r][3] || "").trim();
-    const skillId = normalizeSkillId_(values[r][2] || skillName);
+    const skillName = String(values[r][4] || "").trim();
+    const skillId = normalizeSkillId_(values[r][3] || skillName);
     if (!skillId || ids.has(skillId)) continue;
     ids.add(skillId);
     names.push(skillName || canonicalSkillName_(skillId));
@@ -161,6 +214,7 @@ function skillSummary_(studentIdRaw) {
 
   const { index } = loadSkillStateIndex_();
   const state = index.get(studentId);
+  const studentName = state?.studentName || studentDisplayName_(studentId);
   const purchased = purchasedSkillIdsForStudent_(studentId);
   const tx = ensureSkillTxnSheet_();
   const values = tx.getDataRange().getValues();
@@ -174,15 +228,16 @@ function skillSummary_(studentIdRaw) {
         : String(values[r][0] || "");
     recent.push({
       timestamp: ts,
-      skillName: String(values[r][4] || ""),
-      cost: Math.abs(Math.round(asNum_(values[r][5], 0))),
-      source: String(values[r][8] || ""),
+      skillName: String(values[r][5] || ""),
+      cost: Math.abs(Math.round(asNum_(values[r][6], 0))),
+      source: String(values[r][9] || ""),
     });
   }
 
   return {
     ok: true,
     studentId,
+    studentName,
     skillTokens: state ? state.skillTokens : 0,
     purchasedSkills: purchased.names,
     recent,
@@ -226,6 +281,7 @@ function purchaseSkill_(args) {
     const state = index.get(studentId);
     if (!state) throw new Error("Student not found in Skill_State.");
 
+    const studentName = state.studentName || studentDisplayName_(studentId);
     const purchased = purchasedSkillIdsForStudent_(studentId);
     if (purchased.ids.has(skillId)) throw new Error("Skill already owned.");
 
@@ -233,11 +289,14 @@ function purchaseSkill_(args) {
     if (beforeTokens < cost) throw new Error("Not enough Skill Tokens.");
 
     const afterTokens = beforeTokens - cost;
-    stateSh.getRange(state.row, 2, 1, 2).setValues([[afterTokens, new Date().toISOString()]]);
+    stateSh
+      .getRange(state.row, 2, 1, 3)
+      .setValues([[studentName, afterTokens, new Date().toISOString()]]);
 
     ensurePurchasedSkillsSheet_().appendRow([
       new Date(),
       studentId,
+      studentName,
       skillId,
       skillName,
       cost,
@@ -248,6 +307,7 @@ function purchaseSkill_(args) {
     ensureSkillTxnSheet_().appendRow([
       new Date(),
       studentId,
+      studentName,
       "SPEND",
       skillId,
       skillName,
@@ -265,6 +325,7 @@ function purchaseSkill_(args) {
     return {
       ok: true,
       studentId,
+      studentName,
       skillId,
       skillName,
       cost,
@@ -312,6 +373,8 @@ case "purchaseskill":
 For now, add rows manually in `Skill_State`:
 
 ```text
-StudentID | SkillTokens | UpdatedAt
-8-1-001   | 2           | 2026-08-31T00:00:00.000Z
+StudentID | StudentName      | SkillTokens | UpdatedAt
+8-1-001   | Polsky, Daniel   | 2           | 2026-08-31T00:00:00.000Z
 ```
+
+The backend will also try to fill `StudentName` automatically from `Master` during purchase if it is blank in `Skill_State`.
