@@ -19,11 +19,17 @@ function FieldLabel({ children }: { children: string }) {
 
 type Props = {
   students: Student[];
+  reservedStudentIds?: string[];
   busy: boolean;
   onImport: (students: AdminImportedStudent[]) => Promise<void>;
 };
 
-export default function StudentImportPanel({ students, busy, onImport }: Props) {
+export default function StudentImportPanel({
+  students,
+  reservedStudentIds = [],
+  busy,
+  onImport,
+}: Props) {
   const [pasteFormat, setPasteFormat] = useState<PasteFormat>("last-first");
   const [defaultHomeroom, setDefaultHomeroom] = useState("");
   const [pasteText, setPasteText] = useState("");
@@ -35,8 +41,9 @@ export default function StudentImportPanel({ students, busy, onImport }: Props) 
         format: pasteFormat,
         defaultHomeroom,
         students,
+        reservedStudentIds,
       }),
-    [pasteText, pasteFormat, defaultHomeroom, students]
+    [pasteText, pasteFormat, defaultHomeroom, students, reservedStudentIds]
   );
 
   const importableStudents = parsedStudents.filter((row) => !row.error);
@@ -114,6 +121,11 @@ export default function StudentImportPanel({ students, busy, onImport }: Props) 
           {!defaultHomeroom && (
             <div className="mt-3 text-cyan-100/80">
               No homeroom selected: include the homeroom as the last pasted column.
+            </div>
+          )}
+          {reservedStudentIds.length > 0 && (
+            <div className="mt-3 text-zinc-500">
+              Archived StudentIDs stay reserved automatically and will never be reused by this importer.
             </div>
           )}
         </div>
