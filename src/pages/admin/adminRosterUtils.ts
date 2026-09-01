@@ -68,24 +68,30 @@ function looksLikeHeader(line: string) {
   );
 }
 
-function usedSuffixesByHomeroom(students: Student[]) {
+function usedSuffixesByHomeroom(
+  students: Student[],
+  reservedStudentIds: string[]
+) {
   const used = new Map<string, Set<number>>();
 
-  for (const student of students) {
-    const studentId = normId(student.id);
+  const addId = (value: unknown) => {
+    const studentId = normId(value);
     const match = studentId.match(/^(8-\d+)-(\d+)$/);
 
-    if (!match) continue;
+    if (!match) return;
 
     const homeroom = match[1];
     const suffix = Number(match[2]);
 
-    if (!Number.isFinite(suffix) || suffix < 1) continue;
+    if (!Number.isFinite(suffix) || suffix < 1) return;
 
     const set = used.get(homeroom) ?? new Set<number>();
     set.add(suffix);
     used.set(homeroom, set);
-  }
+  };
+
+  students.forEach((student) => addId(student.id));
+  reservedStudentIds.forEach(addId);
 
   return used;
 }
@@ -124,13 +130,17 @@ export function parseStudentPaste(args: {
   format: PasteFormat;
   defaultHomeroom: string;
   students: Student[];
+  reservedStudentIds?: string[];
 }): ParsedStudent[] {
   const lines = String(args.raw ?? "")
     .split(/\r?\n/g)
     .map((line) => line.trim())
     .filter(Boolean);
 
-  const usedByHr = usedSuffixesByHomeroom(args.students);
+  const usedByHr = usedSuffixesByHomeroom(
+    args.students,
+    Array.isArray(args.reservedStudentIds) ? args.reservedStudentIds : []
+  );
   const existingKeys = existingNameKeys(args.students);
   const incomingKeys = new Set<string>();
   const parsed: ParsedStudent[] = [];
@@ -192,7 +202,7 @@ export function parseStudentPaste(args: {
       const suffix = nextAvailableSuffix(homeroom, used);
 
       if (!suffix) {
-        error = `${homeroom} has no empty roster slots left.`;
+        error = `${homeroom} has no unused roster slots left.`;
       } else {
         previewId = buildPreviewId(homeroom, suffix);
         used.add(suffix);
