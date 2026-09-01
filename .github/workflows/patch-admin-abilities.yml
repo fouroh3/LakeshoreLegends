@@ -25,6 +25,18 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Fix abilities panel insertion guard
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path("scripts/patch_admin_abilities_and_player_state.py")
+          s = p.read_text(encoding="utf-8")
+          old = '''if 'section === "abilities"' not in app.split(inventory_render)[0]:'''
+          new = '''if '<AbilitiesManagerPanel' not in app:'''
+          if old not in s:
+              raise SystemExit("Expected insertion guard not found")
+          p.write_text(s.replace(old, new, 1), encoding="utf-8")
+          PY
       - name: Patch admin + Apps Script
         run: python scripts/patch_admin_abilities_and_player_state.py
       - name: Validate React build
