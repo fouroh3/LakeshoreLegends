@@ -6,7 +6,13 @@ The dashboard now looks for this endpoint so purchased skills can appear without
 GET ?action=skillsnapshot
 ```
 
-Add this helper beside the other skill store helpers:
+Add this helper beside the other skill store helpers.
+
+This version matches the updated `Purchased_Skills` sheet layout:
+
+```txt
+Timestamp | StudentID | StudentName | SkillId | SkillName | Cost | Source | RequestId
+```
 
 ```js
 function skillSnapshot_() {
@@ -18,16 +24,20 @@ function skillSnapshot_() {
     const studentId = normId_(values[r][1]);
     if (!studentId) continue;
 
-    const skillName = String(values[r][3] || "").trim();
-    const skillId = normalizeSkillId_(values[r][2] || skillName);
+    const studentName = String(values[r][2] || "").trim();
+    const skillName = String(values[r][4] || "").trim();
+    const skillId = normalizeSkillId_(values[r][3] || skillName);
     const canonicalName = skillName || canonicalSkillName_(skillId);
     if (!skillId || !canonicalName) continue;
 
     const existing = byStudent.get(studentId) || {
       studentId,
+      studentName,
       ids: new Set(),
       skills: [],
     };
+
+    if (!existing.studentName && studentName) existing.studentName = studentName;
 
     if (!existing.ids.has(skillId)) {
       existing.ids.add(skillId);
@@ -41,6 +51,7 @@ function skillSnapshot_() {
     ok: true,
     purchasedSkills: Array.from(byStudent.values()).map((row) => ({
       studentId: row.studentId,
+      studentName: row.studentName || "",
       skills: row.skills,
     })),
     now: new Date().toISOString(),
