@@ -1,12 +1,14 @@
 // src/pages/admin/components/StudentManagePanel.tsx
 
 import { useMemo, useState } from "react";
+import { ArrowRightLeft } from "lucide-react";
 import type { Student } from "../../../types";
 import type {
   AdminArchiveStudentResult,
+  AdminMoveStudentResult,
   AdminUpdateStudentResult,
 } from "../adminApi";
-import { ADMIN_GUILDS } from "../adminConstants";
+import { ADMIN_GUILDS, ADMIN_HOMEROOMS } from "../adminConstants";
 import {
   clean,
   fullName,
@@ -30,6 +32,11 @@ type Props = {
     first: string;
     last: string;
   }) => Promise<AdminUpdateStudentResult>;
+  onMove: (args: {
+    studentId: string;
+    homeroom: string;
+    reason: string;
+  }) => Promise<AdminMoveStudentResult>;
   onArchive: (args: {
     studentId: string;
     reason: string;
@@ -40,6 +47,7 @@ export default function StudentManagePanel({
   students,
   busy,
   onUpdate,
+  onMove,
   onArchive,
 }: Props) {
   const [homeroomFilter, setHomeroomFilter] = useState("ALL");
@@ -49,6 +57,10 @@ export default function StudentManagePanel({
   const [editingId, setEditingId] = useState("");
   const [first, setFirst] = useState("");
   const [last, setLast] = useState("");
+
+  const [movingId, setMovingId] = useState("");
+  const [moveHomeroom, setMoveHomeroom] = useState("");
+  const [moveReason, setMoveReason] = useState("");
 
   const [archivingId, setArchivingId] = useState("");
   const [archiveReason, setArchiveReason] = useState("");
@@ -92,13 +104,24 @@ export default function StudentManagePanel({
   const editingStudent = students.find(
     (student) => normId(student.id) === editingId
   );
+  const movingStudent = students.find(
+    (student) => normId(student.id) === movingId
+  );
   const archivingStudent = students.find(
     (student) => normId(student.id) === archivingId
   );
 
-  const beginEdit = (student: Student) => {
+  const closeActions = () => {
+    setEditingId("");
+    setMovingId("");
+    setMoveHomeroom("");
+    setMoveReason("");
     setArchivingId("");
     setArchiveReason("");
+  };
+
+  const beginEdit = (student: Student) => {
+    closeActions();
     setEditingId(normId(student.id));
     setFirst(String(student.first || "").trim());
     setLast(String(student.last || "").trim());
@@ -121,8 +144,37 @@ export default function StudentManagePanel({
     }
   };
 
+  const beginMove = (student: Student) => {
+    closeActions();
+    setMovingId(normId(student.id));
+    setMoveHomeroom("");
+  };
+
+  const moveStudent = async () => {
+    if (!movingStudent || !moveHomeroom || !moveReason.trim()) return;
+    if (moveHomeroom === clean(movingStudent.homeroom)) return;
+
+    const confirmed = window.confirm(
+      `Move ${fullName(movingStudent)} from ${clean(movingStudent.homeroom)} to ${moveHomeroom}? A new StudentID will be created and their game state will migrate automatically.`
+    );
+    if (!confirmed) return;
+
+    try {
+      await onMove({
+        studentId: normId(movingStudent.id),
+        homeroom: moveHomeroom,
+        reason: moveReason.trim(),
+      });
+      setMovingId("");
+      setMoveHomeroom("");
+      setMoveReason("");
+    } catch {
+      // Parent displays error and move form remains open.
+    }
+  };
+
   const beginArchive = (student: Student) => {
-    setEditingId("");
+    closeActions();
     setArchivingId(normId(student.id));
     setArchiveReason("");
   };
@@ -243,8 +295,57 @@ export default function StudentManagePanel({
               </button>
             </div>
           </div>
-          <div className="mt-3 text-xs text-zinc-500">
-            Homeroom is intentionally locked here because changing it changes the row-based StudentID. That move will get its own safe migration action rather than silently breaking history.
+        </div>
+      )}
+
+      {movingStudent && (
+        <div className="rounded-[24px] border border-violet-300/20 bg-violet-950/15 p-4">
+          <div className="flex items-center gap-2 text-sm font-black text-violet-100">
+            <ArrowRightLeft size={17} /> Move {fullName(movingStudent)} to another homeroom
+          </div>
+          <p className="mt-1 text-xs leading-5 text-zinc-400">
+            Their current StudentID is tied to {clean(movingStudent.homeroom)}. Global Manager will create the next safe ID in the destination class and migrate HP, XP, Skill Tokens, skills, cards, companion data, bonuses, and history automatically. The old ID stays reserved.
+          </p>
+          <div className="mt-3 grid gap-3 md:grid-cols-[220px_minmax(0,1fr)_auto_auto] md:items-end">
+            <div>
+              <FieldLabel>New homeroom</FieldLabel>
+              <select
+                value={moveHomeroom}
+                onChange={(event) => setMoveHomeroom(event.target.value)}
+                className="mt-2 w-full rounded-2xl border border-white/10 bg-black/40 px-3 py-3 text-sm text-white outline-none"
+              >
+                <option value="">Choose...</option>
+                {ADMIN_HOMEROOMS.filter(
+                  (homeroom) => homeroom !== clean(movingStudent.homeroom)
+                ).map((homeroom) => (
+                  <option key={homeroom} value={homeroom}>{homeroom}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <FieldLabel>Reason</FieldLabel>
+              <input
+                value={moveReason}
+                onChange={(event) => setMoveReason(event.target.value)}
+                placeholder="Schedule change, roster correction..."
+                className="mt-2 w-full rounded-2xl border border-white/10 bg-black/40 px-3 py-3 text-sm text-white outline-none placeholder:text-zinc-600"
+              />
+            </div>
+            <button
+              type="button"
+              onClick={moveStudent}
+              disabled={busy || !moveHomeroom || !moveReason.trim()}
+              className="rounded-2xl bg-violet-300 px-4 py-3 text-sm font-black text-zinc-950 disabled:opacity-50"
+            >
+              Move Student
+            </button>
+            <button
+              type="button"
+              onClick={() => setMovingId("")}
+              className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-bold text-zinc-300"
+            >
+              Cancel
+            </button>
           </div>
         </div>
       )}
@@ -287,7 +388,7 @@ export default function StudentManagePanel({
       )}
 
       <div className="max-h-[620px] overflow-auto rounded-2xl border border-white/10 bg-black/25">
-        <table className="w-full min-w-[820px] text-left text-sm">
+        <table className="w-full min-w-[900px] text-left text-sm">
           <thead className="sticky top-0 bg-zinc-950 text-[11px] uppercase tracking-[0.16em] text-zinc-500">
             <tr>
               <th className="px-3 py-2">Name</th>
@@ -314,6 +415,13 @@ export default function StudentManagePanel({
                         className="rounded-xl border border-cyan-300/20 bg-cyan-300/10 px-3 py-1.5 text-xs font-bold text-cyan-100"
                       >
                         Edit
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => beginMove(student)}
+                        className="rounded-xl border border-violet-300/20 bg-violet-300/10 px-3 py-1.5 text-xs font-bold text-violet-100"
+                      >
+                        Move
                       </button>
                       <button
                         type="button"
