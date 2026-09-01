@@ -5,6 +5,7 @@ on:
     branches: [fluffy-cloud]
     paths:
       - scripts/patch_admin_abilities_and_player_state.py
+      - .github/workflows/patch-admin-abilities.yml
   workflow_dispatch:
 
 permissions:
