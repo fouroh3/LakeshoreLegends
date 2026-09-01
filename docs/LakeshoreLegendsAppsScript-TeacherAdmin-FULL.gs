@@ -5014,6 +5014,22 @@ function adminDeleteArchivedStudent_(args) {
       "",
     ]]);
 
+    // All prior roster transactions are erased above. Keep only a minimal
+    // deletion tombstone so teachers can tell why this reserved ID can never
+    // be reused without retaining the student's name or class details.
+    appendRowFast_(ensureRosterTxnSheet_(), [
+      new Date(),
+      studentId,
+      "",
+      "PERMANENT_DELETE",
+      "",
+      "",
+      reason,
+      mediaCleanupRequired
+        ? "Player data erased; one or more managed media files require manual cleanup."
+        : "Player data erased; StudentID remains permanently reserved.",
+    ]);
+
     SpreadsheetApp.flush();
     cacheRemove_(`studentsMap:${CFG.STUDENTS_SHEET}`);
     cacheRemove_("hpAll:v1");

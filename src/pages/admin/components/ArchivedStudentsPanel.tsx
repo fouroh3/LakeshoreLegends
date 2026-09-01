@@ -81,11 +81,15 @@ export default function ArchivedStudentsPanel({
     setError("");
     setNotice("");
     try {
-      await adminDeleteArchivedStudent({
+      const result = await adminDeleteArchivedStudent({
         studentId: row.studentId,
         reason: reason.trim(),
       });
-      setNotice(`Permanently deleted stored data for ${row.studentName || row.studentId}.`);
+      setNotice(
+        result.mediaCleanupRequired
+          ? `Stored data for ${row.studentName || row.studentId} was deleted, but one or more managed image files could not be removed automatically. Check Image Storage in System.`
+          : `Permanently deleted stored data for ${row.studentName || row.studentId}.`
+      );
       await load();
     } catch (err: any) {
       setError(err?.message || "Permanent deletion failed.");

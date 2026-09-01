@@ -186,7 +186,7 @@ export default function AdminPage() {
     setLoading(true);
 
     try {
-      const data = await loadStudents();
+      const data = await loadStudents({ force: true });
       setStudents(Array.isArray(data) ? data : []);
     } catch (err: any) {
       setNotice({

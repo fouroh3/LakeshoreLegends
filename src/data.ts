@@ -475,10 +475,10 @@ function rowsToStudents(rows: string[][]): Student[] {
 
 /* ---------------- public API ---------------- */
 
-export async function loadStudents(): Promise<Student[]> {
+export async function loadStudents(options?: { force?: boolean }): Promise<Student[]> {
   const now = Date.now();
 
-  if (cache && now - cache.at < CACHE_MS) {
+  if (!options?.force && cache && now - cache.at < CACHE_MS) {
     return cache.students;
   }
 
