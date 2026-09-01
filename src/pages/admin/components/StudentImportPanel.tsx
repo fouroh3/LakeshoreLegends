@@ -1,8 +1,11 @@
 // src/pages/admin/components/StudentImportPanel.tsx
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { Student } from "../../../types";
-import type { AdminImportedStudent } from "../adminApi";
+import {
+  adminSystemStatus,
+  type AdminImportedStudent,
+} from "../adminApi";
 import {
   ADMIN_HOMEROOMS,
   type PasteFormat,
@@ -19,20 +22,36 @@ function FieldLabel({ children }: { children: string }) {
 
 type Props = {
   students: Student[];
-  reservedStudentIds?: string[];
   busy: boolean;
   onImport: (students: AdminImportedStudent[]) => Promise<void>;
 };
 
-export default function StudentImportPanel({
-  students,
-  reservedStudentIds = [],
-  busy,
-  onImport,
-}: Props) {
+export default function StudentImportPanel({ students, busy, onImport }: Props) {
   const [pasteFormat, setPasteFormat] = useState<PasteFormat>("last-first");
   const [defaultHomeroom, setDefaultHomeroom] = useState("");
   const [pasteText, setPasteText] = useState("");
+  const [reservedStudentIds, setReservedStudentIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    adminSystemStatus()
+      .then((result) => {
+        if (cancelled) return;
+        setReservedStudentIds(
+          Array.isArray(result.reservedStudentIds)
+            ? result.reservedStudentIds.map((id: unknown) => String(id || ""))
+            : []
+        );
+      })
+      .catch(() => {
+        if (!cancelled) setReservedStudentIds([]);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [students.length]);
 
   const parsedStudents = useMemo(
     () =>
