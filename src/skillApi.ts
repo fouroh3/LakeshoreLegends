@@ -5,6 +5,7 @@ import { normalizeSkillName } from "./data/skillLibrary";
 export type SkillSummary = {
   studentId: string;
   skillTokens: number;
+  skillCost: number;
   purchasedSkills: string[];
   recent?: Array<{
     timestamp?: string;
@@ -93,6 +94,7 @@ export async function getSkillSummary(studentId: string): Promise<SkillSummary> 
   return {
     studentId: String(data.studentId ?? cleanId),
     skillTokens: Math.max(0, Math.round(toNum(data.skillTokens, 0))),
+    skillCost: Math.max(1, Math.round(toNum(data.skillCost, 1))),
     purchasedSkills: Array.isArray(data.purchasedSkills)
       ? data.purchasedSkills.map((x: unknown) => String(x ?? "").trim()).filter(Boolean)
       : [],

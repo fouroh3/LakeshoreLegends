@@ -1486,6 +1486,7 @@ function readXpControl_() {
     1,
     Math.round(asNum_(out.MaxPointsPerOpen, 999))
   );
+  const skillTokenCost = Math.max(1, Math.round(asNum_(out.SkillTokenCost, 1)));
   const openNonce = norm_(out.OpenNonce ?? "");
   return {
     storeLocked,
@@ -1493,6 +1494,7 @@ function readXpControl_() {
     xpPerPoint,
     windowLabel,
     maxPointsPerOpen,
+    skillTokenCost,
     openNonce,
   };
 }
@@ -1659,6 +1661,7 @@ function xpState_() {
     windowLabel: ctl.windowLabel || "",
     xpPerPoint: ctl.xpPerPoint,
     maxPointsPerOpen: ctl.maxPointsPerOpen,
+    skillTokenCost: ctl.skillTokenCost,
     openNonce: ctl.openNonce || "",
     now: new Date().toISOString(),
     xpLastWriteIso: getProp_(CFG.PROP_LAST_XP_WRITE_ISO) || "",
@@ -2056,6 +2059,7 @@ function skillSummary_(studentIdRaw) {
     studentId,
     studentName,
     skillTokens: state ? state.skillTokens : 0,
+    skillCost: Math.max(1, readXpControl_().skillTokenCost || 1),
     purchasedSkills: purchased.names,
     recent,
     now: new Date().toISOString(),
@@ -2160,7 +2164,7 @@ function purchaseSkill_(args) {
   }
 
   const skillId = normalizeSkillId_(skillName);
-  const cost = SKILL_STORE.COST_PER_SKILL;
+  const cost = Math.max(1, ctl.skillTokenCost || SKILL_STORE.COST_PER_SKILL);
   const requestId = norm_(args.requestId || "");
 
   if (requestId && idemIsDuplicate_("purchaseSkill", requestId)) {
@@ -5718,6 +5722,102 @@ function adminMoveStudent_(args) {
 }
 
 // =========================================================
+// Global Teacher Admin: Store Settings
+// =========================================================
+function adminStoreControlValue_(keyRaw) {
+  const key = norm_(keyRaw);
+  const sh = getXpControlSheet_();
+  const values = sh.getDataRange().getValues();
+  for (let r = 1; r < values.length; r++) {
+    if (norm_(values[r][0]) === key) return values[r][1];
+  }
+  return "";
+}
+
+function adminSetStoreControlValue_(keyRaw, value) {
+  const key = norm_(keyRaw);
+  const sh = getXpControlSheet_();
+  const values = sh.getDataRange().getValues();
+  for (let r = 1; r < values.length; r++) {
+    if (norm_(values[r][0]) !== key) continue;
+    sh.getRange(r + 1, 2).setValue(value);
+    return r + 1;
+  }
+  const row = Math.max(2, sh.getLastRow() + 1);
+  sh.getRange(row, 1, 1, 2).setValues([[key, value]]);
+  return row;
+}
+
+function adminStoreSettingsPayload_() {
+  const ctl = readXpControl_();
+  const updatedRaw = adminStoreControlValue_("UpdatedAt");
+  return {
+    storeLocked: !!ctl.storeLocked,
+    storePin: normPin_(ctl.storePin || ""),
+    xpPerPoint: Math.max(1, Math.round(asNum_(ctl.xpPerPoint, 5))),
+    skillTokenCost: Math.max(1, Math.round(asNum_(ctl.skillTokenCost, 1))),
+    maxPointsPerOpen: Math.max(1, Math.round(asNum_(ctl.maxPointsPerOpen, 8))),
+    windowLabel: norm_(ctl.windowLabel || ""),
+    updatedAt:
+      updatedRaw instanceof Date
+        ? updatedRaw.toISOString()
+        : norm_(updatedRaw || ""),
+  };
+}
+
+function adminStoreSnapshot_(args) {
+  const verified = verifyTeacher_(args || {});
+  return {
+    ok: true,
+    teacherToken: verified.token,
+    settings: adminStoreSettingsPayload_(),
+    now: new Date().toISOString(),
+  };
+}
+
+function adminUpdateStore_(args) {
+  const verified = verifyTeacher_(args || {});
+  const settings = args.settings || {};
+  const storeLocked = toBool_(settings.storeLocked, true);
+  const storePin = normPin_(settings.storePin || "");
+  const xpPerPoint = Math.max(1, Math.min(999, Math.round(asNum_(settings.xpPerPoint, 5))));
+  const skillTokenCost = Math.max(1, Math.min(99, Math.round(asNum_(settings.skillTokenCost, 1))));
+  const maxPointsPerOpen = Math.max(1, Math.min(99, Math.round(asNum_(settings.maxPointsPerOpen, 8))));
+  const windowLabel = norm_(settings.windowLabel || "");
+
+  if (!storePin) throw new Error("Store PIN cannot be blank.");
+  if (!windowLabel) throw new Error("Store window label cannot be blank.");
+
+  const lock = LockService.getScriptLock();
+  lock.waitLock(CFG.LOCK_WAIT_MS);
+  try {
+    const nowIso = new Date().toISOString();
+    const openNonce = Utilities.getUuid();
+
+    adminSetStoreControlValue_("StoreLocked", storeLocked);
+    adminSetStoreControlValue_("StorePIN", storePin);
+    adminSetStoreControlValue_("XPPerPoint", xpPerPoint);
+    adminSetStoreControlValue_("SkillTokenCost", skillTokenCost);
+    adminSetStoreControlValue_("WindowLabel", windowLabel);
+    adminSetStoreControlValue_("MaxPointsPerOpen", maxPointsPerOpen);
+    adminSetStoreControlValue_("OpenNonce", openNonce);
+    adminSetStoreControlValue_("UpdatedAt", nowIso);
+
+    SpreadsheetApp.flush();
+    setProp_(CFG.PROP_LAST_XP_WRITE_ISO, nowIso);
+
+    return {
+      ok: true,
+      teacherToken: verified.token,
+      settings: adminStoreSettingsPayload_(),
+      now: nowIso,
+    };
+  } finally {
+    try { lock.releaseLock(); } catch (_) {}
+  }
+}
+
+// =========================================================
 // Web App Routing + Endpoints
 // =========================================================
 function doGet(e) {
@@ -5943,6 +6043,12 @@ function doPost(e) {
 
       case "adminupdatecompanion":
         return jsonOut_(adminUpdateCompanion_(body));
+
+      case "adminstoresnapshot":
+        return jsonOut_(adminStoreSnapshot_(body));
+
+      case "adminupdatestore":
+        return jsonOut_(adminUpdateStore_(body));
 
       default:
         return jsonOut_({

@@ -165,6 +165,25 @@ export type AdminSkillAdjustmentResult = AdminAbilitySnapshotResult & {
   skillName?: string;
 };
 
+export type AdminStoreSettings = {
+  storeLocked: boolean;
+  storePin: string;
+  xpPerPoint: number;
+  skillTokenCost: number;
+  maxPointsPerOpen: number;
+  windowLabel: string;
+  updatedAt: string;
+};
+
+export type AdminStoreSnapshotResult = {
+  ok?: boolean;
+  error?: string;
+  settings: AdminStoreSettings;
+  [key: string]: any;
+};
+
+export type AdminStoreUpdateResult = AdminStoreSnapshotResult;
+
 export type AdminMediaUploadResult = {
   ok?: boolean;
   error?: string;
@@ -210,7 +229,9 @@ type AdminAction =
   | "adminadjustskill"
   | "adminconfiguremedia"
   | "adminuploadmedia"
-  | "adminupdatecompanion";
+  | "adminupdatecompanion"
+  | "adminstoresnapshot"
+  | "adminupdatestore";
 
 async function postAdminAction<T>(
   action: AdminAction,
@@ -416,4 +437,15 @@ export async function adminUpdateCompanion(args: {
     "adminupdatecompanion",
     args
   );
+}
+
+
+export async function adminStoreSnapshot() {
+  return postAdminAction<AdminStoreSnapshotResult>("adminstoresnapshot", {});
+}
+
+export async function adminUpdateStore(settings: AdminStoreSettings) {
+  return postAdminAction<AdminStoreUpdateResult>("adminupdatestore", {
+    settings,
+  });
 }

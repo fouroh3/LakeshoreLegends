@@ -70,6 +70,7 @@ import InventoryManagerPanel from "./components/InventoryManagerPanel";
 import AbilitiesManagerPanel from "./components/AbilitiesManagerPanel";
 import HeroImageManagerPanel from "./components/HeroImageManagerPanel";
 import CompanionManagerPanel from "./components/CompanionManagerPanel";
+import StoreSettingsPanel from "./components/StoreSettingsPanel";
 
 function Pill({ children }: { children: ReactNode }) {
   return (
@@ -874,6 +875,12 @@ export default function AdminPage() {
                 detail="Balances, rewards, and corrections."
                 onClick={() => setSection("currency")}
               />
+              <SectionButton
+                active={section === "store"}
+                title="Store"
+                detail="Open/close, PIN, costs, and purchase limits."
+                onClick={() => setSection("store")}
+              />
             </div>
 
             <div className="px-3 pb-2 pt-5 text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-600">
@@ -1066,6 +1073,16 @@ export default function AdminPage() {
                   busy={busy || !playerStateReady}
                   onAdjust={handleAdjustInventory}
                 />
+              </AdminPanel>
+            )}
+
+            {section === "store" && (
+              <AdminPanel
+                kicker="Student Store"
+                title="Store Settings"
+                description="Open or close student purchases, change the purchase PIN, and set the live XP and Skill Token costs without touching Store_Control."
+              >
+                <StoreSettingsPanel />
               </AdminPanel>
             )}
 

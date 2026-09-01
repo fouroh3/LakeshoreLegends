@@ -96,7 +96,8 @@ export default function SkillTrainingPanel({
     ? allOwnedSkillIds.has(selectedSkill.id)
     : false;
   const skillTokens = summary?.skillTokens ?? 0;
-  const canAfford = skillTokens >= 1;
+  const skillCost = Math.max(1, summary?.skillCost ?? 1);
+  const canAfford = skillTokens >= skillCost;
   const canBuy =
     !!selectedSkill &&
     !selectedOwned &&
@@ -169,7 +170,7 @@ export default function SkillTrainingPanel({
 
           <div className="flex flex-wrap gap-2">
             <div className="self-start rounded-full border border-violet-300/15 bg-violet-400/[0.08] px-3 py-1 text-[11px] text-violet-100">
-              Cost: 1 Skill Token
+              Cost: {skillCost} Skill Token{skillCost === 1 ? "" : "s"}
             </div>
             <div className="self-start rounded-full border border-cyan-300/15 bg-cyan-400/[0.08] px-3 py-1 text-[11px] text-cyan-100">
               Tokens: {loading ? "…" : err ? "—" : skillTokens}
@@ -225,7 +226,7 @@ export default function SkillTrainingPanel({
                         : "border-white/[0.06] bg-white/[0.04] text-white/56",
                     ].join(" ")}
                   >
-                    {owned ? "Owned" : "1 Token"}
+                    {owned ? "Owned" : `${skillCost} Token${skillCost === 1 ? "" : "s"}`}
                   </span>
                 </div>
 
@@ -282,14 +283,14 @@ export default function SkillTrainingPanel({
                     : "border-violet-300/20 bg-violet-400/[0.12] text-violet-100",
                 ].join(" ")}
               >
-                {selectedOwned ? "Owned" : "1 Token"}
+                {selectedOwned ? "Owned" : `${skillCost} Token${skillCost === 1 ? "" : "s"}`}
               </span>
             </div>
 
             <div className="mt-5 rounded-2xl border border-white/[0.05] bg-black/20 px-4 py-3">
               <div className="flex items-center justify-between text-sm">
                 <span className="text-white/54">Cost</span>
-                <span className="font-semibold text-white">1 Skill Token</span>
+                <span className="font-semibold text-white">{skillCost} Skill Token{skillCost === 1 ? "" : "s"}</span>
               </div>
               <div className="mt-2 flex items-center justify-between text-sm">
                 <span className="text-white/54">Tokens Available</span>
@@ -300,7 +301,7 @@ export default function SkillTrainingPanel({
               <div className="mt-2 flex items-center justify-between text-sm">
                 <span className="text-white/54">After Purchase</span>
                 <span className="font-semibold text-cyan-100">
-                  {selectedOwned ? skillTokens : Math.max(0, skillTokens - 1)}
+                  {selectedOwned ? skillTokens : Math.max(0, skillTokens - skillCost)}
                 </span>
               </div>
             </div>
@@ -347,7 +348,7 @@ export default function SkillTrainingPanel({
                 ? "Skill Backend Needed"
                 : !canAfford
                 ? "Not Enough Skill Tokens"
-                : `Buy ${selectedSkill.name} (1 Token)`}
+                : `Buy ${selectedSkill.name} (${skillCost} Token${skillCost === 1 ? "" : "s"})`}
             </button>
           </div>
         )}
