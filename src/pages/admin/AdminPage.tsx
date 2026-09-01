@@ -9,8 +9,10 @@ import {
 import { loadStudents } from "../../data";
 import type { Student } from "../../types";
 import {
+  adminAdjustCurrency,
   adminAssignGuildBatch,
   adminImportStudents,
+  type AdminCurrencyAdjustmentResult,
   type AdminImportedStudent,
 } from "./adminApi";
 import {
@@ -19,11 +21,14 @@ import {
   loginBattleTeacher,
 } from "../battle/battleTeacherApi";
 import {
+  type AdminCurrency,
+  type AdminCurrencyMode,
   type AdminSection,
 } from "./adminConstants";
 import { normId } from "./adminRosterUtils";
 import StudentImportPanel from "./components/StudentImportPanel";
 import GuildManagerPanel from "./components/GuildManagerPanel";
+import CurrencyManagerPanel from "./components/CurrencyManagerPanel";
 
 function Pill({ children }: { children: ReactNode }) {
   return (
@@ -279,6 +284,41 @@ export default function AdminPage() {
     }
   };
 
+  const handleAdjustCurrency = async (args: {
+    studentIds: string[];
+    currency: AdminCurrency;
+    mode: AdminCurrencyMode;
+    amount: number;
+    reason: string;
+  }): Promise<AdminCurrencyAdjustmentResult> => {
+    setBusy(true);
+    setNotice(null);
+
+    try {
+      const result = await adminAdjustCurrency(args);
+      const currencyLabel = args.currency === "XP" ? "XP" : "Skill Tokens";
+      const actionLabel = args.mode === "ADD" ? "Added" : "Removed";
+      const updated = result.updated ?? args.studentIds.length;
+
+      setNotice({
+        type: "ok",
+        msg: `${actionLabel} ${args.amount} ${currencyLabel} ${
+          args.mode === "ADD" ? "to" : "from"
+        } ${updated} student${updated === 1 ? "" : "s"}.`,
+      });
+
+      return result;
+    } catch (err: any) {
+      setNotice({
+        type: "err",
+        msg: err?.message || "Currency adjustment failed.",
+      });
+      throw err;
+    } finally {
+      setBusy(false);
+    }
+  };
+
   if (!unlocked) {
     return (
       <div className="min-h-screen bg-[radial-gradient(circle_at_top,rgba(34,211,238,0.12),transparent_42%),#070707] px-4 py-8 text-zinc-100">
@@ -418,12 +458,12 @@ export default function AdminPage() {
             detail="Assign, move, filter, and unassign students in bulk."
             onClick={() => setSection("guilds")}
           />
-          <div className="rounded-2xl border border-white/5 bg-white/[0.02] px-4 py-3 opacity-55">
-            <div className="font-bold text-zinc-400">Currency Manager</div>
-            <div className="mt-1 text-xs leading-5 text-zinc-600">
-              XP and Skill Tokens are the next admin module.
-            </div>
-          </div>
+          <SectionButton
+            active={section === "currency"}
+            title="Currency Manager"
+            detail="View balances and add or remove XP and Skill Tokens."
+            onClick={() => setSection("currency")}
+          />
           <div className="rounded-2xl border border-white/5 bg-white/[0.02] px-4 py-3 opacity-55">
             <div className="font-bold text-zinc-400">Inventory Manager</div>
             <div className="mt-1 text-xs leading-5 text-zinc-600">
@@ -458,6 +498,20 @@ export default function AdminPage() {
               busy={busy}
               onAssign={handleAssignGuild}
               onRefresh={reloadStudents}
+            />
+          </AdminPanel>
+        )}
+
+        {section === "currency" && (
+          <AdminPanel
+            kicker="Rewards & Corrections"
+            title="XP / Skill Token Manager"
+            description="See current balances, target a student, guild, class, or filtered group, and add or remove currency with a reason recorded in the transaction logs."
+          >
+            <CurrencyManagerPanel
+              students={students}
+              busy={busy}
+              onAdjust={handleAdjustCurrency}
             />
           </AdminPanel>
         )}
