@@ -2,7 +2,7 @@
 
 import { HP_API_URL } from "../battle/battleConstants";
 import { getBattleTeacherToken } from "../battle/battleTeacherApi";
-export const ADMIN_API_VERSION = "2026-09-01.3";
+export const ADMIN_API_VERSION = "2026-09-01.4";
 
 import type {
   AdminAttributeValues,
@@ -289,6 +289,7 @@ const RETRYABLE_ADMIN_READS = new Set<AdminAction>([
   "adminsystemstatus",
   "adminarchivedstudents",
   "adminabilitysnapshot",
+  "adminupdateabilities",
   "adminstoresnapshot",
 ]);
 

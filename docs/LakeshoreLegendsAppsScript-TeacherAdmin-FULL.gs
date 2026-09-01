@@ -31,7 +31,7 @@
  *   overwritten by the Teacher Admin importer.
  * ========================================================= */
 
-const ADMIN_API_VERSION = "2026-09-01.3";
+const ADMIN_API_VERSION = "2026-09-01.4";
 
 const CFG = {
   // Master
@@ -5444,18 +5444,72 @@ function adminUpdateAbilities_(args) {
   lock.waitLock(CFG.LOCK_WAIT_MS);
 
   try {
-    const before = adminAbilitySnapshotForStudent_(studentId);
     const resolved = adminAbilityResolved_(studentId);
     const state = ensurePlayerStateStudent_(studentId);
     const now = new Date();
     const nowIso = now.toISOString();
-
     const baseOrder = ["str", "dex", "con", "int", "wis", "cha"];
+
+    // Read the class row once instead of rebuilding a full snapshot before
+    // and after every save.
+    const classWidth = Math.max(1, resolved.sh.getLastColumn());
+    const classRow = resolved.sh
+      .getRange(resolved.rowNumber, 1, 1, classWidth)
+      .getValues()[0];
+
+    const beforeBase = {};
     baseOrder.forEach((key) => {
-      resolved.sh
-        .getRange(resolved.rowNumber, resolved.columns[key] + 1)
-        .setValue(base[key]);
+      beforeBase[key] = Math.round(asNum_(classRow[resolved.columns[key]], 0));
     });
+
+    const beforeRosterSkills = [];
+    const beforeRosterSeen = new Set();
+    adminSplitSkills_(classRow[resolved.columns.skills]).forEach((value) => {
+      const canonical = canonicalSkillName_(value) || norm_(value);
+      const key = normalizeSkillId_(canonical);
+      if (!key || beforeRosterSeen.has(key)) return;
+      beforeRosterSeen.add(key);
+      beforeRosterSkills.push(canonical);
+    });
+    beforeRosterSkills.sort((a, b) => a.localeCompare(b));
+
+    const beforeBonusValues = state.sh
+      .getRange(state.row.sheetRow, state.row.col.STR_Bonus, 1, 6)
+      .getValues()[0];
+    const beforeBonus = {
+      str: Math.round(asNum_(beforeBonusValues[0], 0)),
+      dex: Math.round(asNum_(beforeBonusValues[1], 0)),
+      con: Math.round(asNum_(beforeBonusValues[2], 0)),
+      int: Math.round(asNum_(beforeBonusValues[3], 0)),
+      wis: Math.round(asNum_(beforeBonusValues[4], 0)),
+      cha: Math.round(asNum_(beforeBonusValues[5], 0)),
+    };
+
+    // Attribute columns are contiguous in the normal class-sheet schema.
+    // Fall back to individual cells if a sheet is ever rearranged.
+    const baseStart = resolved.columns.str;
+    const contiguous = baseOrder.every(
+      (key, index) => resolved.columns[key] === baseStart + index
+    );
+
+    if (contiguous) {
+      resolved.sh
+        .getRange(resolved.rowNumber, baseStart + 1, 1, 6)
+        .setValues([[
+          base.str,
+          base.dex,
+          base.con,
+          base.int,
+          base.wis,
+          base.cha,
+        ]]);
+    } else {
+      baseOrder.forEach((key) => {
+        resolved.sh
+          .getRange(resolved.rowNumber, resolved.columns[key] + 1)
+          .setValue(base[key]);
+      });
+    }
 
     resolved.sh
       .getRange(resolved.rowNumber, resolved.columns.skills + 1)
@@ -5475,33 +5529,32 @@ function adminUpdateAbilities_(args) {
       .getRange(state.row.sheetRow, state.row.col.UpdatedAt)
       .setValue(nowIso);
 
-    const txn = ensureAbilityTxnSheet_();
     const rows = [];
-    const studentName = before.studentName || "";
+    const studentName = resolved.currentName || studentId;
 
     baseOrder.forEach((key) => {
-      if (before.baseAttributes[key] !== base[key]) {
+      if (beforeBase[key] !== base[key]) {
         rows.push([
           now,
           studentId,
           studentName,
           "SET_BASE_ATTRIBUTE",
           key.toUpperCase(),
-          before.baseAttributes[key],
+          beforeBase[key],
           base[key],
           "ADMIN",
           reason,
         ]);
       }
 
-      if (before.bonusAttributes[key] !== bonus[key]) {
+      if (beforeBonus[key] !== bonus[key]) {
         rows.push([
           now,
           studentId,
           studentName,
           "SET_BONUS_ATTRIBUTE",
           `${key.toUpperCase()}_BONUS`,
-          before.bonusAttributes[key],
+          beforeBonus[key],
           bonus[key],
           "ADMIN",
           reason,
@@ -5509,7 +5562,7 @@ function adminUpdateAbilities_(args) {
       }
     });
 
-    const beforeSkills = before.rosterSkills.join(", ");
+    const beforeSkills = beforeRosterSkills.join(", ");
     const afterSkills = rosterSkills.join(", ");
     if (beforeSkills !== afterSkills) {
       rows.push([
@@ -5526,16 +5579,25 @@ function adminUpdateAbilities_(args) {
     }
 
     if (rows.length) {
-      txn.getRange(txn.getLastRow() + 1, 1, rows.length, rows[0].length).setValues(rows);
+      const txn = ensureAbilityTxnSheet_();
+      txn
+        .getRange(txn.getLastRow() + 1, 1, rows.length, rows[0].length)
+        .setValues(rows);
     }
 
-    SpreadsheetApp.flush();
     cacheRemove_(`studentsMap:${CFG.STUDENTS_SHEET}`);
 
     return {
-      ...adminAbilitySnapshotForStudent_(studentId),
+      ok: true,
+      studentId,
+      studentName,
+      baseAttributes: base,
+      bonusAttributes: bonus,
+      rosterSkills,
+      purchasedSkills: purchasedSkillIdsForStudent_(studentId).names,
       teacherToken: verified.token,
       updated: rows.length > 0,
+      now: nowIso,
     };
   } finally {
     try { lock.releaseLock(); } catch (_) {}

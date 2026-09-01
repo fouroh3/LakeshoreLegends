@@ -184,6 +184,16 @@ export default function AdminPage() {
     msg: string;
   } | null>(null);
 
+  useEffect(() => {
+    if (!notice || notice.type !== "ok") return;
+
+    const timer = window.setTimeout(() => {
+      setNotice((current) => (current === notice ? null : current));
+    }, 4000);
+
+    return () => window.clearTimeout(timer);
+  }, [notice]);
+
   const reloadStudents = async () => {
     setLoading(true);
 
