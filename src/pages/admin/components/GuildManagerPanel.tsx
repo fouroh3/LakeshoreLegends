@@ -1,6 +1,10 @@
 // src/pages/admin/components/GuildManagerPanel.tsx
 
-import { useMemo, useState } from "react";
+import {
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
 import type { Student } from "../../../types";
 import { ADMIN_GUILDS } from "../adminConstants";
 import {
@@ -19,7 +23,7 @@ function FieldLabel({ children }: { children: string }) {
   );
 }
 
-function CountPill({ children }: { children: React.ReactNode }) {
+function CountPill({ children }: { children: ReactNode }) {
   return (
     <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-cyan-100/80">
       {children}
@@ -140,8 +144,12 @@ export default function GuildManagerPanel({
 
     if (!confirmed) return;
 
-    await onAssign(selectedIds, targetGuild);
-    setSelectedIds([]);
+    try {
+      await onAssign(selectedIds, targetGuild);
+      setSelectedIds([]);
+    } catch {
+      // Parent shows the error. Keep the selected students so the teacher can retry.
+    }
   };
 
   return (
