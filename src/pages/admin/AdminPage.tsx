@@ -10,10 +10,19 @@ import { loadStudents } from "../../data";
 import type { Student } from "../../types";
 import {
   adminAdjustCurrency,
+  adminAdjustInventory,
+  adminArchiveStudent,
   adminAssignGuildBatch,
   adminImportStudents,
+  adminMigratePlayerState,
+  adminSystemStatus,
+  adminUpdateStudent,
+  type AdminArchiveStudentResult,
   type AdminCurrencyAdjustmentResult,
   type AdminImportedStudent,
+  type AdminInventoryAdjustmentResult,
+  type AdminSystemStatusResult,
+  type AdminUpdateStudentResult,
 } from "./adminApi";
 import {
   clearBattleTeacherToken,
@@ -23,12 +32,15 @@ import {
 import {
   type AdminCurrency,
   type AdminCurrencyMode,
+  type AdminInventoryMode,
   type AdminSection,
 } from "./adminConstants";
 import { normId } from "./adminRosterUtils";
 import StudentImportPanel from "./components/StudentImportPanel";
+import StudentManagePanel from "./components/StudentManagePanel";
 import GuildManagerPanel from "./components/GuildManagerPanel";
 import CurrencyManagerPanel from "./components/CurrencyManagerPanel";
+import InventoryManagerPanel from "./components/InventoryManagerPanel";
 
 function Pill({ children }: { children: ReactNode }) {
   return (
@@ -132,6 +144,8 @@ export default function AdminPage() {
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [systemStatus, setSystemStatus] = useState<AdminSystemStatusResult | null>(null);
+  const [statusLoading, setStatusLoading] = useState(false);
   const [notice, setNotice] = useState<{
     type: "ok" | "err";
     msg: string;
@@ -153,9 +167,24 @@ export default function AdminPage() {
     }
   };
 
+  const reloadSystemStatus = async () => {
+    setStatusLoading(true);
+
+    try {
+      const result = await adminSystemStatus();
+      setSystemStatus(result);
+    } catch {
+      // Older backend deployment: leave migration-dependent tools locked.
+      setSystemStatus(null);
+    } finally {
+      setStatusLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (unlocked) {
       reloadStudents();
+      reloadSystemStatus();
     }
   }, [unlocked]);
 
@@ -172,6 +201,10 @@ export default function AdminPage() {
   const unassignedCount = useMemo(
     () => students.filter((student) => !String(student.guild || "").trim()).length,
     [students]
+  );
+
+  const playerStateReady = Boolean(
+    systemStatus?.playerStateReady && systemStatus?.masterLookupWired
   );
 
   const handleLogin = async () => {
@@ -197,11 +230,40 @@ export default function AdminPage() {
     clearBattleTeacherToken();
     setUnlocked(false);
     setStudents([]);
+    setSystemStatus(null);
     setNotice(null);
   };
 
+  const handleMigration = async () => {
+    const confirmed = window.confirm(
+      "Upgrade player-owned data to StudentID-keyed Player_State? A backup of the current Master data will be created first."
+    );
+
+    if (!confirmed) return;
+
+    setBusy(true);
+    setNotice(null);
+
+    try {
+      const result = await adminMigratePlayerState();
+      setSystemStatus(result);
+      await reloadStudents();
+      setNotice({
+        type: "ok",
+        msg: "Player data migration completed. Student import, archive, and Inventory Manager are now safe to use.",
+      });
+    } catch (err: any) {
+      setNotice({
+        type: "err",
+        msg: err?.message || "Player data migration failed.",
+      });
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const handleImport = async (rows: AdminImportedStudent[]) => {
-    if (!rows.length) return;
+    if (!rows.length || !playerStateReady) return;
 
     const confirmed = window.confirm(
       `Import ${rows.length} student${rows.length === 1 ? "" : "s"}?`
@@ -231,12 +293,74 @@ export default function AdminPage() {
         type: "ok",
         msg: `Imported ${result.imported ?? rows.length} student${
           (result.imported ?? rows.length) === 1 ? "" : "s"
-        }. HP, XP, and Skill Token state were initialized automatically.`,
+        }. HP, XP, Skill Token, and Player State were initialized automatically.`,
       });
     } catch (err: any) {
       setNotice({
         type: "err",
         msg: err?.message || "Student import failed.",
+      });
+      throw err;
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleUpdateStudent = async (args: {
+    studentId: string;
+    first: string;
+    last: string;
+  }): Promise<AdminUpdateStudentResult> => {
+    setBusy(true);
+    setNotice(null);
+
+    try {
+      const result = await adminUpdateStudent(args);
+      const id = normId(args.studentId);
+
+      setStudents((prev) =>
+        prev.map((student) =>
+          normId(student.id) === id
+            ? { ...student, first: args.first, last: args.last }
+            : student
+        )
+      );
+
+      setNotice({ type: "ok", msg: `Updated ${args.first} ${args.last}.` });
+      return result;
+    } catch (err: any) {
+      setNotice({
+        type: "err",
+        msg: err?.message || "Student update failed.",
+      });
+      throw err;
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleArchiveStudent = async (args: {
+    studentId: string;
+    reason: string;
+  }): Promise<AdminArchiveStudentResult> => {
+    setBusy(true);
+    setNotice(null);
+
+    try {
+      const result = await adminArchiveStudent(args);
+      const id = normId(args.studentId);
+      const student = students.find((row) => normId(row.id) === id);
+
+      setStudents((prev) => prev.filter((row) => normId(row.id) !== id));
+      setNotice({
+        type: "ok",
+        msg: `${student ? `${student.first} ${student.last}` : id} archived. Their StudentID and history are preserved and will not be reused.`,
+      });
+      return result;
+    } catch (err: any) {
+      setNotice({
+        type: "err",
+        msg: err?.message || "Student archive failed.",
       });
       throw err;
     } finally {
@@ -251,24 +375,17 @@ export default function AdminPage() {
     setNotice(null);
 
     try {
-      const result = await adminAssignGuildBatch({
-        studentIds,
-        guild,
-      });
-
+      const result = await adminAssignGuildBatch({ studentIds, guild });
       const changedIds = new Set(studentIds.map(normId));
 
       setStudents((prev) =>
         prev.map((student) =>
-          changedIds.has(normId(student.id))
-            ? { ...student, guild }
-            : student
+          changedIds.has(normId(student.id)) ? { ...student, guild } : student
         )
       );
 
       const label = guild || "Unassigned";
       const updated = result.updated ?? studentIds.length;
-
       setNotice({
         type: "ok",
         msg: `Moved ${updated} student${updated === 1 ? "" : "s"} to ${label}.`,
@@ -319,51 +436,72 @@ export default function AdminPage() {
     }
   };
 
+  const handleAdjustInventory = async (args: {
+    studentIds: string[];
+    mode: AdminInventoryMode;
+    cardKey: string;
+    cardName: string;
+    quantity: number;
+    reason: string;
+  }): Promise<AdminInventoryAdjustmentResult> => {
+    setBusy(true);
+    setNotice(null);
+
+    try {
+      const result = await adminAdjustInventory(args);
+      const updated = result.updated ?? args.studentIds.length;
+      setNotice({
+        type: "ok",
+        msg: `${args.mode === "GIVE" ? "Gave" : "Removed"} ${args.quantity} × ${args.cardName} ${
+          args.mode === "GIVE" ? "to" : "from"
+        } ${updated} student${updated === 1 ? "" : "s"}.`,
+      });
+      return result;
+    } catch (err: any) {
+      setNotice({
+        type: "err",
+        msg: err?.message || "Inventory adjustment failed.",
+      });
+      throw err;
+    } finally {
+      setBusy(false);
+    }
+  };
+
   if (!unlocked) {
     return (
       <div className="min-h-screen bg-[radial-gradient(circle_at_top,rgba(34,211,238,0.12),transparent_42%),#070707] px-4 py-8 text-zinc-100">
         <div className="mx-auto max-w-xl rounded-[32px] border border-white/10 bg-zinc-950/80 p-6 shadow-2xl backdrop-blur-xl">
           <div className="mb-6">
-            <div className="text-[11px] font-semibold uppercase tracking-[0.24em] text-cyan-200/70">
-              Teacher Admin
-            </div>
-            <h1 className="mt-2 text-3xl font-black tracking-tight text-white">
-              Global Manager
-            </h1>
+            <div className="text-[11px] font-semibold uppercase tracking-[0.24em] text-cyan-200/70">Teacher Admin</div>
+            <h1 className="mt-2 text-3xl font-black tracking-tight text-white">Global Manager</h1>
             <p className="mt-2 text-sm leading-6 text-zinc-400">
               Manage the Lakeshore Legends system without editing the database sheets directly.
             </p>
           </div>
 
           {notice && (
-            <div
-              className={[
-                "mb-4 rounded-2xl border px-4 py-3 text-sm",
-                notice.type === "ok"
-                  ? "border-emerald-400/20 bg-emerald-950/30 text-emerald-100"
-                  : "border-red-400/20 bg-red-950/30 text-red-100",
-              ].join(" ")}
-            >
+            <div className={[
+              "mb-4 rounded-2xl border px-4 py-3 text-sm",
+              notice.type === "ok"
+                ? "border-emerald-400/20 bg-emerald-950/30 text-emerald-100"
+                : "border-red-400/20 bg-red-950/30 text-red-100",
+            ].join(" ")}>
               {notice.msg}
             </div>
           )}
 
-          <label className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
-            Teacher passcode
-          </label>
+          <label className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">Teacher passcode</label>
           <input
             type="password"
             value={passcode}
             onChange={(event) => setPasscode(event.target.value)}
             onKeyDown={(event) => {
-              if (event.key === "Enter") {
-                handleLogin();
-              }
+              if (event.key === "Enter") handleLogin();
             }}
             className="mt-2 w-full rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-white outline-none ring-cyan-300/30 placeholder:text-zinc-600 focus:ring-2"
             placeholder="Enter teacher password"
           />
-
           <button
             type="button"
             onClick={handleLogin}
@@ -372,11 +510,7 @@ export default function AdminPage() {
           >
             {busy ? "Unlocking..." : "Unlock Admin"}
           </button>
-
-          <a
-            href="/"
-            className="mt-4 block text-center text-sm font-semibold text-cyan-200/80 hover:text-cyan-100"
-          >
+          <a href="/" className="mt-4 block text-center text-sm font-semibold text-cyan-200/80 hover:text-cyan-100">
             Back to dashboard
           </a>
         </div>
@@ -390,37 +524,17 @@ export default function AdminPage() {
         <header className="mb-5 rounded-[30px] border border-white/10 bg-zinc-950/70 p-5 shadow-[0_20px_70px_rgba(0,0,0,0.35)] backdrop-blur-xl">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
-              <div className="text-[11px] font-semibold uppercase tracking-[0.24em] text-cyan-200/70">
-                Teacher Admin
-              </div>
-              <h1 className="mt-1 text-3xl font-black tracking-tight text-white sm:text-4xl">
-                Global Manager
-              </h1>
+              <div className="text-[11px] font-semibold uppercase tracking-[0.24em] text-cyan-200/70">Teacher Admin</div>
+              <h1 className="mt-1 text-3xl font-black tracking-tight text-white sm:text-4xl">Global Manager</h1>
               <p className="mt-2 max-w-3xl text-sm leading-6 text-zinc-400">
                 The spreadsheet stays underneath as the database. Teachers manage the game from here.
               </p>
             </div>
 
             <div className="flex flex-wrap gap-2">
-              <a
-                href="/"
-                className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2 text-sm font-bold text-zinc-200 hover:bg-white/[0.08]"
-              >
-                Dashboard
-              </a>
-              <a
-                href="/battle/teacher"
-                className="rounded-2xl border border-cyan-300/20 bg-cyan-300/10 px-4 py-2 text-sm font-bold text-cyan-100 hover:bg-cyan-300/15"
-              >
-                Live Battle Console
-              </a>
-              <button
-                type="button"
-                onClick={handleLock}
-                className="rounded-2xl border border-red-300/20 bg-red-950/30 px-4 py-2 text-sm font-bold text-red-100 hover:bg-red-950/50"
-              >
-                Lock
-              </button>
+              <a href="/" className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2 text-sm font-bold text-zinc-200 hover:bg-white/[0.08]">Dashboard</a>
+              <a href="/battle/teacher" className="rounded-2xl border border-cyan-300/20 bg-cyan-300/10 px-4 py-2 text-sm font-bold text-cyan-100 hover:bg-cyan-300/15">Live Battle Console</a>
+              <button type="button" onClick={handleLock} className="rounded-2xl border border-red-300/20 bg-red-950/30 px-4 py-2 text-sm font-bold text-red-100 hover:bg-red-950/50">Lock</button>
             </div>
           </div>
 
@@ -429,19 +543,35 @@ export default function AdminPage() {
             <Pill>{homeroomCount} homerooms</Pill>
             <Pill>{unassignedCount} unassigned</Pill>
             {loading && <Pill>Refreshing roster</Pill>}
+            {playerStateReady && <Pill>Player State protected</Pill>}
           </div>
         </header>
 
         {notice && (
-          <div
-            className={[
-              "mb-5 rounded-2xl border px-4 py-3 text-sm font-medium",
-              notice.type === "ok"
-                ? "border-emerald-400/20 bg-emerald-950/30 text-emerald-100"
-                : "border-red-400/20 bg-red-950/30 text-red-100",
-            ].join(" ")}
-          >
+          <div className={[
+            "mb-5 rounded-2xl border px-4 py-3 text-sm font-medium",
+            notice.type === "ok"
+              ? "border-emerald-400/20 bg-emerald-950/30 text-emerald-100"
+              : "border-red-400/20 bg-red-950/30 text-red-100",
+          ].join(" ")}>
             {notice.msg}
+          </div>
+        )}
+
+        {!playerStateReady && (
+          <div className="mb-5 rounded-[26px] border border-amber-300/25 bg-amber-950/20 p-4 sm:p-5">
+            <div className="font-black text-amber-100">One-time player data upgrade required</div>
+            <p className="mt-1 max-w-4xl text-sm leading-6 text-amber-100/70">
+              Some player-owned data is still tied to spreadsheet row position. Import, archive, and card management are locked until it is moved into StudentID-keyed Player_State. The upgrade creates a backup before changing Master.
+            </p>
+            <button
+              type="button"
+              onClick={handleMigration}
+              disabled={busy || statusLoading}
+              className="mt-3 rounded-2xl bg-amber-300 px-4 py-2.5 text-sm font-black text-zinc-950 disabled:opacity-50"
+            >
+              {busy ? "Upgrading..." : "Protect Player Data"}
+            </button>
           </div>
         )}
 
@@ -449,7 +579,7 @@ export default function AdminPage() {
           <SectionButton
             active={section === "students"}
             title="Students / Import"
-            detail="Paste class lists, preview IDs, and add students safely."
+            detail="Paste class lists, edit names, and archive students safely."
             onClick={() => setSection("students")}
           />
           <SectionButton
@@ -464,33 +594,48 @@ export default function AdminPage() {
             detail="View balances and add or remove XP and Skill Tokens."
             onClick={() => setSection("currency")}
           />
-          <div className="rounded-2xl border border-white/5 bg-white/[0.02] px-4 py-3 opacity-55">
-            <div className="font-bold text-zinc-400">Inventory Manager</div>
-            <div className="mt-1 text-xs leading-5 text-zinc-600">
-              Cards, companions, and other player inventory will follow.
-            </div>
-          </div>
+          <SectionButton
+            active={section === "inventory"}
+            title="Inventory Manager"
+            detail="Give or remove cards for students, guilds, or classes."
+            onClick={() => setSection("inventory")}
+          />
         </div>
 
         {section === "students" && (
-          <AdminPanel
-            kicker="Roster Setup"
-            title="Bulk Paste Students"
-            description="Copy names directly from your school spreadsheet. Choose the class once, paste the names, verify the generated IDs, and import the whole group together."
-          >
-            <StudentImportPanel
-              students={students}
-              busy={busy}
-              onImport={handleImport}
-            />
-          </AdminPanel>
+          <div className="space-y-5">
+            <AdminPanel
+              kicker="Roster Setup"
+              title="Bulk Paste Students"
+              description="Copy names directly from your school spreadsheet. Choose the class once, paste the names, verify the generated IDs, and import the whole group together."
+            >
+              <StudentImportPanel
+                students={students}
+                busy={busy || !playerStateReady}
+                onImport={handleImport}
+              />
+            </AdminPanel>
+
+            <AdminPanel
+              kicker="Active Roster"
+              title="Edit / Archive Students"
+              description="Fix student names without changing their ID, or archive a student while preserving their game history. Homeroom moves are intentionally separated because they require an ID migration."
+            >
+              <StudentManagePanel
+                students={students}
+                busy={busy || !playerStateReady}
+                onUpdate={handleUpdateStudent}
+                onArchive={handleArchiveStudent}
+              />
+            </AdminPanel>
+          </div>
         )}
 
         {section === "guilds" && (
           <AdminPanel
             kicker="Guilds"
             title="Assign / Manage Guilds"
-            description="Filter the roster, select any group of students, then move them together. Guild changes are designed to synchronize the roster and HP guild state."
+            description="Filter the roster, select any group of students, then move them together. Guild changes synchronize the roster and HP guild state."
           >
             <GuildManagerPanel
               students={students}
@@ -512,6 +657,20 @@ export default function AdminPage() {
               students={students}
               busy={busy}
               onAdjust={handleAdjustCurrency}
+            />
+          </AdminPanel>
+        )}
+
+        {section === "inventory" && (
+          <AdminPanel
+            kicker="Cards & Rewards"
+            title="Inventory / Card Manager"
+            description="Choose any card from the live card library, target students by class or guild, and give or remove cards with an audit reason."
+          >
+            <InventoryManagerPanel
+              students={students}
+              busy={busy || !playerStateReady}
+              onAdjust={handleAdjustInventory}
             />
           </AdminPanel>
         )}
