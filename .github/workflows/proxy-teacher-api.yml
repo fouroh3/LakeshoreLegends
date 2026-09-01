@@ -36,8 +36,6 @@ jobs:
                   raise RuntimeError(f"Missing patch target: {label}")
               return text.replace(old, new, 1)
 
-          # Teacher/admin calls use a same-origin proxy. Student battle calls keep
-          # using the direct Apps Script URL to avoid centralizing classroom traffic.
           p = Path("src/pages/battle/battleConstants.ts")
           s = p.read_text(encoding="utf-8")
           old = f'''export const HP_API_URL =\n  "{GOOGLE_URL}";'''
@@ -71,8 +69,6 @@ jobs:
               raise RuntimeError("adminApi still references HP_API_URL")
           p.write_text(s, encoding="utf-8")
 
-          # Vite development proxy follows Apps Script redirects server-side, so
-          # the browser never enters Google's multi-account routing layer.
           p = Path("vite.config.ts")
           s = p.read_text(encoding="utf-8")
           old = '''export default defineConfig({\n  plugins: [react()],\n});'''
@@ -80,8 +76,6 @@ jobs:
           s = once(s, old, new, "vite proxy")
           p.write_text(s, encoding="utf-8")
 
-          # Production proxy. Node's fetch follows the Apps Script redirect on
-          # the server, completely bypassing browser Google-account state.
           p = Path("netlify/functions/apps-script-proxy.mjs")
           p.parent.mkdir(parents=True, exist_ok=True)
           p.write_text(f'''const DEFAULT_APPS_SCRIPT_URL =\n  "{GOOGLE_URL}";\n\nexport const handler = async (event) => {{\n  const targetBase = process.env.LL_APPS_SCRIPT_URL || DEFAULT_APPS_SCRIPT_URL;\n  const params = new URLSearchParams(event.queryStringParameters || {{}});\n  const targetUrl = `${{targetBase}}${{params.size ? `?${{params.toString()}}` : ""}}`;\n  const method = String(event.httpMethod || "GET").toUpperCase();\n\n  try {{\n    const response = await fetch(targetUrl, {{\n      method,\n      headers: {{\n        "Content-Type": event.headers?.["content-type"] || "text/plain;charset=utf-8",\n      }},\n      body: method === "GET" || method === "HEAD" ? undefined : event.body || "",\n      redirect: "follow",\n    }});\n\n    const body = await response.text();\n\n    return {{\n      statusCode: response.status,\n      headers: {{\n        "Content-Type": response.headers.get("content-type") || "application/json; charset=utf-8",\n        "Cache-Control": "no-store, max-age=0",\n      }},\n      body,\n    }};\n  }} catch (error) {{\n    return {{\n      statusCode: 502,\n      headers: {{\n        "Content-Type": "application/json; charset=utf-8",\n        "Cache-Control": "no-store, max-age=0",\n      }},\n      body: JSON.stringify({{\n        ok: false,\n        error: `Teacher API proxy failed: ${{error instanceof Error ? error.message : String(error)}}`,\n      }}),\n    }};\n  }}\n}};\n''', encoding="utf-8")
@@ -101,3 +95,5 @@ jobs:
           git add src/pages/battle/battleConstants.ts src/pages/battle/battleTeacherApi.ts src/pages/admin/adminApi.ts vite.config.ts netlify/functions/apps-script-proxy.mjs
           git commit -m "Proxy teacher admin API through Lakeshore Legends"
           git push origin HEAD:fluffy-cloud
+
+# trigger 2
