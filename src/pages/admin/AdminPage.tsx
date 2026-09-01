@@ -244,6 +244,16 @@ export default function AdminPage() {
     [students]
   );
 
+  const fallenCompanionCount = useMemo(
+    () =>
+      students.filter(
+        (student) =>
+          String(student.companionStatus || "").trim().toLowerCase() ===
+          "fallen"
+      ).length,
+    [students]
+  );
+
   const playerStateReady = Boolean(
     systemStatus?.playerStateReady && systemStatus?.masterLookupWired
   );
@@ -752,12 +762,12 @@ export default function AdminPage() {
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top,rgba(34,211,238,0.10),transparent_42%),#070707] px-3 py-5 text-zinc-100 sm:px-5">
       <div className="mx-auto max-w-[1700px]">
-        <header className="mb-5 rounded-[30px] border border-white/10 bg-zinc-950/70 p-5 shadow-[0_20px_70px_rgba(0,0,0,0.35)] backdrop-blur-xl">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <header className="mb-4 rounded-[26px] border border-white/10 bg-zinc-950/70 px-5 py-4 shadow-[0_20px_70px_rgba(0,0,0,0.35)] backdrop-blur-xl">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <div className="text-[11px] font-semibold uppercase tracking-[0.24em] text-cyan-200/70">Teacher Admin</div>
-              <h1 className="mt-1 text-3xl font-black tracking-tight text-white sm:text-4xl">Global Manager</h1>
-              <p className="mt-2 max-w-3xl text-sm leading-6 text-zinc-400">
+              <h1 className="mt-1 text-3xl font-black tracking-tight text-white">Global Manager</h1>
+              <p className="mt-1.5 max-w-3xl text-sm leading-5 text-zinc-400">
                 The spreadsheet stays underneath as the database. Teachers manage the game from here.
               </p>
             </div>
@@ -769,7 +779,7 @@ export default function AdminPage() {
             </div>
           </div>
 
-          <div className="mt-4 flex flex-wrap gap-2">
+          <div className="mt-3 flex flex-wrap gap-2">
             <Pill>{students.length} students</Pill>
             <Pill>{homeroomCount} homerooms</Pill>
             <Pill>{unassignedCount} unassigned</Pill>
@@ -807,7 +817,7 @@ export default function AdminPage() {
         )}
 
         <div className="grid gap-5 lg:grid-cols-[270px_minmax(0,1fr)]">
-          <aside className="self-start rounded-[28px] border border-white/10 bg-zinc-950/65 p-3 lg:sticky lg:top-5">
+          <aside className="self-start rounded-[28px] border border-white/10 bg-zinc-950/65 p-3 lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto lg:overscroll-contain">
             <div className="px-3 pb-2 pt-2 text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-600">
               Overview
             </div>
@@ -903,27 +913,147 @@ export default function AdminPage() {
                   title="Everything important, at a glance"
                   description="Use the cards below to jump directly to the task you need. Live battle controls remain separate in the Battle Console."
                 >
+                  {(missingHeroCount > 0 ||
+                    missingCompanionCount > 0 ||
+                    unassignedCount > 0 ||
+                    fallenCompanionCount > 0 ||
+                    !playerStateReady) && (
+                    <div className="mb-4 rounded-[22px] border border-amber-300/15 bg-[linear-gradient(135deg,rgba(245,158,11,0.08),rgba(17,24,39,0.28))] px-4 py-3.5">
+                      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                        <div className="flex items-start gap-3">
+                          <div className="mt-0.5 rounded-xl border border-amber-300/15 bg-amber-300/10 p-2 text-amber-100">
+                            <Activity size={17} />
+                          </div>
+                          <div>
+                            <div className="text-sm font-black text-amber-50">Needs Attention</div>
+                            <div className="mt-0.5 text-xs leading-5 text-amber-100/55">
+                              These are the current setup or maintenance items worth checking.
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex flex-wrap gap-2">
+                          {missingHeroCount > 0 && (
+                            <button type="button" onClick={() => setSection("heroImages")} className="rounded-full border border-amber-300/15 bg-black/20 px-3 py-1.5 text-xs font-bold text-amber-100 transition hover:border-amber-200/30 hover:bg-amber-300/10">
+                              {missingHeroCount} hero images
+                            </button>
+                          )}
+                          {missingCompanionCount > 0 && (
+                            <button type="button" onClick={() => setSection("companions")} className="rounded-full border border-amber-300/15 bg-black/20 px-3 py-1.5 text-xs font-bold text-amber-100 transition hover:border-amber-200/30 hover:bg-amber-300/10">
+                              {missingCompanionCount} companions
+                            </button>
+                          )}
+                          {fallenCompanionCount > 0 && (
+                            <button type="button" onClick={() => setSection("companions")} className="rounded-full border border-red-300/15 bg-red-950/20 px-3 py-1.5 text-xs font-bold text-red-100 transition hover:border-red-200/30 hover:bg-red-950/35">
+                              {fallenCompanionCount} fallen
+                            </button>
+                          )}
+                          {unassignedCount > 0 && (
+                            <button type="button" onClick={() => setSection("guilds")} className="rounded-full border border-amber-300/15 bg-black/20 px-3 py-1.5 text-xs font-bold text-amber-100 transition hover:border-amber-200/30 hover:bg-amber-300/10">
+                              {unassignedCount} unassigned guilds
+                            </button>
+                          )}
+                          {!playerStateReady && (
+                            <button type="button" onClick={() => setSection("system")} className="rounded-full border border-red-300/20 bg-red-950/25 px-3 py-1.5 text-xs font-bold text-red-100 transition hover:border-red-200/35 hover:bg-red-950/40">
+                              Game data
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                     {[
-                      { label: "Active Players", value: students.length, icon: <Users size={20} />, section: "students" as AdminSection, tone: "text-cyan-100" },
-                      { label: "Missing Hero Images", value: missingHeroCount, icon: <ImageIcon size={20} />, section: "heroImages" as AdminSection, tone: missingHeroCount ? "text-amber-100" : "text-emerald-100" },
-                      { label: "Missing Companions", value: missingCompanionCount, icon: <PawPrint size={20} />, section: "companions" as AdminSection, tone: missingCompanionCount ? "text-amber-100" : "text-emerald-100" },
-                      { label: "Unassigned Guilds", value: unassignedCount, icon: <Shield size={20} />, section: "guilds" as AdminSection, tone: unassignedCount ? "text-amber-100" : "text-emerald-100" },
-                      { label: "Homerooms", value: homeroomCount, icon: <Activity size={20} />, section: "students" as AdminSection, tone: "text-violet-100" },
-                      { label: "Game Data", value: playerStateReady ? "Healthy" : "Needs attention", icon: <Database size={20} />, section: "system" as AdminSection, tone: playerStateReady ? "text-emerald-100" : "text-red-100" },
+                      {
+                        label: "Active Players",
+                        value: students.length,
+                        icon: <Users size={20} />,
+                        section: "students" as AdminSection,
+                        tone: "text-cyan-100",
+                        iconTone: "text-cyan-100",
+                        surface: "hover:border-cyan-300/30 hover:bg-cyan-300/[0.055]",
+                      },
+                      {
+                        label: "Missing Hero Images",
+                        value: missingHeroCount,
+                        icon: <ImageIcon size={20} />,
+                        section: "heroImages" as AdminSection,
+                        tone: missingHeroCount ? "text-amber-100" : "text-emerald-100",
+                        iconTone: missingHeroCount ? "text-amber-100" : "text-emerald-100",
+                        surface: missingHeroCount
+                          ? "hover:border-amber-300/30 hover:bg-amber-300/[0.055]"
+                          : "hover:border-emerald-300/30 hover:bg-emerald-300/[0.05]",
+                      },
+                      {
+                        label: "Missing Companions",
+                        value: missingCompanionCount,
+                        icon: <PawPrint size={20} />,
+                        section: "companions" as AdminSection,
+                        tone: missingCompanionCount ? "text-amber-100" : "text-emerald-100",
+                        iconTone: missingCompanionCount ? "text-amber-100" : "text-emerald-100",
+                        surface: missingCompanionCount
+                          ? "hover:border-amber-300/30 hover:bg-amber-300/[0.055]"
+                          : "hover:border-emerald-300/30 hover:bg-emerald-300/[0.05]",
+                      },
+                      {
+                        label: "Unassigned Guilds",
+                        value: unassignedCount,
+                        icon: <Shield size={20} />,
+                        section: "guilds" as AdminSection,
+                        tone: unassignedCount ? "text-amber-100" : "text-emerald-100",
+                        iconTone: unassignedCount ? "text-amber-100" : "text-emerald-100",
+                        surface: unassignedCount
+                          ? "hover:border-amber-300/30 hover:bg-amber-300/[0.055]"
+                          : "hover:border-emerald-300/30 hover:bg-emerald-300/[0.05]",
+                      },
+                      {
+                        label: "Fallen Companions",
+                        value: fallenCompanionCount,
+                        icon: <PawPrint size={20} />,
+                        section: "companions" as AdminSection,
+                        tone: fallenCompanionCount ? "text-red-100" : "text-emerald-100",
+                        iconTone: fallenCompanionCount ? "text-red-100" : "text-emerald-100",
+                        surface: fallenCompanionCount
+                          ? "hover:border-red-300/30 hover:bg-red-300/[0.05]"
+                          : "hover:border-emerald-300/30 hover:bg-emerald-300/[0.05]",
+                      },
+                      {
+                        label: "Game Data",
+                        value: playerStateReady ? "Healthy" : "Needs attention",
+                        icon: <Database size={20} />,
+                        section: "system" as AdminSection,
+                        tone: playerStateReady ? "text-emerald-100" : "text-red-100",
+                        iconTone: playerStateReady ? "text-emerald-100" : "text-red-100",
+                        surface: playerStateReady
+                          ? "hover:border-emerald-300/30 hover:bg-emerald-300/[0.05]"
+                          : "hover:border-red-300/30 hover:bg-red-300/[0.05]",
+                      },
                     ].map((card) => (
                       <button
                         key={card.label}
                         type="button"
                         onClick={() => setSection(card.section)}
-                        className="group rounded-[24px] border border-white/10 bg-white/[0.03] p-4 text-left transition hover:-translate-y-0.5 hover:border-cyan-300/20 hover:bg-white/[0.05]"
+                        className={[
+                          "group cursor-pointer rounded-[24px] border border-white/10 bg-white/[0.03] p-4 text-left transition-all duration-200",
+                          "hover:-translate-y-0.5 hover:shadow-[0_16px_40px_rgba(0,0,0,0.24)]",
+                          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/40",
+                          card.surface,
+                        ].join(" ")}
                       >
                         <div className="flex items-center justify-between gap-3">
-                          <div className="rounded-2xl border border-white/10 bg-black/25 p-2.5 text-cyan-100/80">{card.icon}</div>
+                          <div className={`rounded-2xl border border-white/10 bg-black/25 p-2.5 ${card.iconTone}`}>
+                            {card.icon}
+                          </div>
                           <div className={`text-2xl font-black ${card.tone}`}>{card.value}</div>
                         </div>
-                        <div className="mt-4 text-sm font-black text-white">{card.label}</div>
-                        <div className="mt-1 text-xs text-zinc-600 group-hover:text-zinc-500">Open manager →</div>
+                        <div className="mt-4 flex items-end justify-between gap-3">
+                          <div>
+                            <div className="text-sm font-black text-white">{card.label}</div>
+                            <div className="mt-1 text-xs text-zinc-600 transition group-hover:text-zinc-400">Open manager</div>
+                          </div>
+                          <div className="translate-x-0 text-lg text-zinc-700 transition group-hover:translate-x-1 group-hover:text-white/70">→</div>
+                        </div>
                       </button>
                     ))}
                   </div>
