@@ -1,5 +1,6 @@
 // src/skillApi.ts
 import { XP_API_URL } from "./data";
+import { normalizeSkillName } from "./data/skillLibrary";
 
 export type SkillSummary = {
   studentId: string;
@@ -22,12 +23,32 @@ export type PurchaseSkillArgs = {
   requestId?: string;
 };
 
+function normStudentId(id: unknown) {
+  return String(id ?? "")
+    .replace(/\u00A0/g, " ")
+    .replace(/[–—]/g, "-")
+    .replace(/\s+/g, "")
+    .trim()
+    .toUpperCase();
+}
+
 function toNum(value: unknown, fallback = 0) {
   const n =
     typeof value === "number"
       ? value
       : Number.parseFloat(String(value ?? ""));
   return Number.isFinite(n) ? n : fallback;
+}
+
+function toSkillList(value: unknown) {
+  if (Array.isArray(value)) {
+    return value.map((x) => String(x ?? "").trim()).filter(Boolean);
+  }
+
+  return String(value ?? "")
+    .split(/[;,|]/g)
+    .map((x) => x.trim())
+    .filter(Boolean);
 }
 
 async function fetchJsonStrict(url: string, init?: RequestInit) {
@@ -78,6 +99,34 @@ export async function getSkillSummary(studentId: string): Promise<SkillSummary> 
     recent: Array.isArray(data.recent) ? data.recent : [],
     now: data.now ? String(data.now) : "",
   };
+}
+
+export async function getPurchasedSkillSnapshot(): Promise<Map<string, string[]>> {
+  const url = `${XP_API_URL}?action=skillsnapshot&_=${Date.now()}`;
+  const data = await fetchJsonStrict(url, { method: "GET" });
+
+  const rows = Array.isArray(data.purchasedSkills) ? data.purchasedSkills : [];
+  const byStudent = new Map<string, string[]>();
+
+  for (const row of rows) {
+    const studentId = normStudentId(row?.studentId ?? row?.StudentID ?? row?.id);
+    if (!studentId) continue;
+
+    const rawSkills = row?.skills ?? row?.purchasedSkills ?? row?.skillNames ?? row?.SkillName;
+    const existing = byStudent.get(studentId) ?? [];
+    const seen = new Set(existing.map((skill) => normalizeSkillName(skill)));
+
+    for (const skill of toSkillList(rawSkills)) {
+      const key = normalizeSkillName(skill);
+      if (!key || seen.has(key)) continue;
+      seen.add(key);
+      existing.push(skill);
+    }
+
+    byStudent.set(studentId, existing);
+  }
+
+  return byStudent;
 }
 
 export async function purchaseSkill(args: PurchaseSkillArgs) {
