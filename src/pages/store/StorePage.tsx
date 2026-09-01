@@ -5,6 +5,7 @@ import AppTopBar from "../../components/AppTopBar";
 import type { Student } from "../../types";
 import { loadStudents } from "../../data";
 import { fetchHpMap } from "../../hpApi";
+import { normalizeSkillName } from "../../data/skillLibrary";
 import {
   getApiVersions,
   getStoreState,
@@ -18,7 +19,9 @@ import {
 import StoreHero from "./components/StoreHero";
 import LegendSelectionPanel from "./components/LegendSelectionPanel";
 import StoreSummaryPanel from "./components/StoreSummaryPanel";
+import StoreModeTabs, { type StoreMode } from "./components/StoreModeTabs";
 import AttributeGrid from "./components/AttributeGrid";
+import SkillTrainingPanel from "./components/SkillTrainingPanel";
 import PurchaseReviewPanel from "./components/PurchaseReviewPanel";
 import { getGuildTheme, shellCardBase } from "./storeTheme";
 import {
@@ -38,6 +41,15 @@ type HpEntry = {
   baseHP: number;
   currentHP: number;
 };
+
+function skillsToOwnedIdSet(raw: unknown) {
+  return new Set(
+    String(raw ?? "")
+      .split(/[;,|]/g)
+      .map((skill) => normalizeSkillName(skill))
+      .filter(Boolean)
+  );
+}
 
 async function spendXpWithRetry(
   args: Parameters<typeof spendXp>[0],
@@ -76,6 +88,7 @@ export default function StorePage({ onBack }: Props) {
   const [hr, setHr] = useState("");
   const [guild, setGuild] = useState("");
   const [selectedId, setSelectedId] = useState("");
+  const [storeMode, setStoreMode] = useState<StoreMode>("attributes");
 
   const [summary, setSummary] = useState<XpSummary | null>(null);
   const [serverAttrs, setServerAttrs] = useState<AttrsBundle | null>(null);
@@ -83,6 +96,7 @@ export default function StorePage({ onBack }: Props) {
   const [pin, setPin] = useState("");
   const [confirmId, setConfirmId] = useState("");
   const [pendingTarget, setPendingTarget] = useState<AttrKey | null>(null);
+  const [pendingSkillId, setPendingSkillId] = useState<string | null>(null);
 
   const [spending, setSpending] = useState(false);
   const [lastPurchased, setLastPurchased] = useState<AttrKey | null>(null);
@@ -116,91 +130,91 @@ export default function StorePage({ onBack }: Props) {
     };
   }, []);
 
-useEffect(() => {
-  let alive = true;
+  useEffect(() => {
+    let alive = true;
 
-  const tick = async (force = false) => {
-    try {
-      const versions = await getApiVersions();
+    const tick = async (force = false) => {
+      try {
+        const versions = await getApiVersions();
 
-      const hpChanged =
-        force ||
-        lastHpVersionRef.current === null ||
-        versions.hpLastWriteIso !== lastHpVersionRef.current;
+        const hpChanged =
+          force ||
+          lastHpVersionRef.current === null ||
+          versions.hpLastWriteIso !== lastHpVersionRef.current;
 
-      const xpChanged =
-        force ||
-        lastXpVersionRef.current === null ||
-        versions.xpLastWriteIso !== lastXpVersionRef.current;
+        const xpChanged =
+          force ||
+          lastXpVersionRef.current === null ||
+          versions.xpLastWriteIso !== lastXpVersionRef.current;
 
-      if (hpChanged) {
-        try {
-          setHpErr(null);
-          const nextHp = await fetchHpMap();
-          if (!alive) return;
-          setHpMap(nextHp);
-          lastHpVersionRef.current = versions.hpLastWriteIso;
-        } catch (e) {
-          if (!alive) return;
-          setHpErr(e instanceof Error ? e.message : "Failed to load HP state");
-        }
-      }
-
-      if (xpChanged) {
-        try {
-          setStoreErr(null);
-          const nextStore = await getStoreState();
-          if (!alive) return;
-          setStore(nextStore);
-          lastXpVersionRef.current = versions.xpLastWriteIso;
-
-          if (selectedId) {
-            const nextSummary = await getXpSummary(selectedId);
+        if (hpChanged) {
+          try {
+            setHpErr(null);
+            const nextHp = await fetchHpMap();
             if (!alive) return;
-            setSummary(nextSummary);
-            setServerAttrs(nextSummary.attrs ?? null);
+            setHpMap(nextHp);
+            lastHpVersionRef.current = versions.hpLastWriteIso;
+          } catch (e) {
+            if (!alive) return;
+            setHpErr(e instanceof Error ? e.message : "Failed to load HP state");
           }
-        } catch (e) {
-          if (!alive) return;
-          setStoreErr(
-            e instanceof Error ? e.message : "Failed to load store state"
-          );
-          setStore(
-            (prev) =>
-              prev ?? {
-                storeLocked: true,
-                xpPerPoint: 5,
-                maxPointsPerOpen: 999,
-              }
-          );
         }
+
+        if (xpChanged) {
+          try {
+            setStoreErr(null);
+            const nextStore = await getStoreState();
+            if (!alive) return;
+            setStore(nextStore);
+            lastXpVersionRef.current = versions.xpLastWriteIso;
+
+            if (selectedId) {
+              const nextSummary = await getXpSummary(selectedId);
+              if (!alive) return;
+              setSummary(nextSummary);
+              setServerAttrs(nextSummary.attrs ?? null);
+            }
+          } catch (e) {
+            if (!alive) return;
+            setStoreErr(
+              e instanceof Error ? e.message : "Failed to load store state"
+            );
+            setStore(
+              (prev) =>
+                prev ?? {
+                  storeLocked: true,
+                  xpPerPoint: 5,
+                  maxPointsPerOpen: 999,
+                }
+            );
+          }
+        }
+      } catch (e) {
+        if (!alive) return;
+        setStoreErr(e instanceof Error ? e.message : "Failed to load API state");
       }
-    } catch (e) {
-      if (!alive) return;
-      setStoreErr(e instanceof Error ? e.message : "Failed to load API state");
-    }
-  };
+    };
 
-  void tick(true);
+    void tick(true);
 
-  const id = window.setInterval(() => {
-    void tick(false);
-  }, 5000);
+    const id = window.setInterval(() => {
+      void tick(false);
+    }, 5000);
 
-  const onVis = () => {
-    if (document.visibilityState === "visible") {
-      void tick(true);
-    }
-  };
+    const onVis = () => {
+      if (document.visibilityState === "visible") {
+        void tick(true);
+      }
+    };
 
-  document.addEventListener("visibilitychange", onVis);
+    document.addEventListener("visibilitychange", onVis);
 
-  return () => {
-    alive = false;
-    window.clearInterval(id);
-    document.removeEventListener("visibilitychange", onVis);
-  };
-}, [selectedId]);
+    return () => {
+      alive = false;
+      window.clearInterval(id);
+      document.removeEventListener("visibilitychange", onVis);
+    };
+  }, [selectedId]);
 
   const xpPerPoint = store?.xpPerPoint ?? 5;
   const storeLocked = store?.storeLocked ?? true;
@@ -271,6 +285,10 @@ useEffect(() => {
     [selectedGuild]
   );
 
+  const ownedSkillIds = useMemo(() => {
+    return skillsToOwnedIdSet((selected as Record<string, unknown> | null)?.skills);
+  }, [selected]);
+
   const liveHpState = useMemo(() => {
     if (!selectedStudentId) return null;
     return hpMap.get(normIdForConfirm(selectedStudentId)) ?? null;
@@ -280,10 +298,17 @@ useEffect(() => {
     setPin("");
     setConfirmId("");
     setPendingTarget(null);
+    setPendingSkillId(null);
     setSpendErr(null);
     setToast(null);
     setServerAttrs(null);
   }, [selectedId]);
+
+  useEffect(() => {
+    setPendingTarget(null);
+    setPendingSkillId(null);
+    setLastPurchased(null);
+  }, [storeMode]);
 
   useEffect(() => {
     let alive = true;
@@ -377,7 +402,7 @@ useEffect(() => {
         { retries: 3, baseDelayMs: 250 }
       );
 
-            const purchasedTarget = pendingTarget;
+      const purchasedTarget = pendingTarget;
       const beforeAttr = Number(
         res?.beforeAttr ?? displayAttr(purchasedTarget)
       );
@@ -429,7 +454,7 @@ useEffect(() => {
       </div>
 
       <AppTopBar
-        title="Attribute Store"
+        title="Legend Store"
         activeView="store"
         onNavigate={(next) => {
           if (next === "dashboard") {
@@ -487,14 +512,14 @@ useEffect(() => {
                 <div className="rounded-[22px] border border-white/[0.04] bg-[linear-gradient(180deg,rgba(18,22,32,0.58),rgba(9,11,17,0.70))] px-5 py-10 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.03),0_10px_24px_rgba(0,0,0,0.22)]">
                   <div className="mx-auto max-w-xl">
                     <div className="text-[11px] uppercase tracking-[0.24em] text-white/42">
-                      Awaiting Target
+                      Awaiting Legend
                     </div>
                     <div className="mt-2 text-2xl font-semibold tracking-tight text-white">
                       Select a student to enter the store.
                     </div>
                     <p className="mt-2 text-sm leading-6 text-white/58">
                       Once a legend is selected, their XP, confirmation fields,
-                      preview cards, and purchase controls will come online.
+                      upgrade choices, and purchase preview will appear here.
                     </p>
                   </div>
                 </div>
@@ -502,6 +527,14 @@ useEffect(() => {
 
               {selected && (
                 <div className="space-y-3 xl:space-y-5">
+                  <StoreModeTabs
+                    mode={storeMode}
+                    setMode={setStoreMode}
+                    xpBalance={summary?.balance ?? null}
+                    spendablePoints={summary?.spendablePoints ?? null}
+                    skillTokens={null}
+                  />
+
                   <StoreSummaryPanel
                     xpPerPoint={xpPerPoint}
                     maxPoints={maxPoints}
@@ -515,39 +548,51 @@ useEffect(() => {
                     confirmOk={confirmOk}
                     storeLocked={storeLocked}
                     hasEnoughPoints={hasEnoughPoints}
-                    pendingTarget={pendingTarget}
+                    pendingTarget={storeMode === "attributes" ? pendingTarget : null}
                     guildTheme={guildTheme}
                   />
 
-                  <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_360px] xl:gap-5 xl:grid-cols-[minmax(0,1.05fr)_minmax(360px,0.95fr)]">
-                    <AttributeGrid
-                      xpPerPoint={xpPerPoint}
-                      storeLocked={storeLocked}
-                      pin={pin}
-                      confirmOk={confirmOk}
-                      hasEnoughPoints={hasEnoughPoints}
-                      canSelectAttribute={canSelectAttribute}
-                      withinWindow={withinWindow}
-                      pendingTarget={pendingTarget}
-                      setPendingTarget={setPendingTarget}
-                      displayAttr={displayAttr}
-                      guildTheme={guildTheme}
-                    />
+                  {storeMode === "attributes" && (
+                    <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_360px] xl:gap-5 xl:grid-cols-[minmax(0,1.05fr)_minmax(360px,0.95fr)]">
+                      <AttributeGrid
+                        xpPerPoint={xpPerPoint}
+                        storeLocked={storeLocked}
+                        pin={pin}
+                        confirmOk={confirmOk}
+                        hasEnoughPoints={hasEnoughPoints}
+                        canSelectAttribute={canSelectAttribute}
+                        withinWindow={withinWindow}
+                        pendingTarget={pendingTarget}
+                        setPendingTarget={setPendingTarget}
+                        displayAttr={displayAttr}
+                        guildTheme={guildTheme}
+                      />
 
-                    <PurchaseReviewPanel
-                      pendingTarget={pendingTarget}
-                      displayAttr={displayAttr}
-                      xpPerPoint={xpPerPoint}
-                      summaryBalance={summary?.balance ?? null}
-                      canConfirm={canConfirmPurchase}
-                      spending={spending}
-                      lastPurchased={lastPurchased}
-                      onConfirm={() => {
-                        void confirmSpend();
-                      }}
+                      <PurchaseReviewPanel
+                        pendingTarget={pendingTarget}
+                        displayAttr={displayAttr}
+                        xpPerPoint={xpPerPoint}
+                        summaryBalance={summary?.balance ?? null}
+                        canConfirm={canConfirmPurchase}
+                        spending={spending}
+                        lastPurchased={lastPurchased}
+                        onConfirm={() => {
+                          void confirmSpend();
+                        }}
+                        guildTheme={guildTheme}
+                      />
+                    </div>
+                  )}
+
+                  {storeMode === "skills" && (
+                    <SkillTrainingPanel
+                      selectedSkillId={pendingSkillId}
+                      setSelectedSkillId={setPendingSkillId}
+                      ownedSkillIds={ownedSkillIds}
+                      skillTokens={null}
                       guildTheme={guildTheme}
                     />
-                  </div>
+                  )}
                 </div>
               )}
             </section>
