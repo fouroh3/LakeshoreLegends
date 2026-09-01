@@ -13,9 +13,7 @@ type Props = {
   className?: string;
 };
 
-function statFillColor() {
-  return "linear-gradient(90deg, #0891b2 0%, #22d3ee 52%, #67e8f9 100%)";
-}
+const TEAL_STAT_FILL = "linear-gradient(90deg, #0891b2 0%, #22d3ee 52%, #67e8f9 100%)";
 
 export default function StatBar({
   label,
@@ -32,7 +30,11 @@ export default function StatBar({
 
   const trackHeight =
     className ??
-    (density === "ultra" ? "h-2" : density === "compact" ? "h-2.5" : "h-3");
+    (density === "ultra"
+      ? "h-[8px]"
+      : density === "compact"
+      ? "h-[10px]"
+      : "h-[12px]");
 
   return (
     <div className="ll-stat-bar w-full">
@@ -54,7 +56,8 @@ export default function StatBar({
             className={`ll-stat-bar-fill rounded-full transition-[width] duration-300 ${trackHeight}`}
             style={{
               width: `${Math.round(pct * 100)}%`,
-              background: statFillColor(),
+              background: TEAL_STAT_FILL,
+              backgroundImage: TEAL_STAT_FILL,
             }}
           />
         </div>
