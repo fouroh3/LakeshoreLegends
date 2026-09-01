@@ -2685,16 +2685,28 @@ const TEACHER_AUTH = {
   TOKEN_TTL_SECONDS: 60 * 60 * 12,
 };
 
-function teacherPasscode_() {
-  return (
-    PropertiesService.getScriptProperties().getProperty(
-      TEACHER_AUTH.PASSCODE_PROP
-    ) || "legends"
+const TEACHER_DEFAULT_PASSCODE_SHA256 =
+  "814f916ced42a28c6a205612ebcf28d7d90ca0e7c3354b83cee4a5f28862b06d";
+
+function sha256Hex_(value) {
+  const bytes = Utilities.computeDigest(
+    Utilities.DigestAlgorithm.SHA_256,
+    String(value ?? ""),
+    Utilities.Charset.UTF_8
   );
+
+  return bytes
+    .map((b) => ((b + 256) % 256).toString(16).padStart(2, "0"))
+    .join("");
 }
 
-function makeTeacherToken_() {
-  return `teacher:${Date.now()}:${Utilities.getUuid()}`;
+function teacherPasscodeMatches_(passcode) {
+  const configuredHash =
+    PropertiesService.getScriptProperties().getProperty(
+      "LL_TEACHER_PASSCODE_SHA256"
+    ) || TEACHER_DEFAULT_PASSCODE_SHA256;
+
+  return sha256Hex_(norm_(passcode || "")) === configuredHash;
 }
 
 function teacherTokenKey_(token) {
@@ -2710,7 +2722,7 @@ function verifyTeacher_(args) {
     if (cached === "1") return { ok: true, token };
   }
 
-  if (passcode && passcode === teacherPasscode_()) {
+  if (passcode && teacherPasscodeMatches_(passcode)) {
     const nextToken = makeTeacherToken_();
     CacheService.getScriptCache().put(
       teacherTokenKey_(nextToken),
