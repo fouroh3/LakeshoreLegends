@@ -3962,6 +3962,7 @@ const ADMIN_PLAYER_STATE = {
   SHEET: "Player_State",
   INVENTORY_TXN_SHEET: "Inventory_Transactions",
   ROSTER_TXN_SHEET: "Roster_Transactions",
+  ARCHIVED_ROSTER_SHEET: "Archived_Roster",
 };
 
 function ensurePlayerStateSheet_() {
@@ -4029,6 +4030,26 @@ function ensureRosterTxnSheet_() {
     "Reason",
     "Detail",
   ]);
+}
+
+function ensureArchivedRosterSheet_() {
+  const ss = SpreadsheetApp.getActive();
+  let sh = ss.getSheetByName(ADMIN_PLAYER_STATE.ARCHIVED_ROSTER_SHEET);
+  if (!sh) sh = ss.insertSheet(ADMIN_PLAYER_STATE.ARCHIVED_ROSTER_SHEET);
+
+  sh = ensureHeaders_(sh, [
+    "StudentID",
+    "StudentName",
+    "Homeroom",
+    "Guild",
+    "RosterJSON",
+    "HPJSON",
+    "ArchivedAt",
+    "Reason",
+  ]);
+  const rows = Math.max(1, sh.getMaxRows() - 1);
+  sh.getRange(2, 1, rows, 1).setNumberFormat("@");
+  return sh;
 }
 
 function splitPlayerInventory_(raw) {
@@ -4407,11 +4428,7 @@ function ensurePlayerStateStudent_(studentIdRaw) {
     loaded = loadPlayerStateIndex_();
     row = loaded.index.get(studentId);
   } else if (row.rosterStatus !== "ACTIVE") {
-    loaded.sh.getRange(row.sheetRow, row.col.RosterStatus).setValue("ACTIVE");
-    loaded.sh.getRange(row.sheetRow, row.col.ArchivedAt).setValue("");
-    loaded.sh.getRange(row.sheetRow, row.col.UpdatedAt).setValue(nowIso);
-    loaded = loadPlayerStateIndex_();
-    row = loaded.index.get(studentId);
+    throw new Error(`StudentID ${studentId} is ${row.rosterStatus || "inactive"} and cannot be edited as an active player.`);
   }
 
   if (!row) throw new Error(`Unable to create Player_State row for ${studentId}.`);
@@ -4649,6 +4666,374 @@ function adminAdjustInventory_(args) {
 }
 
 // =========================================================
+// Global Teacher Admin: Archived Roster Lifecycle
+// =========================================================
+function adminArchivedSnapshotRow_(studentIdRaw) {
+  const studentId = normId_(studentIdRaw);
+  const sh = ensureArchivedRosterSheet_();
+  const row = findRowByIdInCol_(sh, 1, studentId);
+  if (row < 2) return null;
+  const values = sh.getRange(row, 1, 1, 8).getValues()[0];
+  return {
+    sheet: sh,
+    sheetRow: row,
+    studentId,
+    studentName: norm_(values[1]),
+    homeroom: norm_(values[2]),
+    guild: norm_(values[3]),
+    rosterJson: String(values[4] || ""),
+    hpJson: String(values[5] || ""),
+    archivedAt:
+      values[6] instanceof Date ? values[6].toISOString() : norm_(values[6]),
+    reason: norm_(values[7]),
+  };
+}
+
+function adminSaveArchivedRosterSnapshot_(resolved, reasonRaw) {
+  const reason = norm_(reasonRaw || "");
+  const sh = ensureArchivedRosterSheet_();
+  const headers = resolved.sh
+    .getRange(1, 1, 1, Math.max(1, resolved.sh.getLastColumn()))
+    .getDisplayValues()[0]
+    .map((value) => norm_(value));
+  const values = resolved.sh
+    .getRange(resolved.rowNumber, 1, 1, headers.length)
+    .getValues()[0];
+
+  const roster = {};
+  headers.forEach((header, index) => {
+    if (!header) return;
+    const value = values[index];
+    roster[header] = value instanceof Date ? value.toISOString() : value;
+  });
+
+  const iGuild = idx_(resolved.map, "Guild");
+  const guild = iGuild >= 0
+    ? norm_(resolved.sh.getRange(resolved.rowNumber, iGuild + 1).getValue())
+    : "";
+
+  const hp = loadHpIndex_();
+  const hpRow = hp.index.get(resolved.studentId);
+  const hpSnapshot = hpRow
+    ? { baseHP: hpRow.baseHP, currentHP: hpRow.currentHP }
+    : { baseHP: CFG.MAX_HP_DEFAULT, currentHP: CFG.MAX_HP_DEFAULT };
+  const nowIso = new Date().toISOString();
+
+  const payload = [
+    resolved.studentId,
+    resolved.currentName,
+    resolved.homeroom,
+    guild,
+    JSON.stringify(roster),
+    JSON.stringify(hpSnapshot),
+    nowIso,
+    reason,
+  ];
+
+  const existing = findRowByIdInCol_(sh, 1, resolved.studentId);
+  const rowNumber = existing >= 2 ? existing : sh.getLastRow() + 1;
+  sh.getRange(rowNumber, 1).setNumberFormat("@");
+  sh.getRange(rowNumber, 1, 1, payload.length).setValues([payload]);
+
+  return {
+    studentName: resolved.currentName,
+    homeroom: resolved.homeroom,
+    guild,
+    archivedAt: nowIso,
+  };
+}
+
+function adminArchivedStudents_(args) {
+  const verified = verifyTeacher_(args || {});
+  const state = loadPlayerStateIndex_().index;
+  const archive = ensureArchivedRosterSheet_();
+  const values = archive.getDataRange().getValues();
+  const rows = [];
+
+  for (let r = 1; r < values.length; r++) {
+    const studentId = normId_(values[r][0]);
+    if (!studentId) continue;
+    const stateRow = state.get(studentId);
+    if (!stateRow || stateRow.rosterStatus !== "ARCHIVED") continue;
+
+    rows.push({
+      studentId,
+      studentName: norm_(values[r][1]),
+      homeroom: norm_(values[r][2]),
+      guild: norm_(values[r][3]),
+      archivedAt:
+        values[r][6] instanceof Date
+          ? values[r][6].toISOString()
+          : norm_(values[r][6]),
+      reason: norm_(values[r][7]),
+    });
+  }
+
+  rows.sort((a, b) =>
+    String(b.archivedAt || "").localeCompare(String(a.archivedAt || ""))
+  );
+
+  return {
+    ok: true,
+    teacherToken: verified.token,
+    rows,
+    now: new Date().toISOString(),
+  };
+}
+
+function adminLocationForReservedStudentId_(studentIdRaw) {
+  const studentId = normId_(studentIdRaw);
+  const parts = studentId.match(/^(8-\d+)-(\d+)$/);
+  if (!parts) throw new Error(`Invalid student ID: ${studentId}`);
+  const homeroom = parts[1];
+  const rowNumber = Number(parts[2]) + 1;
+  const maxRow = ADMIN_CLASS_MAX_ROW[homeroom];
+  if (!maxRow || rowNumber < 2 || rowNumber > maxRow) {
+    throw new Error(`Student ID is outside a roster range: ${studentId}`);
+  }
+  const sh = adminClassSheet_(homeroom);
+  const info = adminHeaderMapForSheet_(sh);
+  return { studentId, homeroom, rowNumber, sh, map: info.map, headers: info.headers };
+}
+
+function adminRestoreStudent_(args) {
+  const verified = verifyTeacher_(args || {});
+  const studentId = normId_(args.studentId);
+  if (!studentId) throw new Error("Missing studentId.");
+
+  const lock = LockService.getScriptLock();
+  lock.waitLock(CFG.LOCK_WAIT_MS);
+  try {
+    const loaded = loadPlayerStateIndex_();
+    const state = loaded.index.get(studentId);
+    if (!state || state.rosterStatus !== "ARCHIVED") {
+      throw new Error("Only archived students can be restored.");
+    }
+
+    const snapshot = adminArchivedSnapshotRow_(studentId);
+    if (!snapshot) throw new Error("Archived roster snapshot is missing.");
+    const location = adminLocationForReservedStudentId_(studentId);
+    const iName = idx_(location.map, "Name", "StudentName", "Student Name");
+    if (iName < 0) throw new Error(`${location.homeroom} is missing Name.`);
+    if (norm_(location.sh.getRange(location.rowNumber, iName + 1).getValue())) {
+      throw new Error(
+        `The original roster slot ${studentId} is no longer empty. Restore was stopped to prevent overwriting another student.`
+      );
+    }
+
+    let roster = {};
+    let hpSnapshot = {};
+    try { roster = JSON.parse(snapshot.rosterJson || "{}") || {}; } catch (_) {}
+    try { hpSnapshot = JSON.parse(snapshot.hpJson || "{}") || {}; } catch (_) {}
+
+    location.headers.forEach((header, index) => {
+      const key = norm_(header);
+      if (!key) return;
+      if (["Homeroom", "StudentID", "Student Id", "ID"].includes(key)) return;
+      if (!Object.prototype.hasOwnProperty.call(roster, key)) return;
+      location.sh.getRange(location.rowNumber, index + 1).setValue(roster[key]);
+    });
+
+    const nowIso = new Date().toISOString();
+    loaded.sh.getRange(state.sheetRow, state.col.RosterStatus).setValue("ACTIVE");
+    loaded.sh.getRange(state.sheetRow, state.col.ArchivedAt).setValue("");
+    loaded.sh.getRange(state.sheetRow, state.col.UpdatedAt).setValue(nowIso);
+
+    const hp = hpHeaderIdx_();
+    let hpSheetRow = findRowByIdInCol_(hp.sh, hp.col.StudentID, studentId);
+    const baseHP = Math.max(1, Math.round(asNum_(hpSnapshot.baseHP, CFG.MAX_HP_DEFAULT)));
+    const currentHP = Math.max(0, Math.min(baseHP, Math.round(asNum_(hpSnapshot.currentHP, baseHP))));
+    if (hpSheetRow >= 2) {
+      hp.sh.getRange(hpSheetRow, hp.col.Name).setValue(snapshot.studentName);
+      hp.sh.getRange(hpSheetRow, hp.col.Homeroom).setValue(snapshot.homeroom);
+      hp.sh.getRange(hpSheetRow, hp.col.Guild).setValue(snapshot.guild);
+      hp.sh.getRange(hpSheetRow, hp.col.BaseHP).setValue(baseHP);
+      hp.sh.getRange(hpSheetRow, hp.col.CurrentHP).setValue(currentHP);
+      hp.sh.getRange(hpSheetRow, hp.col.UpdatedAt).setValue(nowIso);
+    } else {
+      appendRowFast_(hp.sh, [
+        studentId,
+        snapshot.studentName,
+        snapshot.homeroom,
+        snapshot.guild,
+        baseHP,
+        currentHP,
+        nowIso,
+        0,
+      ]);
+    }
+
+    appendRowFast_(ensureRosterTxnSheet_(), [
+      new Date(),
+      studentId,
+      snapshot.studentName,
+      "RESTORE",
+      snapshot.homeroom,
+      snapshot.guild,
+      "Teacher Admin",
+      "Restored from Archived_Roster snapshot.",
+    ]);
+
+    snapshot.sheet.deleteRow(snapshot.sheetRow);
+    SpreadsheetApp.flush();
+    cacheRemove_(`studentsMap:${CFG.STUDENTS_SHEET}`);
+    cacheRemove_("hpAll:v1");
+    recomputeGuildTotals_();
+
+    return {
+      ok: true,
+      teacherToken: verified.token,
+      studentId,
+      restored: true,
+      now: nowIso,
+    };
+  } finally {
+    try { lock.releaseLock(); } catch (_) {}
+  }
+}
+
+function adminDeleteRowsForStudentId_(sheetName, studentIdRaw) {
+  const sh = getSheetOptional_(sheetName);
+  if (!sh || sh.getLastRow() < 2) return 0;
+  const headers = sh
+    .getRange(1, 1, 1, Math.max(1, sh.getLastColumn()))
+    .getDisplayValues()[0];
+  const map = headerMap_(headers);
+  const iId = idx_(map, "StudentID", "Student Id", "ID");
+  if (iId < 0) return 0;
+
+  const studentId = normId_(studentIdRaw);
+  const values = sh.getRange(2, iId + 1, sh.getLastRow() - 1, 1).getDisplayValues();
+  const rows = [];
+  values.forEach((row, index) => {
+    if (normId_(row[0]) === studentId) rows.push(index + 2);
+  });
+  rows.sort((a, b) => b - a).forEach((rowNumber) => sh.deleteRow(rowNumber));
+  return rows.length;
+}
+
+function adminGithubDeletePublicUrl_(publicUrlRaw) {
+  const publicUrl = norm_(publicUrlRaw);
+  if (!/^\/(?:portraits|companions)\//i.test(publicUrl)) return true;
+  const cfg = adminMediaConfig_();
+  if (!cfg.token) return false;
+
+  const repoPath = `public${publicUrl}`;
+  const url = adminGithubContentsUrl_(cfg.repo, repoPath);
+  const existing = UrlFetchApp.fetch(
+    `${url}?ref=${encodeURIComponent(cfg.branch)}`,
+    {
+      method: "get",
+      headers: adminGithubHeaders_(cfg.token),
+      muteHttpExceptions: true,
+    }
+  );
+  if (existing.getResponseCode() === 404) return true;
+  if (existing.getResponseCode() !== 200) return false;
+
+  let sha = "";
+  try { sha = String(JSON.parse(existing.getContentText()).sha || ""); } catch (_) {}
+  if (!sha) return false;
+
+  const response = UrlFetchApp.fetch(url, {
+    method: "delete",
+    headers: adminGithubHeaders_(cfg.token),
+    contentType: "application/json",
+    payload: JSON.stringify({
+      message: "Teacher Admin: delete archived player media",
+      sha,
+      branch: cfg.branch,
+    }),
+    muteHttpExceptions: true,
+  });
+  const code = response.getResponseCode();
+  return code >= 200 && code < 300;
+}
+
+function adminDeleteArchivedStudent_(args) {
+  const verified = verifyTeacher_(args || {});
+  const studentId = normId_(args.studentId);
+  const reason = norm_(args.reason || "");
+  if (!studentId) throw new Error("Missing studentId.");
+  if (!reason) throw new Error("A reason is required for permanent deletion.");
+
+  const lock = LockService.getScriptLock();
+  lock.waitLock(CFG.LOCK_WAIT_MS);
+  try {
+    const loaded = loadPlayerStateIndex_();
+    const state = loaded.index.get(studentId);
+    if (!state || state.rosterStatus !== "ARCHIVED") {
+      throw new Error("Only archived students can be permanently deleted.");
+    }
+
+    const snapshot = adminArchivedSnapshotRow_(studentId);
+    let portraitUrl = "";
+    if (snapshot) {
+      try {
+        const roster = JSON.parse(snapshot.rosterJson || "{}") || {};
+        portraitUrl = norm_(roster.PortraitURL || roster["Portrait URL"] || "");
+      } catch (_) {}
+    }
+    const companionUrl = state.companionUrl || "";
+
+    const mediaCleanup = [portraitUrl, companionUrl]
+      .filter(Boolean)
+      .map((url) => adminGithubDeletePublicUrl_(url));
+    const mediaCleanupRequired = mediaCleanup.some((ok) => !ok);
+
+    [
+      CFG.HP_STATE_SHEET,
+      CFG.HP_LOG_SHEET,
+      CFG.XP_STATE_SHEET,
+      CFG.XP_TXN_SHEET,
+      CFG.SKILL_STATE_SHEET,
+      CFG.PURCHASED_SKILLS_SHEET,
+      CFG.SKILL_TXN_SHEET,
+      ADMIN_PLAYER_STATE.INVENTORY_TXN_SHEET,
+      ADMIN_ABILITIES.TXN_SHEET,
+      ADMIN_MEDIA.TXN_SHEET,
+      ADMIN_PLAYER_STATE.ROSTER_TXN_SHEET,
+    ].forEach((sheetName) => adminDeleteRowsForStudentId_(sheetName, studentId));
+
+    if (snapshot) snapshot.sheet.deleteRow(snapshot.sheetRow);
+
+    const nowIso = new Date().toISOString();
+    loaded.sh.getRange(state.sheetRow, 2, 1, 13).setValues([[
+      "",
+      "",
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      "",
+      "DELETED",
+      nowIso,
+      nowIso,
+      "",
+    ]]);
+
+    SpreadsheetApp.flush();
+    cacheRemove_(`studentsMap:${CFG.STUDENTS_SHEET}`);
+    cacheRemove_("hpAll:v1");
+    recomputeGuildTotals_();
+
+    return {
+      ok: true,
+      teacherToken: verified.token,
+      studentId,
+      deleted: true,
+      mediaCleanupRequired,
+      reason,
+      now: nowIso,
+    };
+  } finally {
+    try { lock.releaseLock(); } catch (_) {}
+  }
+}
+
+// =========================================================
 // Global Teacher Admin: Student Edit + Archive
 // =========================================================
 function adminUpdateStudent_(args) {
@@ -4765,6 +5150,8 @@ function adminArchiveStudent_(args) {
     const guild = iGuild >= 0 ? norm_(resolved.sh.getRange(resolved.rowNumber, iGuild + 1).getValue()) : "";
     const studentName = resolved.currentName;
     const nowIso = new Date().toISOString();
+
+    adminSaveArchivedRosterSnapshot_(resolved, reason);
 
     const state = ensurePlayerStateStudent_(studentId);
     state.sh.getRange(state.row.sheetRow, state.row.col.RosterStatus).setValue("ARCHIVED");
@@ -5919,6 +6306,7 @@ function doGet(e) {
         ensurePlayerStateSheet_();
         ensureInventoryTxnSheet_();
         ensureRosterTxnSheet_();
+        ensureArchivedRosterSheet_();
         ensureAbilityTxnSheet_();
         ensureMediaTxnSheet_();
         ensureFinalExaminerSheets_();
@@ -6022,6 +6410,15 @@ function doPost(e) {
 
       case "adminarchivestudent":
         return jsonOut_(adminArchiveStudent_(body));
+
+      case "adminarchivedstudents":
+        return jsonOut_(adminArchivedStudents_(body));
+
+      case "adminrestorestudent":
+        return jsonOut_(adminRestoreStudent_(body));
+
+      case "admindeletearchivedstudent":
+        return jsonOut_(adminDeleteArchivedStudent_(body));
 
       case "adminabilitysnapshot":
         return jsonOut_(adminAbilitySnapshot_(body));
@@ -6127,6 +6524,7 @@ function RUN_ensureAllSheets() {
   ensurePlayerStateSheet_();
   ensureInventoryTxnSheet_();
   ensureRosterTxnSheet_();
+  ensureArchivedRosterSheet_();
   ensureAbilityTxnSheet_();
   ensureMediaTxnSheet_();
   ensureFinalExaminerSheets_();

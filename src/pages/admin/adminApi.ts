@@ -136,6 +136,39 @@ export type AdminMoveStudentResult = {
   [key: string]: any;
 };
 
+export type AdminArchivedStudentRow = {
+  studentId: string;
+  studentName: string;
+  homeroom: string;
+  guild: string;
+  archivedAt: string;
+  reason: string;
+};
+
+export type AdminArchivedStudentsResult = {
+  ok?: boolean;
+  error?: string;
+  rows?: AdminArchivedStudentRow[];
+  [key: string]: any;
+};
+
+export type AdminRestoreStudentResult = {
+  ok?: boolean;
+  error?: string;
+  studentId?: string;
+  restored?: boolean;
+  [key: string]: any;
+};
+
+export type AdminDeleteArchivedStudentResult = {
+  ok?: boolean;
+  error?: string;
+  studentId?: string;
+  deleted?: boolean;
+  mediaCleanupRequired?: boolean;
+  [key: string]: any;
+};
+
 export type AdminArchiveStudentResult = {
   ok?: boolean;
   error?: string;
@@ -224,6 +257,9 @@ type AdminAction =
   | "adminupdatestudent"
   | "adminmovestudent"
   | "adminarchivestudent"
+  | "adminarchivedstudents"
+  | "adminrestorestudent"
+  | "admindeletearchivedstudent"
   | "adminabilitysnapshot"
   | "adminupdateabilities"
   | "adminadjustskill"
@@ -448,4 +484,29 @@ export async function adminUpdateStore(settings: AdminStoreSettings) {
   return postAdminAction<AdminStoreUpdateResult>("adminupdatestore", {
     settings,
   });
+}
+
+
+export async function adminArchivedStudents() {
+  return postAdminAction<AdminArchivedStudentsResult>(
+    "adminarchivedstudents",
+    {}
+  );
+}
+
+export async function adminRestoreStudent(args: { studentId: string }) {
+  return postAdminAction<AdminRestoreStudentResult>(
+    "adminrestorestudent",
+    args
+  );
+}
+
+export async function adminDeleteArchivedStudent(args: {
+  studentId: string;
+  reason: string;
+}) {
+  return postAdminAction<AdminDeleteArchivedStudentResult>(
+    "admindeletearchivedstudent",
+    args
+  );
 }

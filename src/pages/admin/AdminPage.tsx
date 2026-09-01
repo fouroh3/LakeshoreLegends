@@ -71,6 +71,7 @@ import AbilitiesManagerPanel from "./components/AbilitiesManagerPanel";
 import HeroImageManagerPanel from "./components/HeroImageManagerPanel";
 import CompanionManagerPanel from "./components/CompanionManagerPanel";
 import StoreSettingsPanel from "./components/StoreSettingsPanel";
+import ArchivedStudentsPanel from "./components/ArchivedStudentsPanel";
 
 function Pill({ children }: { children: ReactNode }) {
   return (
@@ -979,6 +980,14 @@ export default function AdminPage() {
                     onMove={handleMoveStudent}
                     onArchive={handleArchiveStudent}
                   />
+                </AdminPanel>
+
+                <AdminPanel
+                  kicker="Archived Roster"
+                  title="Restore or Permanently Delete"
+                  description="Archived students stay recoverable and keep their StudentID reserved. Restore mistakes safely, or permanently erase their stored game data when you are certain it is no longer needed."
+                >
+                  <ArchivedStudentsPanel onRosterChanged={reloadStudents} />
                 </AdminPanel>
               </div>
             )}
