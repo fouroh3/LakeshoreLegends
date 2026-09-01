@@ -282,7 +282,7 @@ export default function AbilitiesManagerPanel({
 
   return (
     <div className="space-y-5">
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-[220px_minmax(0,1fr)_minmax(280px,1.4fr)]">
+      <div className="grid gap-3 md:grid-cols-[220px_minmax(0,1fr)]">
         <div>
           <FieldLabel>Homeroom</FieldLabel>
           <select
@@ -312,21 +312,61 @@ export default function AbilitiesManagerPanel({
             className="mt-2 w-full rounded-2xl border border-white/10 bg-black/40 px-3 py-3 text-sm text-white outline-none placeholder:text-zinc-600"
           />
         </div>
+      </div>
 
-        <div>
-          <FieldLabel>Student</FieldLabel>
-          <select
-            value={selectedId}
-            onChange={(event) => setSelectedId(event.target.value)}
-            className="mt-2 w-full rounded-2xl border border-white/10 bg-black/40 px-3 py-3 text-sm text-white outline-none"
-          >
-            <option value="">Choose student...</option>
-            {visibleStudents.map((student) => (
-              <option key={student.id} value={normId(student.id)}>
-                {fullName(student)} · {student.homeroom} · {student.guild || "Unassigned"}
-              </option>
-            ))}
-          </select>
+      <div className="overflow-hidden rounded-[24px] border border-white/10 bg-black/25">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 px-4 py-3">
+          <div>
+            <div className="text-sm font-black text-white">Students</div>
+            <div className="mt-0.5 text-xs text-zinc-500">
+              Click a student to edit attributes and skills.
+            </div>
+          </div>
+          <div className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-semibold text-cyan-100/80">
+            {visibleStudents.length} shown
+          </div>
+        </div>
+
+        <div className="max-h-[320px] overflow-auto">
+          {visibleStudents.map((student) => {
+            const studentId = normId(student.id);
+            const selected = studentId === normId(selectedId);
+
+            return (
+              <button
+                key={studentId}
+                type="button"
+                onClick={() => setSelectedId(studentId)}
+                className={[
+                  "grid w-full grid-cols-[minmax(0,1fr)_100px_130px] items-center gap-3 border-t border-white/5 px-4 py-3 text-left transition first:border-t-0",
+                  selected
+                    ? "bg-cyan-300/[0.09] text-white"
+                    : "hover:bg-white/[0.035]",
+                ].join(" ")}
+              >
+                <div className="min-w-0">
+                  <div className="truncate text-sm font-bold text-white">
+                    {fullName(student) || "Unnamed Legend"}
+                  </div>
+                  <div className="mt-0.5 truncate font-mono text-[11px] text-cyan-100/60">
+                    {studentId}
+                  </div>
+                </div>
+                <div className="text-sm text-zinc-400">
+                  {clean(student.homeroom) || "—"}
+                </div>
+                <div className="truncate text-sm text-zinc-400">
+                  {clean(student.guild) || "Unassigned"}
+                </div>
+              </button>
+            );
+          })}
+
+          {visibleStudents.length === 0 && (
+            <div className="px-5 py-10 text-center text-sm text-zinc-500">
+              No students match the current filters.
+            </div>
+          )}
         </div>
       </div>
 
@@ -338,7 +378,7 @@ export default function AbilitiesManagerPanel({
 
       {!selectedId ? (
         <div className="rounded-[24px] border border-dashed border-white/10 bg-black/20 px-5 py-12 text-center text-sm text-zinc-500">
-          Choose a student to edit attributes and skills.
+          Select a student from the roster above to edit attributes and skills.
         </div>
       ) : loading ? (
         <div className="rounded-[24px] border border-white/10 bg-black/20 px-5 py-12 text-center text-sm text-zinc-400">
