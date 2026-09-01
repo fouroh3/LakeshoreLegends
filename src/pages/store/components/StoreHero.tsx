@@ -22,25 +22,29 @@ export default function StoreHero({
       <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
         <div className="max-w-3xl">
           <div className="text-[11px] uppercase tracking-[0.28em] text-white/42">
-            Attribute Store
+            Legend Store
           </div>
           <h2 className="mt-2 text-2xl font-semibold tracking-tight text-white sm:text-3xl">
-            Spend XP. Increase core attributes.
+            Upgrade attributes. Train new skills.
           </h2>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-white/62 sm:text-[15px]">
-            Select a legend, preview the upgrade, and confirm the purchase to
-            apply a permanent stat increase.
+            Select a legend, choose Attribute Upgrades or Skill Training, review
+            the purchase, and confirm before anything is spent.
           </p>
         </div>
 
         <div className="flex flex-wrap gap-2">
           <span className={pill}>
             <span className="text-white/42">Flow</span>
-            <span className="font-semibold">Select → Preview → Confirm</span>
+            <span className="font-semibold">Choose → Preview → Confirm</span>
           </span>
           <span className={pill}>
-            <span className="text-white/42">Logs</span>
-            <span className="font-semibold">Teacher verifiable</span>
+            <span className="text-white/42">XP</span>
+            <span className="font-semibold">Attributes</span>
+          </span>
+          <span className={pill}>
+            <span className="text-white/42">Skill Tokens</span>
+            <span className="font-semibold">Skills</span>
           </span>
           <span className={pill}>
             <span className="text-white/42">Roster</span>
