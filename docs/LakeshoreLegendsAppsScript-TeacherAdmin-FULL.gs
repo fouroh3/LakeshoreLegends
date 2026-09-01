@@ -18,6 +18,8 @@
  *   - StudentID-keyed Player_State protection
  *   - Inventory / card management
  *   - Student rename + archive lifecycle
+ *   - Attribute + skill management
+ *   - Player_State StudentID integrity protection
  *
  * IMPORTANT ROSTER RULE:
  * - Master is a derived roll-up and is NOT the source for roster edits.
@@ -2187,6 +2189,13 @@ function purchaseSkill_(args) {
         .setValue(studentName);
     }
 
+    const rosterSkillIds = new Set(
+      adminRosterSkillsForStudent_(studentId).map((name) => normalizeSkillId_(name))
+    );
+    if (rosterSkillIds.has(skillId)) {
+      throw new Error("Skill already owned.");
+    }
+
     const purchased = purchasedSkillIdsForStudent_(studentId);
 
     if (purchased.ids.has(skillId)) {
@@ -3941,7 +3950,7 @@ function ensurePlayerStateSheet_() {
   let sh = ss.getSheetByName(ADMIN_PLAYER_STATE.SHEET);
   if (!sh) sh = ss.insertSheet(ADMIN_PLAYER_STATE.SHEET);
 
-  return ensureHeaders_(sh, [
+  sh = ensureHeaders_(sh, [
     "StudentID",
     "CompanionURL",
     "Inventory",
@@ -3956,6 +3965,13 @@ function ensurePlayerStateSheet_() {
     "ArchivedAt",
     "UpdatedAt",
   ]);
+
+  // CRITICAL: IDs such as 8-1-001 look like dates to Google Sheets.
+  // Force the entire StudentID data column to plain text before every write.
+  const dataRows = Math.max(1, sh.getMaxRows() - 1);
+  sh.getRange(2, 1, dataRows, 1).setNumberFormat("@");
+
+  return sh;
 }
 
 function ensureInventoryTxnSheet_() {
@@ -4139,16 +4155,77 @@ function backupMasterBeforePlayerStateMigration_() {
   return name;
 }
 
+function playerStateIdIntegrity_() {
+  const master = getSheet_(CFG.STUDENTS_SHEET);
+  const masterHeaders = master
+    .getRange(1, 1, 1, Math.max(master.getLastColumn(), 3))
+    .getDisplayValues()[0];
+  const masterMap = headerMap_(masterHeaders);
+  const masterIdIndex = idx_(masterMap, "StudentID", "ID");
+  if (masterIdIndex < 0) throw new Error("Master missing StudentID column.");
+
+  const masterRowCount = Math.max(0, master.getLastRow() - 1);
+  const activeIds = masterRowCount
+    ? master
+        .getRange(2, masterIdIndex + 1, masterRowCount, 1)
+        .getDisplayValues()
+        .map((row) => normId_(row[0]))
+        .filter(Boolean)
+    : [];
+
+  const state = ensurePlayerStateSheet_();
+  const stateRowCount = Math.max(0, state.getLastRow() - 1);
+  const stateIds = stateRowCount
+    ? state
+        .getRange(2, 1, stateRowCount, 1)
+        .getDisplayValues()
+        .map((row) => normId_(row[0]))
+        .filter(Boolean)
+    : [];
+
+  const validPattern = /^8-(?:10|[1-9])-\d{3}$/;
+  const invalidPlayerStateIds = Array.from(
+    new Set(stateIds.filter((id) => !validPattern.test(id)))
+  );
+  const seen = new Set();
+  const duplicatePlayerStateIds = [];
+  stateIds.forEach((id) => {
+    if (seen.has(id)) duplicatePlayerStateIds.push(id);
+    seen.add(id);
+  });
+
+  const stateSet = new Set(stateIds);
+  const missingPlayerStateIds = Array.from(
+    new Set(activeIds.filter((id) => !stateSet.has(id)))
+  );
+
+  return {
+    ok:
+      invalidPlayerStateIds.length === 0 &&
+      duplicatePlayerStateIds.length === 0 &&
+      missingPlayerStateIds.length === 0,
+    invalidPlayerStateIds,
+    duplicatePlayerStateIds: Array.from(new Set(duplicatePlayerStateIds)),
+    missingPlayerStateIds,
+  };
+}
+
 function playerStateStatusPayload_(teacherToken) {
   const { index } = loadPlayerStateIndex_();
   const masterLookupWired = masterPlayerStateLookupWired_();
+  const integrity = playerStateIdIntegrity_();
+  const playerStateReady = masterLookupWired && integrity.ok;
 
   return {
     ok: true,
     teacherToken: teacherToken || "",
-    playerStateReady: masterLookupWired,
+    playerStateReady,
     masterLookupWired,
-    migrationRequired: !masterLookupWired,
+    idIntegrityOk: integrity.ok,
+    invalidPlayerStateIds: integrity.invalidPlayerStateIds,
+    duplicatePlayerStateIds: integrity.duplicatePlayerStateIds,
+    missingPlayerStateIds: integrity.missingPlayerStateIds,
+    migrationRequired: !playerStateReady,
     playerStateRows: index.size,
     reservedStudentIds: Array.from(index.keys()).sort((a, b) =>
       String(a).localeCompare(String(b), "en", { numeric: true })
@@ -4165,16 +4242,24 @@ function adminSystemStatus_(args) {
 function migratePlayerStateFromMaster_(args) {
   const verified = verifyTeacher_(args || {});
 
-  if (masterPlayerStateLookupWired_()) {
-    return playerStateStatusPayload_(verified.token);
+  const initialStatus = playerStateStatusPayload_(verified.token);
+  if (initialStatus.playerStateReady) {
+    return initialStatus;
+  }
+
+  if (initialStatus.masterLookupWired && !initialStatus.idIntegrityOk) {
+    throw new Error(
+      "Player_State StudentID integrity failed. Restore from the latest PlayerState_Backup before running migration again."
+    );
   }
 
   const lock = LockService.getScriptLock();
   lock.waitLock(CFG.LOCK_WAIT_MS);
 
   try {
-    if (masterPlayerStateLookupWired_()) {
-      return playerStateStatusPayload_(verified.token);
+    const lockedStatus = playerStateStatusPayload_(verified.token);
+    if (lockedStatus.playerStateReady) {
+      return lockedStatus;
     }
 
     const master = getSheet_(CFG.STUDENTS_SHEET);
@@ -4251,6 +4336,7 @@ function migratePlayerStateFromMaster_(args) {
     ensurePlayerStateSheet_();
 
     if (rows.length) {
+      state.getRange(2, 1, rows.length, 1).setNumberFormat("@");
       state.getRange(2, 1, rows.length, rows[0].length).setValues(rows);
     }
 
@@ -4276,8 +4362,9 @@ function ensurePlayerStateStudent_(studentIdRaw) {
   const nowIso = new Date().toISOString();
 
   if (!row) {
-    appendRowFast_(loaded.sh, [
-      studentId,
+    const newRow = loaded.sh.getLastRow() + 1;
+    loaded.sh.getRange(newRow, 1).setNumberFormat("@").setValue(studentId);
+    loaded.sh.getRange(newRow, 2, 1, 12).setValues([[
       "",
       "",
       0,
@@ -4290,7 +4377,7 @@ function ensurePlayerStateStudent_(studentIdRaw) {
       "ACTIVE",
       "",
       nowIso,
-    ]);
+    ]]);
     loaded = loadPlayerStateIndex_();
     row = loaded.index.get(studentId);
   } else if (row.rosterStatus !== "ACTIVE") {
@@ -4696,6 +4783,410 @@ function adminArchiveStudent_(args) {
 }
 
 // =========================================================
+// Global Teacher Admin: Attributes + Skills
+// =========================================================
+const ADMIN_ABILITIES = {
+  TXN_SHEET: "Ability_Transactions",
+};
+
+function ensureAbilityTxnSheet_() {
+  const ss = SpreadsheetApp.getActive();
+  let sh = ss.getSheetByName(ADMIN_ABILITIES.TXN_SHEET);
+  if (!sh) sh = ss.insertSheet(ADMIN_ABILITIES.TXN_SHEET);
+
+  return ensureHeaders_(sh, [
+    "Timestamp",
+    "StudentID",
+    "StudentName",
+    "Action",
+    "Field",
+    "Before",
+    "After",
+    "Source",
+    "Note",
+  ]);
+}
+
+function adminSplitSkills_(raw) {
+  return String(raw || "")
+    .split(/[;,|\n\r]/g)
+    .map((value) => norm_(value))
+    .filter(Boolean);
+}
+
+function adminCanonicalSkillList_(values) {
+  const out = [];
+  const seen = new Set();
+
+  (Array.isArray(values) ? values : []).forEach((value) => {
+    const canonical = canonicalSkillName_(value);
+    if (!canonical) throw new Error(`Invalid skill: ${value}`);
+
+    const key = normalizeSkillId_(canonical);
+    if (seen.has(key)) return;
+    seen.add(key);
+    out.push(canonical);
+  });
+
+  return out.sort((a, b) => a.localeCompare(b));
+}
+
+function adminAbilityResolved_(studentIdRaw) {
+  const studentId = normId_(studentIdRaw);
+  if (!studentId) throw new Error("Missing studentId.");
+
+  const resolved = adminResolveClassRowForStudentId_(studentId);
+  const map = resolved.map;
+
+  const columns = {
+    str: idx_(map, "Strength", "STR"),
+    dex: idx_(map, "Dexterity", "DEX"),
+    con: idx_(map, "Constitution", "CON"),
+    int: idx_(map, "Intelligence", "INT"),
+    wis: idx_(map, "Wisdom", "WIS"),
+    cha: idx_(map, "Charisma", "CHA"),
+    skills: idx_(map, "Skills", "Skill"),
+  };
+
+  ["str", "dex", "con", "int", "wis", "cha", "skills"].forEach((key) => {
+    if (columns[key] < 0) {
+      throw new Error(`${resolved.homeroom} is missing the ${key} ability column.`);
+    }
+  });
+
+  return { ...resolved, columns };
+}
+
+function adminRosterSkillsForStudent_(studentIdRaw) {
+  const resolved = adminAbilityResolved_(studentIdRaw);
+  const raw = resolved.sh
+    .getRange(resolved.rowNumber, resolved.columns.skills + 1)
+    .getValue();
+
+  const out = [];
+  const seen = new Set();
+
+  adminSplitSkills_(raw).forEach((value) => {
+    const canonical = canonicalSkillName_(value) || norm_(value);
+    const key = normalizeSkillId_(canonical);
+    if (!key || seen.has(key)) return;
+    seen.add(key);
+    out.push(canonical);
+  });
+
+  return out.sort((a, b) => a.localeCompare(b));
+}
+
+function adminAbilitySnapshotForStudent_(studentIdRaw) {
+  const studentId = normId_(studentIdRaw);
+  const students = loadStudentsMap_();
+  const student = students.get(studentId);
+  if (!student) throw new Error(`Active student not found: ${studentId}`);
+
+  const resolved = adminAbilityResolved_(studentId);
+  const state = ensurePlayerStateStudent_(studentId);
+
+  const readBase = (key) =>
+    Math.round(
+      asNum_(
+        resolved.sh.getRange(resolved.rowNumber, resolved.columns[key] + 1).getValue(),
+        0
+      )
+    );
+
+  const readBonus = (name) =>
+    Math.round(
+      asNum_(state.sh.getRange(state.row.sheetRow, state.row.col[name]).getValue(), 0)
+    );
+
+  return {
+    ok: true,
+    studentId,
+    studentName: student.name || "",
+    baseAttributes: {
+      str: readBase("str"),
+      dex: readBase("dex"),
+      con: readBase("con"),
+      int: readBase("int"),
+      wis: readBase("wis"),
+      cha: readBase("cha"),
+    },
+    bonusAttributes: {
+      str: readBonus("STR_Bonus"),
+      dex: readBonus("DEX_Bonus"),
+      con: readBonus("CON_Bonus"),
+      int: readBonus("INT_Bonus"),
+      wis: readBonus("WIS_Bonus"),
+      cha: readBonus("CHA_Bonus"),
+    },
+    rosterSkills: adminRosterSkillsForStudent_(studentId),
+    purchasedSkills: purchasedSkillIdsForStudent_(studentId).names,
+    now: new Date().toISOString(),
+  };
+}
+
+function adminAbilitySnapshot_(args) {
+  const verified = verifyTeacher_(args || {});
+  if (!masterPlayerStateLookupWired_()) {
+    throw new Error("Player data protection is required before abilities can be edited.");
+  }
+
+  return {
+    ...adminAbilitySnapshotForStudent_(args.studentId),
+    teacherToken: verified.token,
+  };
+}
+
+function adminAttributeObject_(raw) {
+  const source = raw || {};
+  const out = {};
+
+  ["str", "dex", "con", "int", "wis", "cha"].forEach((key) => {
+    const value = Math.round(asNum_(source[key], 0));
+    if (value < -99 || value > 99) {
+      throw new Error(`${key.toUpperCase()} must be between -99 and 99.`);
+    }
+    out[key] = value;
+  });
+
+  return out;
+}
+
+function adminUpdateAbilities_(args) {
+  const verified = verifyTeacher_(args || {});
+  if (!masterPlayerStateLookupWired_()) {
+    throw new Error("Player data protection is required before abilities can be edited.");
+  }
+
+  const studentId = normId_(args.studentId);
+  const reason = norm_(args.reason || "");
+  if (!studentId) throw new Error("Missing studentId.");
+  if (!reason) throw new Error("A reason is required for ability changes.");
+
+  const base = adminAttributeObject_(args.baseAttributes);
+  const bonus = adminAttributeObject_(args.bonusAttributes);
+  const rosterSkills = adminCanonicalSkillList_(args.rosterSkills);
+
+  const lock = LockService.getScriptLock();
+  lock.waitLock(CFG.LOCK_WAIT_MS);
+
+  try {
+    const before = adminAbilitySnapshotForStudent_(studentId);
+    const resolved = adminAbilityResolved_(studentId);
+    const state = ensurePlayerStateStudent_(studentId);
+    const now = new Date();
+    const nowIso = now.toISOString();
+
+    const baseOrder = ["str", "dex", "con", "int", "wis", "cha"];
+    baseOrder.forEach((key) => {
+      resolved.sh
+        .getRange(resolved.rowNumber, resolved.columns[key] + 1)
+        .setValue(base[key]);
+    });
+
+    resolved.sh
+      .getRange(resolved.rowNumber, resolved.columns.skills + 1)
+      .setValue(rosterSkills.join(", "));
+
+    state.sh
+      .getRange(state.row.sheetRow, state.row.col.STR_Bonus, 1, 6)
+      .setValues([[
+        bonus.str,
+        bonus.dex,
+        bonus.con,
+        bonus.int,
+        bonus.wis,
+        bonus.cha,
+      ]]);
+    state.sh
+      .getRange(state.row.sheetRow, state.row.col.UpdatedAt)
+      .setValue(nowIso);
+
+    const txn = ensureAbilityTxnSheet_();
+    const rows = [];
+    const studentName = before.studentName || "";
+
+    baseOrder.forEach((key) => {
+      if (before.baseAttributes[key] !== base[key]) {
+        rows.push([
+          now,
+          studentId,
+          studentName,
+          "SET_BASE_ATTRIBUTE",
+          key.toUpperCase(),
+          before.baseAttributes[key],
+          base[key],
+          "ADMIN",
+          reason,
+        ]);
+      }
+
+      if (before.bonusAttributes[key] !== bonus[key]) {
+        rows.push([
+          now,
+          studentId,
+          studentName,
+          "SET_BONUS_ATTRIBUTE",
+          `${key.toUpperCase()}_BONUS`,
+          before.bonusAttributes[key],
+          bonus[key],
+          "ADMIN",
+          reason,
+        ]);
+      }
+    });
+
+    const beforeSkills = before.rosterSkills.join(", ");
+    const afterSkills = rosterSkills.join(", ");
+    if (beforeSkills !== afterSkills) {
+      rows.push([
+        now,
+        studentId,
+        studentName,
+        "SET_ROSTER_SKILLS",
+        "Skills",
+        beforeSkills,
+        afterSkills,
+        "ADMIN",
+        reason,
+      ]);
+    }
+
+    if (rows.length) {
+      txn.getRange(txn.getLastRow() + 1, 1, rows.length, rows[0].length).setValues(rows);
+    }
+
+    SpreadsheetApp.flush();
+    cacheRemove_(`studentsMap:${CFG.STUDENTS_SHEET}`);
+
+    return {
+      ...adminAbilitySnapshotForStudent_(studentId),
+      teacherToken: verified.token,
+      updated: rows.length > 0,
+    };
+  } finally {
+    try { lock.releaseLock(); } catch (_) {}
+  }
+}
+
+function adminAdjustSkill_(args) {
+  const verified = verifyTeacher_(args || {});
+  const studentId = normId_(args.studentId);
+  const mode = norm_(args.mode || "").toUpperCase();
+  const skillName = canonicalSkillName_(args.skillName || args.skillId || "");
+  const reason = norm_(args.reason || "");
+
+  if (!studentId) throw new Error("Missing studentId.");
+  if (!["GRANT", "REVOKE"].includes(mode)) {
+    throw new Error("Skill mode must be GRANT or REVOKE.");
+  }
+  if (!skillName) throw new Error("Invalid skill.");
+  if (!reason) throw new Error("A reason is required for skill changes.");
+
+  const students = loadStudentsMap_();
+  const student = students.get(studentId);
+  if (!student) throw new Error(`Active student not found: ${studentId}`);
+
+  const skillId = normalizeSkillId_(skillName);
+  const rosterIds = new Set(
+    adminRosterSkillsForStudent_(studentId).map((name) => normalizeSkillId_(name))
+  );
+  const purchased = purchasedSkillIdsForStudent_(studentId);
+
+  if (mode === "GRANT") {
+    if (rosterIds.has(skillId) || purchased.ids.has(skillId)) {
+      throw new Error("Skill already owned.");
+    }
+
+    const { index } = loadSkillStateIndex_();
+    const state = index.get(studentId);
+    const tokens = state ? state.skillTokens : 0;
+
+    ensurePurchasedSkillsSheet_().appendRow([
+      new Date(),
+      studentId,
+      student.name || "",
+      skillId,
+      skillName,
+      0,
+      "ADMIN",
+      "",
+    ]);
+
+    ensureSkillTxnSheet_().appendRow([
+      new Date(),
+      studentId,
+      student.name || "",
+      "ADMIN_GRANT",
+      skillId,
+      skillName,
+      0,
+      tokens,
+      tokens,
+      "ADMIN",
+      "",
+      reason,
+    ]);
+  } else {
+    if (rosterIds.has(skillId) && !purchased.ids.has(skillId)) {
+      throw new Error(
+        "That is a roster skill. Uncheck it under Roster Skills and save instead."
+      );
+    }
+
+    const sh = ensurePurchasedSkillsSheet_();
+    const values = sh.getDataRange().getValues();
+    const map = headerMap_(values[0] || []);
+    const iId = idx_(map, "StudentID", "ID");
+    const iSkillId = idx_(map, "SkillId", "Skill ID");
+    const iSkillName = idx_(map, "SkillName", "Skill Name");
+    const rowsToDelete = [];
+
+    for (let r = 1; r < values.length; r++) {
+      if (normId_(values[r][iId]) !== studentId) continue;
+      const rowSkillId = normalizeSkillId_(
+        iSkillId >= 0 ? values[r][iSkillId] : values[r][iSkillName]
+      );
+      if (rowSkillId === skillId) rowsToDelete.push(r + 1);
+    }
+
+    if (!rowsToDelete.length) throw new Error("Purchased/granted skill not found.");
+
+    rowsToDelete
+      .sort((a, b) => b - a)
+      .forEach((rowNumber) => sh.deleteRow(rowNumber));
+
+    const { index } = loadSkillStateIndex_();
+    const state = index.get(studentId);
+    const tokens = state ? state.skillTokens : 0;
+
+    ensureSkillTxnSheet_().appendRow([
+      new Date(),
+      studentId,
+      student.name || "",
+      "ADMIN_REVOKE",
+      skillId,
+      skillName,
+      0,
+      tokens,
+      tokens,
+      "ADMIN",
+      "",
+      reason,
+    ]);
+  }
+
+  SpreadsheetApp.flush();
+
+  return {
+    ...adminAbilitySnapshotForStudent_(studentId),
+    teacherToken: verified.token,
+    mode,
+    skillName,
+  };
+}
+
+// =========================================================
 // Web App Routing + Endpoints
 // =========================================================
 function doGet(e) {
@@ -4797,6 +5288,7 @@ function doGet(e) {
         ensurePlayerStateSheet_();
         ensureInventoryTxnSheet_();
         ensureRosterTxnSheet_();
+        ensureAbilityTxnSheet_();
         ensureFinalExaminerSheets_();
         getSheet_("FinalExaminer_Config");
         syncBattleControlDerivedFields_();
@@ -4899,6 +5391,15 @@ function doPost(e) {
       case "adminarchivestudent":
         return jsonOut_(adminArchiveStudent_(body));
 
+      case "adminabilitysnapshot":
+        return jsonOut_(adminAbilitySnapshot_(body));
+
+      case "adminupdateabilities":
+        return jsonOut_(adminUpdateAbilities_(body));
+
+      case "adminadjustskill":
+        return jsonOut_(adminAdjustSkill_(body));
+
       default:
         return jsonOut_({
           ok: false,
@@ -4976,6 +5477,7 @@ function RUN_ensureAllSheets() {
   ensurePlayerStateSheet_();
   ensureInventoryTxnSheet_();
   ensureRosterTxnSheet_();
+  ensureAbilityTxnSheet_();
   ensureFinalExaminerSheets_();
   syncBattleControlDerivedFields_();
 

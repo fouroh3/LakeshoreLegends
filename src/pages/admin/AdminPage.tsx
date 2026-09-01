@@ -11,16 +11,20 @@ import type { Student } from "../../types";
 import {
   adminAdjustCurrency,
   adminAdjustInventory,
+  adminAdjustSkill,
   adminArchiveStudent,
   adminAssignGuildBatch,
   adminImportStudents,
   adminMigratePlayerState,
   adminSystemStatus,
+  adminUpdateAbilities,
   adminUpdateStudent,
+  type AdminAbilityUpdateResult,
   type AdminArchiveStudentResult,
   type AdminCurrencyAdjustmentResult,
   type AdminImportedStudent,
   type AdminInventoryAdjustmentResult,
+  type AdminSkillAdjustmentResult,
   type AdminSystemStatusResult,
   type AdminUpdateStudentResult,
 } from "./adminApi";
@@ -30,9 +34,11 @@ import {
   loginBattleTeacher,
 } from "../battle/battleTeacherApi";
 import {
+  type AdminAttributeValues,
   type AdminCurrency,
   type AdminCurrencyMode,
   type AdminInventoryMode,
+  type AdminSkillMode,
   type AdminSection,
 } from "./adminConstants";
 import { normId } from "./adminRosterUtils";
@@ -41,6 +47,7 @@ import StudentManagePanel from "./components/StudentManagePanel";
 import GuildManagerPanel from "./components/GuildManagerPanel";
 import CurrencyManagerPanel from "./components/CurrencyManagerPanel";
 import InventoryManagerPanel from "./components/InventoryManagerPanel";
+import AbilitiesManagerPanel from "./components/AbilitiesManagerPanel";
 
 function Pill({ children }: { children: ReactNode }) {
   return (
@@ -436,6 +443,62 @@ export default function AdminPage() {
     }
   };
 
+  const handleUpdateAbilities = async (args: {
+    studentId: string;
+    baseAttributes: AdminAttributeValues;
+    bonusAttributes: AdminAttributeValues;
+    rosterSkills: string[];
+    reason: string;
+  }): Promise<AdminAbilityUpdateResult> => {
+    setBusy(true);
+    setNotice(null);
+
+    try {
+      const result = await adminUpdateAbilities(args);
+      await reloadStudents();
+      setNotice({
+        type: "ok",
+        msg: "Updated attributes and roster skills. Changes were recorded in the ability audit log.",
+      });
+      return result;
+    } catch (err: any) {
+      setNotice({
+        type: "err",
+        msg: err?.message || "Ability update failed.",
+      });
+      throw err;
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleAdjustSkill = async (args: {
+    studentId: string;
+    mode: AdminSkillMode;
+    skillName: string;
+    reason: string;
+  }): Promise<AdminSkillAdjustmentResult> => {
+    setBusy(true);
+    setNotice(null);
+
+    try {
+      const result = await adminAdjustSkill(args);
+      setNotice({
+        type: "ok",
+        msg: `${args.mode === "GRANT" ? "Granted" : "Revoked"} ${args.skillName}.`,
+      });
+      return result;
+    } catch (err: any) {
+      setNotice({
+        type: "err",
+        msg: err?.message || "Skill change failed.",
+      });
+      throw err;
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const handleAdjustInventory = async (args: {
     studentIds: string[];
     mode: AdminInventoryMode;
@@ -575,7 +638,7 @@ export default function AdminPage() {
           </div>
         )}
 
-        <div className="mb-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <div className="mb-5 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
           <SectionButton
             active={section === "students"}
             title="Students / Import"
@@ -593,6 +656,12 @@ export default function AdminPage() {
             title="Currency Manager"
             detail="View balances and add or remove XP and Skill Tokens."
             onClick={() => setSection("currency")}
+          />
+          <SectionButton
+            active={section === "abilities"}
+            title="Abilities Manager"
+            detail="Edit attributes, bonuses, roster skills, and teacher-granted skills."
+            onClick={() => setSection("abilities")}
           />
           <SectionButton
             active={section === "inventory"}
@@ -657,6 +726,21 @@ export default function AdminPage() {
               students={students}
               busy={busy}
               onAdjust={handleAdjustCurrency}
+            />
+          </AdminPanel>
+        )}
+
+        {section === "abilities" && (
+          <AdminPanel
+            kicker="Attributes & Skills"
+            title="Abilities Manager"
+            description="Correct base attributes, purchased/admin bonuses, roster skills, and purchased or teacher-granted skills without editing class sheets by hand."
+          >
+            <AbilitiesManagerPanel
+              students={students}
+              busy={busy || !playerStateReady}
+              onSave={handleUpdateAbilities}
+              onAdjustSkill={handleAdjustSkill}
             />
           </AdminPanel>
         )}
