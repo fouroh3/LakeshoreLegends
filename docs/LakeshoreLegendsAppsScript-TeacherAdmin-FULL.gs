@@ -31,7 +31,7 @@
  *   overwritten by the Teacher Admin importer.
  * ========================================================= */
 
-const ADMIN_API_VERSION = "2026-09-01.2";
+const ADMIN_API_VERSION = "2026-09-01.3";
 
 const CFG = {
   // Master
@@ -2707,6 +2707,12 @@ function sha256Hex_(value) {
   return bytes
     .map((b) => ((b + 256) % 256).toString(16).padStart(2, "0"))
     .join("");
+}
+
+function makeTeacherToken_() {
+  const partA = Utilities.getUuid().replace(/-/g, "");
+  const partB = Utilities.getUuid().replace(/-/g, "");
+  return `t2_${Date.now().toString(36)}_${partA}${partB}`;
 }
 
 function teacherPasscodeMatches_(passcode) {
