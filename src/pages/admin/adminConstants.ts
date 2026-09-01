@@ -37,11 +37,15 @@ export const ADMIN_CLASS_MAX_ROW: Record<string, number> = {
 };
 
 export type AdminSection =
+  | "overview"
   | "students"
+  | "heroImages"
+  | "companions"
   | "guilds"
   | "currency"
   | "abilities"
-  | "inventory";
+  | "inventory"
+  | "system";
 
 export type PasteFormat =
   | "last-first"
@@ -53,6 +57,8 @@ export type AdminCurrencyMode = "ADD" | "REMOVE";
 
 export type AdminInventoryMode = "GIVE" | "REMOVE";
 export type AdminSkillMode = "GRANT" | "REVOKE";
+export type AdminMediaKind = "PORTRAIT" | "COMPANION";
+export type AdminCompanionStatus = "Active" | "Fallen";
 
 export type AdminAttributeKey =
   | "str"
