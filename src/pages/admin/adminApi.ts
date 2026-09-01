@@ -2,6 +2,10 @@
 
 import { HP_API_URL } from "../battle/battleConstants";
 import { getBattleTeacherToken } from "../battle/battleTeacherApi";
+import type {
+  AdminCurrency,
+  AdminCurrencyMode,
+} from "./adminConstants";
 
 export type AdminImportedStudent = {
   first: string;
@@ -35,7 +39,26 @@ export type AdminAssignGuildResult = {
   [key: string]: any;
 };
 
-type AdminAction = "adminimportstudents" | "adminassignguildbatch";
+export type AdminCurrencyAdjustmentResult = {
+  ok?: boolean;
+  error?: string;
+  updated?: number;
+  currency?: AdminCurrency;
+  mode?: AdminCurrencyMode;
+  amount?: number;
+  results?: Array<{
+    studentId: string;
+    studentName: string;
+    before: number;
+    after: number;
+  }>;
+  [key: string]: any;
+};
+
+type AdminAction =
+  | "adminimportstudents"
+  | "adminassignguildbatch"
+  | "adminadjustcurrency";
 
 async function postAdminAction<T>(
   action: AdminAction,
@@ -90,4 +113,23 @@ export async function adminAssignGuildBatch(args: {
     studentIds: args.studentIds,
     guild: args.guild,
   });
+}
+
+export async function adminAdjustCurrency(args: {
+  studentIds: string[];
+  currency: AdminCurrency;
+  mode: AdminCurrencyMode;
+  amount: number;
+  reason: string;
+}) {
+  return postAdminAction<AdminCurrencyAdjustmentResult>(
+    "adminadjustcurrency",
+    {
+      studentIds: args.studentIds,
+      currency: args.currency,
+      mode: args.mode,
+      amount: args.amount,
+      reason: args.reason,
+    }
+  );
 }
