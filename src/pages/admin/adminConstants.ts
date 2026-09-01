@@ -45,6 +45,7 @@ export type AdminSection =
   | "currency"
   | "abilities"
   | "inventory"
+  | "store"
   | "system";
 
 export type PasteFormat =
