@@ -25,13 +25,14 @@ export type Student = {
 
   // gameplay data
   skills: string[] | string;
+  purchasedSkills?: string[];
   inventory?: string[];
 
-// optional visuals / metadata
-portraitUrl?: string;
-companionUrl?: string;
-companionStatus?: "Active" | "Fallen" | string;
-guild?: Guild;
+  // optional visuals / metadata
+  portraitUrl?: string;
+  companionUrl?: string;
+  companionStatus?: "Active" | "Fallen" | string;
+  guild?: Guild;
 
   // HP (from Apps Script)
   baseHP?: number;
