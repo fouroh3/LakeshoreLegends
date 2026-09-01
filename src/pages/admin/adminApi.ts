@@ -39,6 +39,19 @@ export type AdminAssignGuildResult = {
   [key: string]: any;
 };
 
+export type AdminCurrencyRow = {
+  studentId: string;
+  xp: number;
+  skillTokens: number;
+};
+
+export type AdminCurrencySnapshotResult = {
+  ok?: boolean;
+  error?: string;
+  rows?: AdminCurrencyRow[];
+  [key: string]: any;
+};
+
 export type AdminCurrencyAdjustmentResult = {
   ok?: boolean;
   error?: string;
@@ -58,6 +71,7 @@ export type AdminCurrencyAdjustmentResult = {
 type AdminAction =
   | "adminimportstudents"
   | "adminassignguildbatch"
+  | "admincurrencysnapshot"
   | "adminadjustcurrency";
 
 async function postAdminAction<T>(
@@ -113,6 +127,13 @@ export async function adminAssignGuildBatch(args: {
     studentIds: args.studentIds,
     guild: args.guild,
   });
+}
+
+export async function adminCurrencySnapshot() {
+  return postAdminAction<AdminCurrencySnapshotResult>(
+    "admincurrencysnapshot",
+    {}
+  );
 }
 
 export async function adminAdjustCurrency(args: {
