@@ -40,6 +40,7 @@ export type AdminSection =
   | "students"
   | "guilds"
   | "currency"
+  | "abilities"
   | "inventory";
 
 export type PasteFormat =
@@ -51,3 +52,14 @@ export type AdminCurrency = "XP" | "SKILL_TOKENS";
 export type AdminCurrencyMode = "ADD" | "REMOVE";
 
 export type AdminInventoryMode = "GIVE" | "REMOVE";
+export type AdminSkillMode = "GRANT" | "REVOKE";
+
+export type AdminAttributeKey =
+  | "str"
+  | "dex"
+  | "con"
+  | "int"
+  | "wis"
+  | "cha";
+
+export type AdminAttributeValues = Record<AdminAttributeKey, number>;
