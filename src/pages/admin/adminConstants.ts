@@ -36,7 +36,11 @@ export const ADMIN_CLASS_MAX_ROW: Record<string, number> = {
   "8-10": 50,
 };
 
-export type AdminSection = "students" | "guilds" | "currency";
+export type AdminSection =
+  | "students"
+  | "guilds"
+  | "currency"
+  | "inventory";
 
 export type PasteFormat =
   | "last-first"
@@ -45,3 +49,5 @@ export type PasteFormat =
 
 export type AdminCurrency = "XP" | "SKILL_TOKENS";
 export type AdminCurrencyMode = "ADD" | "REMOVE";
+
+export type AdminInventoryMode = "GIVE" | "REMOVE";
