@@ -1,0 +1,35 @@
+name: Patch Teacher Admin Apps Script
+
+on:
+  push:
+    branches: [fluffy-cloud]
+    paths:
+      - scripts/patch_teacher_admin_apps_script.py
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fluffy-cloud
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Patch full Apps Script replacement
+        run: python scripts/patch_teacher_admin_apps_script.py
+      - name: Commit replacement file
+        run: |
+          if git diff --quiet -- docs/LakeshoreLegendsAppsScript-TeacherAdmin-FULL.gs; then
+            echo "No change required"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/LakeshoreLegendsAppsScript-TeacherAdmin-FULL.gs
+          git commit -m "Add Player State and inventory admin backend"
+          git push origin HEAD:fluffy-cloud
