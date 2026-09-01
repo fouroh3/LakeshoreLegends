@@ -1,0 +1,92 @@
+name: Fix Teacher Session Persistence
+
+on:
+  push:
+    branches: [fluffy-cloud]
+    paths:
+      - .github/workflows/fix-teacher-session-persistence.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch-build-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fluffy-cloud
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Make teacher sessions durable and surface expiry correctly
+        shell: python
+        run: |
+          from pathlib import Path
+
+          def once(text, old, new, label):
+              if old not in text:
+                  raise RuntimeError(f"Missing patch target: {label}")
+              return text.replace(old, new, 1)
+
+          # Backend: bump API version and move teacher auth from CacheService
+          # to Script Properties with a real expiry timestamp.
+          p = Path("docs/LakeshoreLegendsAppsScript-TeacherAdmin-FULL.gs")
+          s = p.read_text(encoding="utf-8")
+          s = once(
+              s,
+              'const ADMIN_API_VERSION = "2026-09-01.1";',
+              'const ADMIN_API_VERSION = "2026-09-01.2";',
+              "backend API version",
+          )
+
+          old_auth = '''const TEACHER_AUTH = {\n  PASSCODE_PROP: "LL_TEACHER_PASSCODE",\n  TOKEN_PREFIX: "teacherToken:v1:",\n  TOKEN_TTL_SECONDS: 60 * 60 * 12,\n};'''
+          new_auth = '''const TEACHER_AUTH = {\n  PASSCODE_PROP: "LL_TEACHER_PASSCODE",\n  TOKEN_PREFIX: "LL_TEACHER_TOKEN_V2_",\n  TOKEN_TTL_SECONDS: 60 * 60 * 12,\n};'''
+          s = once(s, old_auth, new_auth, "teacher auth config")
+
+          old_block = '''function teacherTokenKey_(token) {\n  return `${TEACHER_AUTH.TOKEN_PREFIX}${String(token || "")}`;\n}\n\nfunction verifyTeacher_(args) {\n  const token = norm_(args.teacherToken || "");\n  const passcode = norm_(args.passcode || "");\n\n  if (token) {\n    const cached = CacheService.getScriptCache().get(teacherTokenKey_(token));\n    if (cached === "1") return { ok: true, token };\n  }\n\n  if (passcode && teacherPasscodeMatches_(passcode)) {\n    const nextToken = makeTeacherToken_();\n    CacheService.getScriptCache().put(\n      teacherTokenKey_(nextToken),\n      "1",\n      TEACHER_AUTH.TOKEN_TTL_SECONDS\n    );\n    return { ok: true, token: nextToken };\n  }\n\n  throw new Error("Teacher authorization failed.");\n}\n'''
+
+          new_block = '''function teacherTokenKey_(token) {\n  return `${TEACHER_AUTH.TOKEN_PREFIX}${String(token || "")}`;\n}\n\nfunction pruneExpiredTeacherTokens_() {\n  const props = PropertiesService.getScriptProperties();\n  const all = props.getProperties();\n  const now = Date.now();\n\n  Object.keys(all).forEach((key) => {\n    if (!key.startsWith(TEACHER_AUTH.TOKEN_PREFIX)) return;\n    const expiresAt = Number(all[key] || 0);\n    if (!Number.isFinite(expiresAt) || expiresAt <= now) {\n      props.deleteProperty(key);\n    }\n  });\n}\n\nfunction rememberTeacherToken_(token) {\n  const expiresAt = Date.now() + TEACHER_AUTH.TOKEN_TTL_SECONDS * 1000;\n  PropertiesService.getScriptProperties().setProperty(\n    teacherTokenKey_(token),\n    String(expiresAt)\n  );\n  return expiresAt;\n}\n\nfunction teacherTokenIsValid_(token) {\n  if (!token) return false;\n\n  const props = PropertiesService.getScriptProperties();\n  const key = teacherTokenKey_(token);\n  const expiresAt = Number(props.getProperty(key) || 0);\n\n  if (!Number.isFinite(expiresAt) || expiresAt <= Date.now()) {\n    if (expiresAt) props.deleteProperty(key);\n    return false;\n  }\n\n  return true;\n}\n\nfunction verifyTeacher_(args) {\n  const token = norm_(args.teacherToken || "");\n  const passcode = norm_(args.passcode || "");\n\n  if (teacherTokenIsValid_(token)) {\n    return { ok: true, token };\n  }\n\n  if (passcode && teacherPasscodeMatches_(passcode)) {\n    pruneExpiredTeacherTokens_();\n    const nextToken = makeTeacherToken_();\n    rememberTeacherToken_(nextToken);\n    return { ok: true, token: nextToken };\n  }\n\n  throw new Error("Teacher authorization failed.");\n}\n'''
+          s = once(s, old_block, new_block, "durable teacher token functions")
+          p.write_text(s, encoding="utf-8")
+
+          # Frontend API version must match.
+          p = Path("src/pages/admin/adminApi.ts")
+          s = p.read_text(encoding="utf-8")
+          s = once(
+              s,
+              'export const ADMIN_API_VERSION = "2026-09-01.1";',
+              'export const ADMIN_API_VERSION = "2026-09-01.2";',
+              "frontend API version",
+          )
+          p.write_text(s, encoding="utf-8")
+
+          # Global Manager: stale/expired auth is not a data-health problem.
+          p = Path("src/pages/admin/AdminPage.tsx")
+          s = p.read_text(encoding="utf-8")
+          old_catch = '''    } catch {\n      // Keep migration-dependent tools locked, but distinguish a failed\n      // health check from a confirmed Player_State migration requirement.\n      setSystemStatus(null);\n      setSystemStatusError(true);\n    } finally {'''
+          new_catch = '''    } catch (err: any) {\n      const message = String(err?.message || "");\n\n      if (/teacher authorization failed/i.test(message)) {\n        clearBattleTeacherToken();\n        setSystemStatus(null);\n        setSystemStatusError(false);\n        setUnlocked(false);\n        setNotice({\n          type: "err",\n          msg: "Teacher session expired. Unlock Global Manager again.",\n        });\n        return;\n      }\n\n      // Keep migration-dependent tools locked, but distinguish a failed\n      // health check from a confirmed Player_State migration requirement.\n      setSystemStatus(null);\n      setSystemStatusError(true);\n    } finally {'''
+          s = once(s, old_catch, new_catch, "expired session handling")
+          p.write_text(s, encoding="utf-8")
+
+      - name: Validate Apps Script syntax
+        run: |
+          cp docs/LakeshoreLegendsAppsScript-TeacherAdmin-FULL.gs /tmp/admin.js
+          node --check /tmp/admin.js
+
+      - name: Validate React production build
+        run: |
+          npm ci
+          npm run build
+
+      - name: Commit validated session fix
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/LakeshoreLegendsAppsScript-TeacherAdmin-FULL.gs src/pages/admin/adminApi.ts src/pages/admin/AdminPage.tsx
+          git commit -m "Make teacher admin sessions durable"
+          git push origin HEAD:fluffy-cloud
