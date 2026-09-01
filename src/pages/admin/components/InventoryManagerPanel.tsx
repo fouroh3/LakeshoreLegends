@@ -214,7 +214,7 @@ export default function InventoryManagerPanel({
     if (!confirmed) return;
 
     try {
-      const result = await onAdjust({
+      await onAdjust({
         studentIds: selectedIds,
         mode,
         cardKey,
@@ -223,20 +223,7 @@ export default function InventoryManagerPanel({
         reason: reason.trim(),
       });
 
-      if (Array.isArray(result.results)) {
-        setInventories((prev) => {
-          const next = new Map(prev);
-          result.results?.forEach((row) => {
-            next.set(
-              normId(row.studentId),
-              Array.isArray(row.inventory) ? row.inventory : []
-            );
-          });
-          return next;
-        });
-      } else {
-        await loadInventories();
-      }
+      await loadInventories();
 
       setSelectedIds([]);
       setReason("");

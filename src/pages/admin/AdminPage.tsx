@@ -223,6 +223,18 @@ export default function AdminPage() {
     }
   }, [unlocked]);
 
+  useEffect(() => {
+    if (!unlocked) return;
+
+    const refreshOnFocus = () => {
+      void reloadStudents();
+      void reloadSystemStatus();
+    };
+
+    window.addEventListener("focus", refreshOnFocus);
+    return () => window.removeEventListener("focus", refreshOnFocus);
+  }, [unlocked]);
+
   const homeroomCount = useMemo(() => {
     const homerooms = new Set(
       students
@@ -351,6 +363,7 @@ export default function AdminPage() {
         });
       }
 
+      await Promise.all([reloadStudents(), reloadSystemStatus()]);
       setNotice({
         type: "ok",
         msg: `Imported ${result.imported ?? rows.length} student${
@@ -388,6 +401,7 @@ export default function AdminPage() {
         )
       );
 
+      await reloadStudents();
       setNotice({ type: "ok", msg: `Updated ${args.first} ${args.last}.` });
       return result;
     } catch (err: any) {
@@ -426,7 +440,7 @@ export default function AdminPage() {
         type: "ok",
         msg: `Moved student to ${args.homeroom}. New StudentID: ${nextId}. All linked game state migrated automatically.`,
       });
-      await reloadSystemStatus();
+      await Promise.all([reloadStudents(), reloadSystemStatus()]);
       return result;
     } catch (err: any) {
       setNotice({
@@ -525,6 +539,7 @@ export default function AdminPage() {
             : student
         )
       );
+      await reloadStudents();
       setNotice({ type: "ok", msg: "Companion record updated." });
       return result;
     } catch (err: any) {
@@ -548,6 +563,7 @@ export default function AdminPage() {
       const student = students.find((row) => normId(row.id) === id);
 
       setStudents((prev) => prev.filter((row) => normId(row.id) !== id));
+      await Promise.all([reloadStudents(), reloadSystemStatus()]);
       setNotice({
         type: "ok",
         msg: `${student ? `${student.first} ${student.last}` : id} archived. Their StudentID and history are preserved and will not be reused.`,
@@ -582,6 +598,7 @@ export default function AdminPage() {
 
       const label = guild || "Unassigned";
       const updated = result.updated ?? studentIds.length;
+      await reloadStudents();
       setNotice({
         type: "ok",
         msg: `Moved ${updated} student${updated === 1 ? "" : "s"} to ${label}.`,
@@ -613,6 +630,7 @@ export default function AdminPage() {
       const actionLabel = args.mode === "ADD" ? "Added" : "Removed";
       const updated = result.updated ?? args.studentIds.length;
 
+      await reloadStudents();
       setNotice({
         type: "ok",
         msg: `${actionLabel} ${args.amount} ${currencyLabel} ${
@@ -672,6 +690,7 @@ export default function AdminPage() {
 
     try {
       const result = await adminAdjustSkill(args);
+      await reloadStudents();
       setNotice({
         type: "ok",
         msg: `${args.mode === "GRANT" ? "Granted" : "Revoked"} ${args.skillName}.`,
@@ -701,6 +720,7 @@ export default function AdminPage() {
 
     try {
       const result = await adminAdjustInventory(args);
+      await reloadStudents();
       const updated = result.updated ?? args.studentIds.length;
       setNotice({
         type: "ok",

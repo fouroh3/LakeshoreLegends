@@ -193,7 +193,7 @@ export default function CurrencyManagerPanel({
     if (!confirmed) return;
 
     try {
-      const result = await onAdjust({
+      await onAdjust({
         studentIds: selectedIds,
         currency,
         mode,
@@ -201,31 +201,7 @@ export default function CurrencyManagerPanel({
         reason: reason.trim(),
       });
 
-      if (Array.isArray(result.results)) {
-        setBalances((prev) => {
-          const next = new Map(prev);
-
-          result.results?.forEach((row) => {
-            const studentId = normId(row.studentId);
-            const current = next.get(studentId) ?? {
-              studentId,
-              xp: 0,
-              skillTokens: 0,
-            };
-
-            next.set(studentId, {
-              ...current,
-              ...(currency === "XP"
-                ? { xp: Number(row.after ?? 0) }
-                : { skillTokens: Number(row.after ?? 0) }),
-            });
-          });
-
-          return next;
-        });
-      } else {
-        await loadBalances();
-      }
+      await loadBalances();
 
       setSelectedIds([]);
       setReason("");

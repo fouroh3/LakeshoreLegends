@@ -61,7 +61,7 @@ export default function StoreSettingsPanel() {
 
     try {
       const result = await adminUpdateStore(settings);
-      setSettings(result.settings);
+      await load();
       setSuccess(
         result.settings.storeLocked
           ? "Store settings saved. Student purchases are closed."

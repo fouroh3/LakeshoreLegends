@@ -239,14 +239,14 @@ export default function AbilitiesManagerPanel({
     if (!confirmed) return;
 
     try {
-      const result = await onSave({
+      await onSave({
         studentId: selectedId,
         baseAttributes,
         bonusAttributes,
         rosterSkills,
         reason: reason.trim(),
       });
-      applySnapshot(result);
+      await loadSnapshot(selectedId);
       setReason("");
     } catch {
       // Parent displays the write failure; keep edits for retry.
@@ -267,13 +267,13 @@ export default function AbilitiesManagerPanel({
     if (!confirmed) return;
 
     try {
-      const result = await onAdjustSkill({
+      await onAdjustSkill({
         studentId: selectedId,
         mode,
         skillName,
         reason: reason.trim(),
       });
-      applySnapshot(result);
+      await loadSnapshot(selectedId);
       setReason("");
     } catch {
       // Parent displays the write failure.
