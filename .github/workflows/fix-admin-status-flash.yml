@@ -1,0 +1,111 @@
+name: Fix Admin Status Flash
+
+on:
+  push:
+    branches: [fluffy-cloud]
+    paths:
+      - .github/workflows/fix-admin-status-flash.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fix-build-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fluffy-cloud
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Fix system health loading state
+        shell: python
+        run: |
+          from pathlib import Path
+
+          p = Path("src/pages/admin/AdminPage.tsx")
+          s = p.read_text(encoding="utf-8")
+
+          def once(old, new, label):
+              global s
+              if old not in s:
+                  raise RuntimeError(f"Missing patch target: {label}")
+              s = s.replace(old, new, 1)
+
+          once(
+              '  const [systemStatus, setSystemStatus] = useState<AdminSystemStatusResult | null>(null);\n  const [statusLoading, setStatusLoading] = useState(false);',
+              '  const [systemStatus, setSystemStatus] = useState<AdminSystemStatusResult | null>(null);\n  const [statusLoading, setStatusLoading] = useState(false);\n  const [systemStatusError, setSystemStatusError] = useState(false);',
+              'status error state',
+          )
+
+          once(
+              '  const reloadSystemStatus = async () => {\n    setStatusLoading(true);\n\n    try {\n      const result = await adminSystemStatus();\n      setSystemStatus(result);\n    } catch {\n      // Older backend deployment: leave migration-dependent tools locked.\n      setSystemStatus(null);\n    } finally {\n      setStatusLoading(false);\n    }\n  };',
+              '  const reloadSystemStatus = async () => {\n    setStatusLoading(true);\n    setSystemStatusError(false);\n\n    try {\n      const result = await adminSystemStatus();\n      setSystemStatus(result);\n    } catch {\n      // Keep migration-dependent tools locked, but distinguish a failed\n      // health check from a confirmed Player_State migration requirement.\n      setSystemStatus(null);\n      setSystemStatusError(true);\n    } finally {\n      setStatusLoading(false);\n    }\n  };',
+              'reload system status',
+          )
+
+          once(
+              '  const playerStateReady = Boolean(\n    systemStatus?.playerStateReady && systemStatus?.masterLookupWired\n  );',
+              '  const playerStateReady = Boolean(\n    systemStatus?.playerStateReady && systemStatus?.masterLookupWired\n  );\n\n  const systemStatusResolved = Boolean(\n    !statusLoading && systemStatus !== null\n  );\n  const systemStatusProblem = systemStatusResolved && !playerStateReady;\n  const systemStatusUnavailable = !statusLoading && systemStatusError;',
+              'derived status state',
+          )
+
+          once(
+              '    setSystemStatus(null);\n    setNotice(null);',
+              '    setSystemStatus(null);\n    setSystemStatusError(false);\n    setNotice(null);',
+              'lock reset',
+          )
+
+          once(
+              '        {!playerStateReady && (\n          <div className="mb-5 rounded-[26px] border border-amber-300/25 bg-amber-950/20 p-4 sm:p-5">',
+              '        {systemStatusProblem && (\n          <div className="mb-5 rounded-[26px] border border-amber-300/25 bg-amber-950/20 p-4 sm:p-5">',
+              'confirmed migration banner',
+          )
+
+          marker = '''        {systemStatusProblem && (\n          <div className="mb-5 rounded-[26px] border border-amber-300/25 bg-amber-950/20 p-4 sm:p-5">\n            <div className="font-black text-amber-100">One-time player data upgrade required</div>\n            <p className="mt-1 max-w-4xl text-sm leading-6 text-amber-100/70">\n              Some player-owned data is still tied to spreadsheet row position. Import, archive, and card management are locked until it is moved into StudentID-keyed Player_State. The upgrade creates a backup before changing Master.\n            </p>\n            <button\n              type="button"\n              onClick={handleMigration}\n              disabled={busy || statusLoading}\n              className="mt-3 rounded-2xl bg-amber-300 px-4 py-2.5 text-sm font-black text-zinc-950 disabled:opacity-50"\n            >\n              {busy ? "Upgrading..." : "Protect Player Data"}\n            </button>\n          </div>\n        )}\n'''
+          if marker not in s:
+              raise RuntimeError('Missing migration banner block')
+          error_banner = marker + '''\n        {systemStatusUnavailable && (\n          <div className="mb-5 rounded-[26px] border border-red-300/20 bg-red-950/20 p-4 sm:p-5">\n            <div className="font-black text-red-100">Could not verify player data health</div>\n            <p className="mt-1 max-w-4xl text-sm leading-6 text-red-100/65">\n              Global Manager could not complete its system-health check. Player-management tools remain locked until the check succeeds; this does not mean a data upgrade is required.\n            </p>\n            <button\n              type="button"\n              onClick={() => void reloadSystemStatus()}\n              disabled={statusLoading}\n              className="mt-3 rounded-2xl border border-red-200/20 bg-red-200/10 px-4 py-2.5 text-sm font-black text-red-50 transition hover:bg-red-200/15 disabled:opacity-50"\n            >\n              {statusLoading ? "Checking..." : "Retry Health Check"}\n            </button>\n          </div>\n        )}\n'''
+          s = s.replace(marker, error_banner, 1)
+
+          once(
+              '                    fallenCompanionCount > 0 ||\n                    !playerStateReady) && (',
+              '                    fallenCompanionCount > 0 ||\n                    systemStatusProblem ||\n                    systemStatusUnavailable) && (',
+              'attention status condition',
+          )
+
+          once(
+              '                          {!playerStateReady && (\n                            <button type="button" onClick={() => setSection("system")} className="rounded-full border border-red-300/20 bg-red-950/25 px-3 py-1.5 text-xs font-bold text-red-100 transition hover:border-red-200/35 hover:bg-red-950/40">\n                              Game data\n                            </button>\n                          )}',
+              '                          {(systemStatusProblem || systemStatusUnavailable) && (\n                            <button type="button" onClick={() => setSection("system")} className="rounded-full border border-red-300/20 bg-red-950/25 px-3 py-1.5 text-xs font-bold text-red-100 transition hover:border-red-200/35 hover:bg-red-950/40">\n                              {systemStatusUnavailable ? "Health check failed" : "Game data"}\n                            </button>\n                          )}',
+              'attention game data pill',
+          )
+
+          old_card = '''                      {\n                        label: "Game Data",\n                        value: playerStateReady ? "Healthy" : "Needs attention",\n                        icon: <Database size={20} />,\n                        section: "system" as AdminSection,\n                        tone: playerStateReady ? "text-emerald-100" : "text-red-100",\n                        iconTone: playerStateReady ? "text-emerald-100" : "text-red-100",\n                        surface: playerStateReady\n                          ? "hover:border-emerald-300/30 hover:bg-emerald-300/[0.05]"\n                          : "hover:border-red-300/30 hover:bg-red-300/[0.05]",\n                      },'''
+          new_card = '''                      {\n                        label: "Game Data",\n                        value: systemStatusUnavailable\n                          ? "Check failed"\n                          : !systemStatusResolved\n                          ? "Checking…"\n                          : playerStateReady\n                          ? "Healthy"\n                          : "Needs attention",\n                        icon: <Database size={20} />,\n                        section: "system" as AdminSection,\n                        tone: systemStatusUnavailable\n                          ? "text-red-100"\n                          : !systemStatusResolved\n                          ? "text-zinc-300"\n                          : playerStateReady\n                          ? "text-emerald-100"\n                          : "text-red-100",\n                        iconTone: systemStatusUnavailable\n                          ? "text-red-100"\n                          : !systemStatusResolved\n                          ? "text-zinc-400"\n                          : playerStateReady\n                          ? "text-emerald-100"\n                          : "text-red-100",\n                        surface: systemStatusUnavailable\n                          ? "hover:border-red-300/30 hover:bg-red-300/[0.05]"\n                          : !systemStatusResolved\n                          ? "hover:border-white/20 hover:bg-white/[0.045]"\n                          : playerStateReady\n                          ? "hover:border-emerald-300/30 hover:bg-emerald-300/[0.05]"\n                          : "hover:border-red-300/30 hover:bg-red-300/[0.05]",\n                      },'''
+          if old_card not in s:
+              raise RuntimeError('Missing Game Data card')
+          s = s.replace(old_card, new_card, 1)
+
+          p.write_text(s, encoding="utf-8")
+
+      - name: Validate React production build
+        run: |
+          npm ci
+          npm run build
+
+      - name: Commit validated fix
+        run: |
+          if git diff --quiet -- src/pages/admin/AdminPage.tsx; then
+            echo "No UI changes required"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/admin/AdminPage.tsx
+          git commit -m "Fix Global Manager health status flash"
+          git push origin HEAD:fluffy-cloud
