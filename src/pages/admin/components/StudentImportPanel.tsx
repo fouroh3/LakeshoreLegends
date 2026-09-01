@@ -45,16 +45,20 @@ export default function StudentImportPanel({ students, busy, onImport }: Props) 
   const handleImport = async () => {
     if (!importableStudents.length || hasErrors) return;
 
-    await onImport(
-      importableStudents.map((row) => ({
-        first: row.first,
-        last: row.last,
-        homeroom: row.homeroom,
-        guild: row.guild || "",
-      }))
-    );
+    try {
+      await onImport(
+        importableStudents.map((row) => ({
+          first: row.first,
+          last: row.last,
+          homeroom: row.homeroom,
+          guild: row.guild || "",
+        }))
+      );
 
-    setPasteText("");
+      setPasteText("");
+    } catch {
+      // Parent shows the error. Keep the pasted roster so the teacher can retry.
+    }
   };
 
   const formatHint =
