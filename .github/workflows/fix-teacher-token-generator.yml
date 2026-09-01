@@ -1,0 +1,89 @@
+name: Fix Teacher Token Generator
+
+on:
+  push:
+    branches: [fluffy-cloud]
+    paths:
+      - .github/workflows/fix-teacher-token-generator.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch-build-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fluffy-cloud
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Add teacher token generator and login retry
+        shell: python
+        run: |
+          from pathlib import Path
+
+          def once(text, old, new, label):
+              if old not in text:
+                  raise RuntimeError(f"Missing patch target: {label}")
+              return text.replace(old, new, 1)
+
+          # Apps Script: bump API version and define the missing runtime helper.
+          p = Path("docs/LakeshoreLegendsAppsScript-TeacherAdmin-FULL.gs")
+          s = p.read_text(encoding="utf-8")
+          s = once(
+              s,
+              'const ADMIN_API_VERSION = "2026-09-01.2";',
+              'const ADMIN_API_VERSION = "2026-09-01.3";',
+              "backend API version",
+          )
+
+          marker = '''function teacherPasscodeMatches_(passcode) {'''
+          generator = '''function makeTeacherToken_() {\n  const partA = Utilities.getUuid().replace(/-/g, "");\n  const partB = Utilities.getUuid().replace(/-/g, "");\n  return `t2_${Date.now().toString(36)}_${partA}${partB}`;\n}\n\nfunction teacherPasscodeMatches_(passcode) {'''
+          s = once(s, marker, generator, "teacher token generator")
+          p.write_text(s, encoding="utf-8")
+
+          # Frontend version guard must match the backend build.
+          p = Path("src/pages/admin/adminApi.ts")
+          s = p.read_text(encoding="utf-8")
+          s = once(
+              s,
+              'export const ADMIN_API_VERSION = "2026-09-01.2";',
+              'export const ADMIN_API_VERSION = "2026-09-01.3";',
+              "frontend API version",
+          )
+          p.write_text(s, encoding="utf-8")
+
+          # Teacher login is safe to retry once when Google itself returns a
+          # transient non-JSON/404 before the Apps Script handler completes.
+          p = Path("src/pages/battle/battleTeacherApi.ts")
+          s = p.read_text(encoding="utf-8")
+          old = '''export async function loginBattleTeacher(passcode: string) {\n  return postTeacherAction("battleteacherlogin", { passcode });\n}\n'''
+          new = '''export async function loginBattleTeacher(passcode: string) {\n  let lastError: unknown = null;\n\n  for (let attempt = 0; attempt < 2; attempt++) {\n    try {\n      return await postTeacherAction("battleteacherlogin", { passcode });\n    } catch (err) {\n      lastError = err;\n      const message = String((err as any)?.message || err || "");\n      const retryable = /non-JSON \(404\)|failed: 404/i.test(message);\n\n      if (!retryable || attempt === 1) throw err;\n      await new Promise((resolve) => window.setTimeout(resolve, 350));\n    }\n  }\n\n  throw lastError;\n}\n'''
+          s = once(s, old, new, "teacher login retry")
+          p.write_text(s, encoding="utf-8")
+
+      - name: Validate Apps Script syntax and required runtime symbols
+        run: |
+          cp docs/LakeshoreLegendsAppsScript-TeacherAdmin-FULL.gs /tmp/admin.js
+          node --check /tmp/admin.js
+          grep -q 'function makeTeacherToken_()' docs/LakeshoreLegendsAppsScript-TeacherAdmin-FULL.gs
+          grep -q 'const nextToken = makeTeacherToken_();' docs/LakeshoreLegendsAppsScript-TeacherAdmin-FULL.gs
+
+      - name: Validate React production build
+        run: |
+          npm ci
+          npm run build
+
+      - name: Commit validated fix
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/LakeshoreLegendsAppsScript-TeacherAdmin-FULL.gs src/pages/admin/adminApi.ts src/pages/battle/battleTeacherApi.ts
+          git commit -m "Fix teacher admin token generation"
+          git push origin HEAD:fluffy-cloud
