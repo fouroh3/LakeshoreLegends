@@ -177,6 +177,7 @@ export default function AdminPage() {
   const [busy, setBusy] = useState(false);
   const [systemStatus, setSystemStatus] = useState<AdminSystemStatusResult | null>(null);
   const [statusLoading, setStatusLoading] = useState(false);
+  const [systemStatusError, setSystemStatusError] = useState(false);
   const [notice, setNotice] = useState<{
     type: "ok" | "err";
     msg: string;
@@ -200,13 +201,16 @@ export default function AdminPage() {
 
   const reloadSystemStatus = async () => {
     setStatusLoading(true);
+    setSystemStatusError(false);
 
     try {
       const result = await adminSystemStatus();
       setSystemStatus(result);
     } catch {
-      // Older backend deployment: leave migration-dependent tools locked.
+      // Keep migration-dependent tools locked, but distinguish a failed
+      // health check from a confirmed Player_State migration requirement.
       setSystemStatus(null);
+      setSystemStatusError(true);
     } finally {
       setStatusLoading(false);
     }
@@ -258,6 +262,12 @@ export default function AdminPage() {
     systemStatus?.playerStateReady && systemStatus?.masterLookupWired
   );
 
+  const systemStatusResolved = Boolean(
+    !statusLoading && systemStatus !== null
+  );
+  const systemStatusProblem = systemStatusResolved && !playerStateReady;
+  const systemStatusUnavailable = !statusLoading && systemStatusError;
+
   const handleLogin = async () => {
     setNotice(null);
     setBusy(true);
@@ -282,6 +292,7 @@ export default function AdminPage() {
     setUnlocked(false);
     setStudents([]);
     setSystemStatus(null);
+    setSystemStatusError(false);
     setNotice(null);
   };
 
@@ -799,7 +810,7 @@ export default function AdminPage() {
           </div>
         )}
 
-        {!playerStateReady && (
+        {systemStatusProblem && (
           <div className="mb-5 rounded-[26px] border border-amber-300/25 bg-amber-950/20 p-4 sm:p-5">
             <div className="font-black text-amber-100">One-time player data upgrade required</div>
             <p className="mt-1 max-w-4xl text-sm leading-6 text-amber-100/70">
@@ -812,6 +823,23 @@ export default function AdminPage() {
               className="mt-3 rounded-2xl bg-amber-300 px-4 py-2.5 text-sm font-black text-zinc-950 disabled:opacity-50"
             >
               {busy ? "Upgrading..." : "Protect Player Data"}
+            </button>
+          </div>
+        )}
+
+        {systemStatusUnavailable && (
+          <div className="mb-5 rounded-[26px] border border-red-300/20 bg-red-950/20 p-4 sm:p-5">
+            <div className="font-black text-red-100">Could not verify player data health</div>
+            <p className="mt-1 max-w-4xl text-sm leading-6 text-red-100/65">
+              Global Manager could not complete its system-health check. Player-management tools remain locked until the check succeeds; this does not mean a data upgrade is required.
+            </p>
+            <button
+              type="button"
+              onClick={() => void reloadSystemStatus()}
+              disabled={statusLoading}
+              className="mt-3 rounded-2xl border border-red-200/20 bg-red-200/10 px-4 py-2.5 text-sm font-black text-red-50 transition hover:bg-red-200/15 disabled:opacity-50"
+            >
+              {statusLoading ? "Checking..." : "Retry Health Check"}
             </button>
           </div>
         )}
@@ -917,7 +945,8 @@ export default function AdminPage() {
                     missingCompanionCount > 0 ||
                     unassignedCount > 0 ||
                     fallenCompanionCount > 0 ||
-                    !playerStateReady) && (
+                    systemStatusProblem ||
+                    systemStatusUnavailable) && (
                     <div className="mb-4 rounded-[22px] border border-amber-300/15 bg-[linear-gradient(135deg,rgba(245,158,11,0.08),rgba(17,24,39,0.28))] px-4 py-3.5">
                       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                         <div className="flex items-start gap-3">
@@ -953,9 +982,9 @@ export default function AdminPage() {
                               {unassignedCount} unassigned guilds
                             </button>
                           )}
-                          {!playerStateReady && (
+                          {(systemStatusProblem || systemStatusUnavailable) && (
                             <button type="button" onClick={() => setSection("system")} className="rounded-full border border-red-300/20 bg-red-950/25 px-3 py-1.5 text-xs font-bold text-red-100 transition hover:border-red-200/35 hover:bg-red-950/40">
-                              Game data
+                              {systemStatusUnavailable ? "Health check failed" : "Game data"}
                             </button>
                           )}
                         </div>
@@ -1020,12 +1049,34 @@ export default function AdminPage() {
                       },
                       {
                         label: "Game Data",
-                        value: playerStateReady ? "Healthy" : "Needs attention",
+                        value: systemStatusUnavailable
+                          ? "Check failed"
+                          : !systemStatusResolved
+                          ? "Checking…"
+                          : playerStateReady
+                          ? "Healthy"
+                          : "Needs attention",
                         icon: <Database size={20} />,
                         section: "system" as AdminSection,
-                        tone: playerStateReady ? "text-emerald-100" : "text-red-100",
-                        iconTone: playerStateReady ? "text-emerald-100" : "text-red-100",
-                        surface: playerStateReady
+                        tone: systemStatusUnavailable
+                          ? "text-red-100"
+                          : !systemStatusResolved
+                          ? "text-zinc-300"
+                          : playerStateReady
+                          ? "text-emerald-100"
+                          : "text-red-100",
+                        iconTone: systemStatusUnavailable
+                          ? "text-red-100"
+                          : !systemStatusResolved
+                          ? "text-zinc-400"
+                          : playerStateReady
+                          ? "text-emerald-100"
+                          : "text-red-100",
+                        surface: systemStatusUnavailable
+                          ? "hover:border-red-300/30 hover:bg-red-300/[0.05]"
+                          : !systemStatusResolved
+                          ? "hover:border-white/20 hover:bg-white/[0.045]"
+                          : playerStateReady
                           ? "hover:border-emerald-300/30 hover:bg-emerald-300/[0.05]"
                           : "hover:border-red-300/30 hover:bg-red-300/[0.05]",
                       },
