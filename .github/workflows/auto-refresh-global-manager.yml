@@ -1,0 +1,149 @@
+name: Auto Refresh Global Manager
+
+on:
+  push:
+    branches: [fluffy-cloud]
+    paths:
+      - .github/workflows/auto-refresh-global-manager.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch-build-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fluffy-cloud
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Make displayed admin data self-refreshing
+        shell: python
+        run: |
+          from pathlib import Path
+
+          def once(text, old, new, label):
+              if old not in text:
+                  raise RuntimeError(f"Missing patch target: {label}")
+              return text.replace(old, new, 1)
+
+          # Parent roster/system state: re-sync on focus and after writes.
+          p = Path("src/pages/admin/AdminPage.tsx")
+          s = p.read_text(encoding="utf-8")
+
+          s = once(s,
+          '''  useEffect(() => {\n    if (unlocked) {\n      reloadStudents();\n      reloadSystemStatus();\n    }\n  }, [unlocked]);\n''',
+          '''  useEffect(() => {\n    if (unlocked) {\n      reloadStudents();\n      reloadSystemStatus();\n    }\n  }, [unlocked]);\n\n  useEffect(() => {\n    if (!unlocked) return;\n\n    const refreshOnFocus = () => {\n      void reloadStudents();\n      void reloadSystemStatus();\n    };\n\n    window.addEventListener("focus", refreshOnFocus);\n    return () => window.removeEventListener("focus", refreshOnFocus);\n  }, [unlocked]);\n''',
+          "focus refresh")
+
+          s = once(s,
+          '''      setNotice({\n        type: "ok",\n        msg: `Imported ${result.imported ?? rows.length} student${\n          (result.imported ?? rows.length) === 1 ? "" : "s"\n        }. HP, XP, Skill Token, and Player State were initialized automatically.`,\n      });''',
+          '''      await Promise.all([reloadStudents(), reloadSystemStatus()]);\n      setNotice({\n        type: "ok",\n        msg: `Imported ${result.imported ?? rows.length} student${\n          (result.imported ?? rows.length) === 1 ? "" : "s"\n        }. HP, XP, Skill Token, and Player State were initialized automatically.`,\n      });''',
+          "import refresh")
+
+          s = once(s,
+          '''      setNotice({ type: "ok", msg: `Updated ${args.first} ${args.last}.` });\n      return result;''',
+          '''      await reloadStudents();\n      setNotice({ type: "ok", msg: `Updated ${args.first} ${args.last}.` });\n      return result;''',
+          "rename refresh")
+
+          s = once(s,
+          '''      await reloadSystemStatus();\n      return result;''',
+          '''      await Promise.all([reloadStudents(), reloadSystemStatus()]);\n      return result;''',
+          "move refresh")
+
+          s = once(s,
+          '''      setNotice({ type: "ok", msg: "Companion record updated." });\n      return result;''',
+          '''      await reloadStudents();\n      setNotice({ type: "ok", msg: "Companion record updated." });\n      return result;''',
+          "companion refresh")
+
+          s = once(s,
+          '''      setNotice({\n        type: "ok",\n        msg: `${student ? `${student.first} ${student.last}` : id} archived. Their StudentID and history are preserved and will not be reused.`,\n      });\n      return result;''',
+          '''      await Promise.all([reloadStudents(), reloadSystemStatus()]);\n      setNotice({\n        type: "ok",\n        msg: `${student ? `${student.first} ${student.last}` : id} archived. Their StudentID and history are preserved and will not be reused.`,\n      });\n      return result;''',
+          "archive refresh")
+
+          s = once(s,
+          '''      setNotice({\n        type: "ok",\n        msg: `Moved ${updated} student${updated === 1 ? "" : "s"} to ${label}.`,\n      });''',
+          '''      await reloadStudents();\n      setNotice({\n        type: "ok",\n        msg: `Moved ${updated} student${updated === 1 ? "" : "s"} to ${label}.`,\n      });''',
+          "guild refresh")
+
+          s = once(s,
+          '''      setNotice({\n        type: "ok",\n        msg: `${actionLabel} ${args.amount} ${currencyLabel} ${\n          args.mode === "ADD" ? "to" : "from"\n        } ${updated} student${updated === 1 ? "" : "s"}.`,\n      });\n\n      return result;''',
+          '''      await reloadStudents();\n      setNotice({\n        type: "ok",\n        msg: `${actionLabel} ${args.amount} ${currencyLabel} ${\n          args.mode === "ADD" ? "to" : "from"\n        } ${updated} student${updated === 1 ? "" : "s"}.`,\n      });\n\n      return result;''',
+          "currency parent refresh")
+
+          s = once(s,
+          '''      const result = await adminAdjustSkill(args);\n      setNotice({''',
+          '''      const result = await adminAdjustSkill(args);\n      await reloadStudents();\n      setNotice({''',
+          "skill refresh")
+
+          s = once(s,
+          '''      const result = await adminAdjustInventory(args);\n      const updated = result.updated ?? args.studentIds.length;''',
+          '''      const result = await adminAdjustInventory(args);\n      await reloadStudents();\n      const updated = result.updated ?? args.studentIds.length;''',
+          "inventory parent refresh")
+
+          p.write_text(s, encoding="utf-8")
+
+          # Inventory: always re-read the authoritative snapshot after a write.
+          p = Path("src/pages/admin/components/InventoryManagerPanel.tsx")
+          s = p.read_text(encoding="utf-8")
+          old = '''      if (Array.isArray(result.results)) {\n        setInventories((prev) => {\n          const next = new Map(prev);\n          result.results?.forEach((row) => {\n            next.set(\n              normId(row.studentId),\n              Array.isArray(row.inventory) ? row.inventory : []\n            );\n          });\n          return next;\n        });\n      } else {\n        await loadInventories();\n      }\n\n      setSelectedIds([]);'''
+          new = '''      await loadInventories();\n\n      setSelectedIds([]);'''
+          s = once(s, old, new, "inventory authoritative refresh")
+          p.write_text(s, encoding="utf-8")
+
+          # Currency: same rule for balances.
+          p = Path("src/pages/admin/components/CurrencyManagerPanel.tsx")
+          s = p.read_text(encoding="utf-8")
+          start = s.find('      if (Array.isArray(result.results)) {')
+          end_marker = '      setSelectedIds([]);'
+          end = s.find(end_marker, start)
+          if start < 0 or end < 0:
+              raise RuntimeError("Missing currency optimistic update block")
+          s = s[:start] + '      await loadBalances();\n\n' + s[end:]
+          p.write_text(s, encoding="utf-8")
+
+          # Abilities: re-read the selected student after each write instead of
+          # trusting only the mutation payload.
+          p = Path("src/pages/admin/components/AbilitiesManagerPanel.tsx")
+          s = p.read_text(encoding="utf-8")
+          s = once(s,
+          '''      applySnapshot(result);\n      setReason("");''',
+          '''      await loadSnapshot(selectedId);\n      setReason("");''',
+          "ability save refresh")
+          s = once(s,
+          '''      applySnapshot(result);\n      setReason("");''',
+          '''      await loadSnapshot(selectedId);\n      setReason("");''',
+          "skill adjustment refresh")
+          p.write_text(s, encoding="utf-8")
+
+          # Store: save, then immediately read the live control sheet back.
+          p = Path("src/pages/admin/components/StoreSettingsPanel.tsx")
+          s = p.read_text(encoding="utf-8")
+          s = once(s,
+          '''      const result = await adminUpdateStore(settings);\n      setSettings(result.settings);\n      setSuccess(''',
+          '''      const result = await adminUpdateStore(settings);\n      await load();\n      setSuccess(''',
+          "store authoritative refresh")
+          p.write_text(s, encoding="utf-8")
+
+      - name: Validate React production build
+        run: |
+          npm ci
+          npm run build
+
+      - name: Commit validated refresh behavior
+        run: |
+          if git diff --quiet -- src/pages/admin; then
+            echo "No admin changes required"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/admin
+          git commit -m "Auto-refresh Global Manager data after writes"
+          git push origin HEAD:fluffy-cloud
