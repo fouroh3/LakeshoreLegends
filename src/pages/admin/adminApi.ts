@@ -3,9 +3,11 @@
 import { HP_API_URL } from "../battle/battleConstants";
 import { getBattleTeacherToken } from "../battle/battleTeacherApi";
 import type {
+  AdminAttributeValues,
   AdminCurrency,
   AdminCurrencyMode,
   AdminInventoryMode,
+  AdminSkillMode,
 } from "./adminConstants";
 
 export type AdminImportedStudent = {
@@ -104,6 +106,9 @@ export type AdminSystemStatusResult = {
   masterLookupWired?: boolean;
   playerStateRows?: number;
   migrationRequired?: boolean;
+  idIntegrityOk?: boolean;
+  missingPlayerStateIds?: string[];
+  invalidPlayerStateIds?: string[];
   [key: string]: any;
 };
 
@@ -125,6 +130,27 @@ export type AdminArchiveStudentResult = {
   [key: string]: any;
 };
 
+export type AdminAbilitySnapshotResult = {
+  ok?: boolean;
+  error?: string;
+  studentId: string;
+  studentName: string;
+  baseAttributes: AdminAttributeValues;
+  bonusAttributes: AdminAttributeValues;
+  rosterSkills: string[];
+  purchasedSkills: string[];
+  [key: string]: any;
+};
+
+export type AdminAbilityUpdateResult = AdminAbilitySnapshotResult & {
+  updated?: boolean;
+};
+
+export type AdminSkillAdjustmentResult = AdminAbilitySnapshotResult & {
+  mode?: AdminSkillMode;
+  skillName?: string;
+};
+
 type AdminAction =
   | "adminimportstudents"
   | "adminassignguildbatch"
@@ -135,7 +161,10 @@ type AdminAction =
   | "adminsystemstatus"
   | "adminmigrateplayerstate"
   | "adminupdatestudent"
-  | "adminarchivestudent";
+  | "adminarchivestudent"
+  | "adminabilitysnapshot"
+  | "adminupdateabilities"
+  | "adminadjustskill";
 
 async function postAdminAction<T>(
   action: AdminAction,
@@ -267,6 +296,38 @@ export async function adminArchiveStudent(args: {
 }) {
   return postAdminAction<AdminArchiveStudentResult>(
     "adminarchivestudent",
+    args
+  );
+}
+
+export async function adminAbilitySnapshot(studentId: string) {
+  return postAdminAction<AdminAbilitySnapshotResult>(
+    "adminabilitysnapshot",
+    { studentId }
+  );
+}
+
+export async function adminUpdateAbilities(args: {
+  studentId: string;
+  baseAttributes: AdminAttributeValues;
+  bonusAttributes: AdminAttributeValues;
+  rosterSkills: string[];
+  reason: string;
+}) {
+  return postAdminAction<AdminAbilityUpdateResult>(
+    "adminupdateabilities",
+    args
+  );
+}
+
+export async function adminAdjustSkill(args: {
+  studentId: string;
+  mode: AdminSkillMode;
+  skillName: string;
+  reason: string;
+}) {
+  return postAdminAction<AdminSkillAdjustmentResult>(
+    "adminadjustskill",
     args
   );
 }
