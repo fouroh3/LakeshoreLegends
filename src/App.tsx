@@ -7,6 +7,7 @@ import CharacterProfileModal from "./components/CharacterProfileModal";
 import BattlePage from "./pages/BattlePage";
 import CardLibraryPage from "./pages/CardLibraryPage";
 import StorePage from "./pages/store/StorePage";
+import AdminPage from "./pages/admin/AdminPage";
 import { loadStudents } from "./data";
 import { normalizeSkillName } from "./data/skillLibrary";
 import type { Student } from "./types";
@@ -75,6 +76,7 @@ type ViewMode =
   | "store"
   | "battle"
   | "battle-teacher"
+  | "admin"
   | "cards"
   | "boss-display";
 
@@ -87,6 +89,7 @@ export default function App() {
     if (path === "store") return "store";
     if (path === "battle") return "battle";
     if (path === "battle/teacher") return "battle-teacher";
+    if (path === "admin" || path === "teacher") return "admin";
     if (path === "cards") return "cards";
     if (path === "bossdisplay") return "boss-display";
 
@@ -101,6 +104,11 @@ export default function App() {
 
     if (view === "battle-teacher") {
       document.title = "Battle Teacher Console";
+      return;
+    }
+
+    if (view === "admin") {
+      document.title = "Teacher Admin";
       return;
     }
 
@@ -128,6 +136,7 @@ export default function App() {
       store: "/store",
       battle: "/battle",
       "battle-teacher": "/battle/teacher",
+      admin: "/admin",
       cards: "/cards",
       "boss-display": "/bossdisplay",
     };
@@ -412,6 +421,10 @@ export default function App() {
 
   if (view === "battle-teacher") {
     return <BattleTeacherConsole />;
+  }
+
+  if (view === "admin") {
+    return <AdminPage />;
   }
 
   if (view === "boss-display") {
