@@ -1,13 +1,22 @@
 // src/pages/store/components/SkillTrainingPanel.tsx
 
-import { skillLibrary } from "../../../data/skillLibrary";
+import { useEffect, useMemo, useState } from "react";
+import { normalizeSkillName, skillLibrary } from "../../../data/skillLibrary";
+import {
+  getSkillSummary,
+  purchaseSkill,
+  type SkillSummary,
+} from "../../../skillApi";
 import { innerCard, label } from "../storeTheme";
 
 type Props = {
+  studentId: string;
   selectedSkillId: string | null;
   setSelectedSkillId: (next: string | null) => void;
   ownedSkillIds: Set<string>;
-  skillTokens?: number | null;
+  storeLocked: boolean;
+  pin: string;
+  confirmOk: boolean;
   guildTheme: {
     border: string;
     softPanel: string;
@@ -18,18 +27,124 @@ type Props = {
 };
 
 export default function SkillTrainingPanel({
+  studentId,
   selectedSkillId,
   setSelectedSkillId,
   ownedSkillIds,
-  skillTokens = null,
+  storeLocked,
+  pin,
+  confirmOk,
   guildTheme,
 }: Props) {
+  const [summary, setSummary] = useState<SkillSummary | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const [purchasing, setPurchasing] = useState(false);
+  const [lastPurchasedSkillId, setLastPurchasedSkillId] = useState<string | null>(
+    null
+  );
+
+  useEffect(() => {
+    let alive = true;
+
+    (async () => {
+      if (!studentId) {
+        setSummary(null);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        setErr(null);
+        const next = await getSkillSummary(studentId);
+        if (!alive) return;
+        setSummary(next);
+      } catch (e) {
+        if (!alive) return;
+        setSummary(null);
+        setErr(
+          e instanceof Error
+            ? e.message
+            : "Skill Tokens are not available yet."
+        );
+      } finally {
+        if (!alive) return;
+        setLoading(false);
+      }
+    })();
+
+    return () => {
+      alive = false;
+    };
+  }, [studentId]);
+
+  const purchasedSkillIds = useMemo(() => {
+    return new Set(
+      (summary?.purchasedSkills ?? [])
+        .map((skill) => normalizeSkillName(skill))
+        .filter(Boolean)
+    );
+  }, [summary?.purchasedSkills]);
+
+  const allOwnedSkillIds = useMemo(() => {
+    return new Set([...Array.from(ownedSkillIds), ...Array.from(purchasedSkillIds)]);
+  }, [ownedSkillIds, purchasedSkillIds]);
+
   const selectedSkill =
     skillLibrary.find((skill) => skill.id === selectedSkillId) ?? null;
   const selectedOwned = selectedSkill
-    ? ownedSkillIds.has(selectedSkill.id)
+    ? allOwnedSkillIds.has(selectedSkill.id)
     : false;
-  const canAfford = typeof skillTokens === "number" && skillTokens >= 1;
+  const skillTokens = summary?.skillTokens ?? 0;
+  const canAfford = skillTokens >= 1;
+  const canBuy =
+    !!selectedSkill &&
+    !selectedOwned &&
+    !storeLocked &&
+    !loading &&
+    !purchasing &&
+    !err &&
+    !!pin.trim() &&
+    confirmOk &&
+    canAfford;
+
+  async function handleBuySkill() {
+    if (!selectedSkill || !studentId) return;
+
+    setPurchasing(true);
+    setErr(null);
+
+    try {
+      const requestId = `skill:${studentId}:${selectedSkill.id}:${Date.now()}:${Math.random()
+        .toString(16)
+        .slice(2)}`;
+
+      const res = await purchaseSkill({
+        studentId,
+        skillId: selectedSkill.id,
+        skillName: selectedSkill.name,
+        pin: pin.trim(),
+        requestId,
+      });
+
+      if (res?.summary) {
+        setSummary(res.summary as SkillSummary);
+      } else {
+        const next = await getSkillSummary(studentId);
+        setSummary(next);
+      }
+
+      setLastPurchasedSkillId(selectedSkill.id);
+
+      window.setTimeout(() => {
+        setLastPurchasedSkillId(null);
+      }, 2400);
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Skill purchase failed.");
+    } finally {
+      setPurchasing(false);
+    }
+  }
 
   return (
     <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_360px] xl:gap-5 xl:grid-cols-[minmax(0,1.05fr)_minmax(360px,0.95fr)]">
@@ -48,18 +163,29 @@ export default function SkillTrainingPanel({
             </div>
 
             <div className="mt-1 text-xs text-white/56 xl:text-sm">
-              Select a skill to preview it. Owned skills are clearly marked.
+              Spend Skill Tokens to unlock a new permanent skill.
             </div>
           </div>
 
-          <div className="self-start rounded-full border border-violet-300/15 bg-violet-400/[0.08] px-3 py-1 text-[11px] text-violet-100">
-            Cost: 1 Skill Token
+          <div className="flex flex-wrap gap-2">
+            <div className="self-start rounded-full border border-violet-300/15 bg-violet-400/[0.08] px-3 py-1 text-[11px] text-violet-100">
+              Cost: 1 Skill Token
+            </div>
+            <div className="self-start rounded-full border border-cyan-300/15 bg-cyan-400/[0.08] px-3 py-1 text-[11px] text-cyan-100">
+              Tokens: {loading ? "…" : err ? "—" : skillTokens}
+            </div>
           </div>
         </div>
 
+        {err && (
+          <div className="mt-4 rounded-2xl border border-amber-300/16 bg-amber-400/[0.08] px-3 py-2 text-xs leading-5 text-amber-100">
+            {err}
+          </div>
+        )}
+
         <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2 xl:mt-5 xl:grid-cols-3">
           {skillLibrary.map((skill) => {
-            const owned = ownedSkillIds.has(skill.id);
+            const owned = allOwnedSkillIds.has(skill.id);
             const isSelected = selectedSkillId === skill.id;
 
             return (
@@ -168,7 +294,13 @@ export default function SkillTrainingPanel({
               <div className="mt-2 flex items-center justify-between text-sm">
                 <span className="text-white/54">Tokens Available</span>
                 <span className="font-semibold text-white">
-                  {skillTokens ?? "Coming soon"}
+                  {loading ? "…" : err ? "—" : skillTokens}
+                </span>
+              </div>
+              <div className="mt-2 flex items-center justify-between text-sm">
+                <span className="text-white/54">After Purchase</span>
+                <span className="font-semibold text-cyan-100">
+                  {selectedOwned ? skillTokens : Math.max(0, skillTokens - 1)}
                 </span>
               </div>
             </div>
@@ -179,20 +311,43 @@ export default function SkillTrainingPanel({
               </div>
               <div className="mt-1 text-xs leading-5 text-cyan-100/62">
                 Purchased skills will appear on the dashboard card, profile
-                modal, and battle card once the skill-purchase backend is wired.
+                modal, and battle card after the purchased-skill display layer is
+                connected.
               </div>
             </div>
 
             <button
               type="button"
-              disabled
-              className="mt-5 w-full cursor-not-allowed rounded-[24px] border border-white/[0.05] bg-white/[0.04] px-5 py-4 text-[15px] font-semibold tracking-tight text-white/38"
+              disabled={!canBuy || lastPurchasedSkillId === selectedSkill.id}
+              onClick={() => {
+                void handleBuySkill();
+              }}
+              className={[
+                "mt-5 w-full rounded-[24px] px-5 py-4 text-[15px] font-semibold tracking-tight transition-all duration-200",
+                lastPurchasedSkillId === selectedSkill.id
+                  ? "border border-emerald-300/20 bg-emerald-400/[0.14] text-emerald-100 shadow-[0_0_28px_rgba(52,211,153,0.16)]"
+                  : canBuy
+                  ? "bg-[linear-gradient(180deg,#a78bfa,#67e8f9)] text-slate-950 shadow-[0_0_28px_rgba(34,211,238,0.24)] hover:scale-[1.02]"
+                  : "cursor-not-allowed border border-white/[0.05] bg-white/[0.04] text-white/38",
+              ].join(" ")}
             >
-              {selectedOwned
+              {lastPurchasedSkillId === selectedSkill.id
+                ? `Purchased — ${selectedSkill.name}`
+                : selectedOwned
                 ? "Already Owned"
-                : canAfford
-                ? "Skill Purchase Backend Coming Next"
-                : "Skill Tokens Coming Next"}
+                : purchasing
+                ? "Processing Purchase..."
+                : storeLocked
+                ? "Store Closed"
+                : !pin.trim()
+                ? "Enter Store PIN"
+                : !confirmOk
+                ? "Confirm StudentID"
+                : err
+                ? "Skill Backend Needed"
+                : !canAfford
+                ? "Not Enough Skill Tokens"
+                : `Buy ${selectedSkill.name} (1 Token)`}
             </button>
           </div>
         )}
