@@ -6,6 +6,17 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import {
+  Activity,
+  Coins,
+  Database,
+  Image as ImageIcon,
+  PackageOpen,
+  PawPrint,
+  Shield,
+  Sparkles,
+  Users,
+} from "lucide-react";
 import { loadStudents } from "../../data";
 import type { Student } from "../../types";
 import {
@@ -14,16 +25,24 @@ import {
   adminAdjustSkill,
   adminArchiveStudent,
   adminAssignGuildBatch,
+  adminConfigureMedia,
   adminImportStudents,
+  adminMoveStudent,
   adminMigratePlayerState,
   adminSystemStatus,
   adminUpdateAbilities,
+  adminUpdateCompanion,
   adminUpdateStudent,
+  adminUploadMedia,
   type AdminAbilityUpdateResult,
   type AdminArchiveStudentResult,
   type AdminCurrencyAdjustmentResult,
   type AdminImportedStudent,
+  type AdminConfigureMediaResult,
+  type AdminCompanionUpdateResult,
   type AdminInventoryAdjustmentResult,
+  type AdminMediaUploadResult,
+  type AdminMoveStudentResult,
   type AdminSkillAdjustmentResult,
   type AdminSystemStatusResult,
   type AdminUpdateStudentResult,
@@ -35,6 +54,7 @@ import {
 } from "../battle/battleTeacherApi";
 import {
   type AdminAttributeValues,
+  type AdminCompanionStatus,
   type AdminCurrency,
   type AdminCurrencyMode,
   type AdminInventoryMode,
@@ -48,6 +68,8 @@ import GuildManagerPanel from "./components/GuildManagerPanel";
 import CurrencyManagerPanel from "./components/CurrencyManagerPanel";
 import InventoryManagerPanel from "./components/InventoryManagerPanel";
 import AbilitiesManagerPanel from "./components/AbilitiesManagerPanel";
+import HeroImageManagerPanel from "./components/HeroImageManagerPanel";
+import CompanionManagerPanel from "./components/CompanionManagerPanel";
 
 function Pill({ children }: { children: ReactNode }) {
   return (
@@ -73,7 +95,7 @@ function SectionButton({
       type="button"
       onClick={onClick}
       className={[
-        "rounded-2xl border px-4 py-3 text-left transition",
+        "w-full rounded-2xl border px-4 py-3 text-left transition",
         active
           ? "border-cyan-300/30 bg-cyan-300/10 shadow-[0_0_24px_rgba(34,211,238,0.08)]"
           : "border-white/10 bg-white/[0.03] hover:bg-white/[0.06]",
@@ -147,7 +169,7 @@ export default function AdminPage() {
     Boolean(getBattleTeacherToken())
   );
   const [passcode, setPasscode] = useState("");
-  const [section, setSection] = useState<AdminSection>("students");
+  const [section, setSection] = useState<AdminSection>("overview");
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -207,6 +229,16 @@ export default function AdminPage() {
 
   const unassignedCount = useMemo(
     () => students.filter((student) => !String(student.guild || "").trim()).length,
+    [students]
+  );
+
+  const missingHeroCount = useMemo(
+    () => students.filter((student) => !String(student.portraitUrl || "").trim()).length,
+    [students]
+  );
+
+  const missingCompanionCount = useMemo(
+    () => students.filter((student) => !String(student.companionUrl || "").trim()).length,
     [students]
   );
 
@@ -340,6 +372,140 @@ export default function AdminPage() {
         type: "err",
         msg: err?.message || "Student update failed.",
       });
+      throw err;
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleMoveStudent = async (args: {
+    studentId: string;
+    homeroom: string;
+    reason: string;
+  }): Promise<AdminMoveStudentResult> => {
+    setBusy(true);
+    setNotice(null);
+
+    try {
+      const result = await adminMoveStudent(args);
+      const oldId = normId(args.studentId);
+      const nextId = normId(result.studentId || args.studentId);
+
+      setStudents((prev) =>
+        prev.map((student) =>
+          normId(student.id) === oldId
+            ? { ...student, id: nextId, homeroom: args.homeroom }
+            : student
+        )
+      );
+
+      setNotice({
+        type: "ok",
+        msg: `Moved student to ${args.homeroom}. New StudentID: ${nextId}. All linked game state migrated automatically.`,
+      });
+      await reloadSystemStatus();
+      return result;
+    } catch (err: any) {
+      setNotice({
+        type: "err",
+        msg: err?.message || "Homeroom move failed.",
+      });
+      throw err;
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleConfigureMedia = async (args: {
+    token: string;
+    branch?: string;
+  }): Promise<AdminConfigureMediaResult> => {
+    setBusy(true);
+    setNotice(null);
+
+    try {
+      const result = await adminConfigureMedia(args);
+      setSystemStatus((prev) => ({ ...(prev || {}), ...result }));
+      setNotice({
+        type: "ok",
+        msg: "Image storage connected. Hero and companion uploads are ready.",
+      });
+      return result;
+    } catch (err: any) {
+      setNotice({ type: "err", msg: err?.message || "Media connection failed." });
+      throw err;
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleHeroUpload = async (args: {
+    studentId: string;
+    fileName: string;
+    mimeType: string;
+    base64: string;
+  }): Promise<AdminMediaUploadResult> => {
+    const result = await adminUploadMedia({ ...args, kind: "PORTRAIT" });
+    const id = normId(args.studentId);
+    setStudents((prev) =>
+      prev.map((student) =>
+        normId(student.id) === id
+          ? { ...student, portraitUrl: result.publicUrl || student.portraitUrl }
+          : student
+      )
+    );
+    return result;
+  };
+
+  const handleCompanionUpload = async (args: {
+    studentId: string;
+    fileName: string;
+    mimeType: string;
+    base64: string;
+    companionStatus: AdminCompanionStatus;
+  }): Promise<AdminMediaUploadResult> => {
+    const result = await adminUploadMedia({ ...args, kind: "COMPANION" });
+    const id = normId(args.studentId);
+    setStudents((prev) =>
+      prev.map((student) =>
+        normId(student.id) === id
+          ? {
+              ...student,
+              companionUrl: result.publicUrl || student.companionUrl,
+              companionStatus: args.companionStatus,
+            }
+          : student
+      )
+    );
+    return result;
+  };
+
+  const handleUpdateCompanion = async (args: {
+    studentId: string;
+    companionUrl: string;
+    companionStatus: AdminCompanionStatus;
+  }): Promise<AdminCompanionUpdateResult> => {
+    setBusy(true);
+    setNotice(null);
+
+    try {
+      const result = await adminUpdateCompanion(args);
+      const id = normId(args.studentId);
+      setStudents((prev) =>
+        prev.map((student) =>
+          normId(student.id) === id
+            ? {
+                ...student,
+                companionUrl: result.companionUrl ?? args.companionUrl,
+                companionStatus: result.companionStatus ?? args.companionStatus,
+              }
+            : student
+        )
+      );
+      setNotice({ type: "ok", msg: "Companion record updated." });
+      return result;
+    } catch (err: any) {
+      setNotice({ type: "err", msg: err?.message || "Companion update failed." });
       throw err;
     } finally {
       setBusy(false);
@@ -638,126 +804,311 @@ export default function AdminPage() {
           </div>
         )}
 
-        <div className="mb-5 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-          <SectionButton
-            active={section === "students"}
-            title="Students / Import"
-            detail="Paste class lists, edit names, and archive students safely."
-            onClick={() => setSection("students")}
-          />
-          <SectionButton
-            active={section === "guilds"}
-            title="Guild Manager"
-            detail="Assign, move, filter, and unassign students in bulk."
-            onClick={() => setSection("guilds")}
-          />
-          <SectionButton
-            active={section === "currency"}
-            title="Currency Manager"
-            detail="View balances and add or remove XP and Skill Tokens."
-            onClick={() => setSection("currency")}
-          />
-          <SectionButton
-            active={section === "abilities"}
-            title="Abilities Manager"
-            detail="Edit attributes, bonuses, roster skills, and teacher-granted skills."
-            onClick={() => setSection("abilities")}
-          />
-          <SectionButton
-            active={section === "inventory"}
-            title="Inventory Manager"
-            detail="Give or remove cards for students, guilds, or classes."
-            onClick={() => setSection("inventory")}
-          />
+        <div className="grid gap-5 lg:grid-cols-[270px_minmax(0,1fr)]">
+          <aside className="self-start rounded-[28px] border border-white/10 bg-zinc-950/65 p-3 lg:sticky lg:top-5">
+            <div className="px-3 pb-2 pt-2 text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-600">
+              Overview
+            </div>
+            <SectionButton
+              active={section === "overview"}
+              title="Control Center"
+              detail="See what needs attention and jump to common tasks."
+              onClick={() => setSection("overview")}
+            />
+
+            <div className="px-3 pb-2 pt-5 text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-600">
+              Players
+            </div>
+            <div className="space-y-2">
+              <SectionButton
+                active={section === "students"}
+                title="Roster & Demographics"
+                detail="Import, rename, move classes, or archive students."
+                onClick={() => setSection("students")}
+              />
+              <SectionButton
+                active={section === "heroImages"}
+                title="Hero Images"
+                detail="Bulk-match and upload student portraits."
+                onClick={() => setSection("heroImages")}
+              />
+            </div>
+
+            <div className="px-3 pb-2 pt-5 text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-600">
+              Characters
+            </div>
+            <div className="space-y-2">
+              <SectionButton
+                active={section === "companions"}
+                title="Companions"
+                detail="Images, living/fallen status, and replacements."
+                onClick={() => setSection("companions")}
+              />
+              <SectionButton
+                active={section === "abilities"}
+                title="Attributes & Skills"
+                detail="Base values, bonuses, roster skills, and grants."
+                onClick={() => setSection("abilities")}
+              />
+              <SectionButton
+                active={section === "inventory"}
+                title="Inventory & Cards"
+                detail="Give or remove cards for any group."
+                onClick={() => setSection("inventory")}
+              />
+            </div>
+
+            <div className="px-3 pb-2 pt-5 text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-600">
+              Groups & Rewards
+            </div>
+            <div className="space-y-2">
+              <SectionButton
+                active={section === "guilds"}
+                title="Guilds"
+                detail="Assign and move students in bulk."
+                onClick={() => setSection("guilds")}
+              />
+              <SectionButton
+                active={section === "currency"}
+                title="XP & Skill Tokens"
+                detail="Balances, rewards, and corrections."
+                onClick={() => setSection("currency")}
+              />
+            </div>
+
+            <div className="px-3 pb-2 pt-5 text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-600">
+              System
+            </div>
+            <SectionButton
+              active={section === "system"}
+              title="Data Health"
+              detail="Player State, media connection, and integrity checks."
+              onClick={() => setSection("system")}
+            />
+          </aside>
+
+          <main className="min-w-0">
+            {section === "overview" && (
+              <div className="space-y-5">
+                <AdminPanel
+                  kicker="Teacher Control Center"
+                  title="Everything important, at a glance"
+                  description="Use the cards below to jump directly to the task you need. Live battle controls remain separate in the Battle Console."
+                >
+                  <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                    {[
+                      { label: "Active Players", value: students.length, icon: <Users size={20} />, section: "students" as AdminSection, tone: "text-cyan-100" },
+                      { label: "Missing Hero Images", value: missingHeroCount, icon: <ImageIcon size={20} />, section: "heroImages" as AdminSection, tone: missingHeroCount ? "text-amber-100" : "text-emerald-100" },
+                      { label: "Missing Companions", value: missingCompanionCount, icon: <PawPrint size={20} />, section: "companions" as AdminSection, tone: missingCompanionCount ? "text-amber-100" : "text-emerald-100" },
+                      { label: "Unassigned Guilds", value: unassignedCount, icon: <Shield size={20} />, section: "guilds" as AdminSection, tone: unassignedCount ? "text-amber-100" : "text-emerald-100" },
+                      { label: "Homerooms", value: homeroomCount, icon: <Activity size={20} />, section: "students" as AdminSection, tone: "text-violet-100" },
+                      { label: "Game Data", value: playerStateReady ? "Healthy" : "Needs attention", icon: <Database size={20} />, section: "system" as AdminSection, tone: playerStateReady ? "text-emerald-100" : "text-red-100" },
+                    ].map((card) => (
+                      <button
+                        key={card.label}
+                        type="button"
+                        onClick={() => setSection(card.section)}
+                        className="group rounded-[24px] border border-white/10 bg-white/[0.03] p-4 text-left transition hover:-translate-y-0.5 hover:border-cyan-300/20 hover:bg-white/[0.05]"
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="rounded-2xl border border-white/10 bg-black/25 p-2.5 text-cyan-100/80">{card.icon}</div>
+                          <div className={`text-2xl font-black ${card.tone}`}>{card.value}</div>
+                        </div>
+                        <div className="mt-4 text-sm font-black text-white">{card.label}</div>
+                        <div className="mt-1 text-xs text-zinc-600 group-hover:text-zinc-500">Open manager →</div>
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                    <button type="button" onClick={() => setSection("students")} className="rounded-2xl border border-cyan-300/15 bg-cyan-300/[0.06] p-4 text-left hover:bg-cyan-300/[0.09]">
+                      <Users size={19} className="text-cyan-100" />
+                      <div className="mt-3 font-black text-white">Add / Move Students</div>
+                      <div className="mt-1 text-xs leading-5 text-zinc-500">Beginning-of-year import, corrections, class changes.</div>
+                    </button>
+                    <button type="button" onClick={() => setSection("heroImages")} className="rounded-2xl border border-violet-300/15 bg-violet-300/[0.05] p-4 text-left hover:bg-violet-300/[0.08]">
+                      <ImageIcon size={19} className="text-violet-100" />
+                      <div className="mt-3 font-black text-white">Import Hero Images</div>
+                      <div className="mt-1 text-xs leading-5 text-zinc-500">Drop a whole folder and review only uncertain matches.</div>
+                    </button>
+                    <button type="button" onClick={() => setSection("currency")} className="rounded-2xl border border-emerald-300/15 bg-emerald-300/[0.05] p-4 text-left hover:bg-emerald-300/[0.08]">
+                      <Coins size={19} className="text-emerald-100" />
+                      <div className="mt-3 font-black text-white">Give Rewards</div>
+                      <div className="mt-1 text-xs leading-5 text-zinc-500">XP or Skill Tokens to students, guilds, or classes.</div>
+                    </button>
+                    <button type="button" onClick={() => setSection("inventory")} className="rounded-2xl border border-amber-300/15 bg-amber-300/[0.05] p-4 text-left hover:bg-amber-300/[0.08]">
+                      <PackageOpen size={19} className="text-amber-100" />
+                      <div className="mt-3 font-black text-white">Manage Cards</div>
+                      <div className="mt-1 text-xs leading-5 text-zinc-500">View, give, or remove inventory cards.</div>
+                    </button>
+                  </div>
+                </AdminPanel>
+              </div>
+            )}
+
+            {section === "students" && (
+              <div className="space-y-5">
+                <AdminPanel
+                  kicker="Roster Setup"
+                  title="Bulk Paste Students"
+                  description="Copy names directly from your school spreadsheet. Choose the class once, paste the names, verify the generated IDs, and import the whole group together."
+                >
+                  <StudentImportPanel
+                    students={students}
+                    busy={busy || !playerStateReady}
+                    onImport={handleImport}
+                  />
+                </AdminPanel>
+
+                <AdminPanel
+                  kicker="Active Roster"
+                  title="Roster & Demographics"
+                  description="Fix names, move students between homerooms with full game-state migration, or archive students without losing their history."
+                >
+                  <StudentManagePanel
+                    students={students}
+                    busy={busy || !playerStateReady}
+                    onUpdate={handleUpdateStudent}
+                    onMove={handleMoveStudent}
+                    onArchive={handleArchiveStudent}
+                  />
+                </AdminPanel>
+              </div>
+            )}
+
+            {section === "heroImages" && (
+              <AdminPanel
+                kicker="Player Media"
+                title="Hero Image Import"
+                description="Drop a whole batch of student hero images. Global Manager matches filenames automatically, flags only uncertain rows, and updates PortraitURL after upload."
+              >
+                <HeroImageManagerPanel
+                  students={students}
+                  busy={busy}
+                  mediaConfigured={Boolean(systemStatus?.mediaConfigured)}
+                  mediaRepo={systemStatus?.mediaRepo}
+                  mediaBranch={systemStatus?.mediaBranch}
+                  onConfigureMedia={handleConfigureMedia}
+                  onUpload={handleHeroUpload}
+                />
+              </AdminPanel>
+            )}
+
+            {section === "companions" && (
+              <AdminPanel
+                kicker="Companion Records"
+                title="Companion Manager"
+                description="Upload or replace companion images, remove outdated images, and set each companion to Living or Fallen without touching Player_State or class sheets."
+              >
+                <CompanionManagerPanel
+                  students={students}
+                  busy={busy || !playerStateReady}
+                  mediaConfigured={Boolean(systemStatus?.mediaConfigured)}
+                  onUpload={handleCompanionUpload}
+                  onUpdate={handleUpdateCompanion}
+                />
+              </AdminPanel>
+            )}
+
+            {section === "guilds" && (
+              <AdminPanel
+                kicker="Guilds"
+                title="Assign / Manage Guilds"
+                description="Filter the roster, select any group of students, then move them together. Guild changes synchronize the roster and HP guild state."
+              >
+                <GuildManagerPanel
+                  students={students}
+                  loading={loading}
+                  busy={busy}
+                  onAssign={handleAssignGuild}
+                  onRefresh={reloadStudents}
+                />
+              </AdminPanel>
+            )}
+
+            {section === "currency" && (
+              <AdminPanel
+                kicker="Rewards & Corrections"
+                title="XP / Skill Token Manager"
+                description="See current balances, target a student, guild, class, or filtered group, and add or remove currency with a reason recorded in the transaction logs."
+              >
+                <CurrencyManagerPanel
+                  students={students}
+                  busy={busy}
+                  onAdjust={handleAdjustCurrency}
+                />
+              </AdminPanel>
+            )}
+
+            {section === "abilities" && (
+              <AdminPanel
+                kicker="Attributes & Skills"
+                title="Abilities Manager"
+                description="Correct base attributes, purchased/admin bonuses, roster skills, and purchased or teacher-granted skills without editing class sheets by hand."
+              >
+                <AbilitiesManagerPanel
+                  students={students}
+                  busy={busy || !playerStateReady}
+                  onSave={handleUpdateAbilities}
+                  onAdjustSkill={handleAdjustSkill}
+                />
+              </AdminPanel>
+            )}
+
+            {section === "inventory" && (
+              <AdminPanel
+                kicker="Cards & Rewards"
+                title="Inventory / Card Manager"
+                description="Choose any card from the live card library, target students by class or guild, and give or remove cards with an audit reason."
+              >
+                <InventoryManagerPanel
+                  students={students}
+                  busy={busy || !playerStateReady}
+                  onAdjust={handleAdjustInventory}
+                />
+              </AdminPanel>
+            )}
+
+            {section === "system" && (
+              <AdminPanel
+                kicker="System Health"
+                title="Data Health & Connections"
+                description="A plain-language view of the protections underneath the game. Normal teacher work should never require opening these sheets directly."
+              >
+                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                  <div className="rounded-[24px] border border-white/10 bg-black/20 p-4">
+                    <Database size={20} className={playerStateReady ? "text-emerald-200" : "text-red-200"} />
+                    <div className="mt-3 font-black text-white">Player Data</div>
+                    <div className={`mt-1 text-sm font-bold ${playerStateReady ? "text-emerald-100" : "text-red-100"}`}>
+                      {playerStateReady ? "Healthy & StudentID-keyed" : "Needs attention"}
+                    </div>
+                    <div className="mt-2 text-xs leading-5 text-zinc-500">
+                      {systemStatus?.playerStateRows ?? 0} Player_State records • ID integrity {systemStatus?.idIntegrityOk ? "passed" : "not confirmed"}
+                    </div>
+                  </div>
+                  <div className="rounded-[24px] border border-white/10 bg-black/20 p-4">
+                    <ImageIcon size={20} className={systemStatus?.mediaConfigured ? "text-emerald-200" : "text-amber-200"} />
+                    <div className="mt-3 font-black text-white">Image Storage</div>
+                    <div className={`mt-1 text-sm font-bold ${systemStatus?.mediaConfigured ? "text-emerald-100" : "text-amber-100"}`}>
+                      {systemStatus?.mediaConfigured ? "Connected" : "Not connected"}
+                    </div>
+                    <div className="mt-2 text-xs leading-5 text-zinc-500">
+                      {systemStatus?.mediaRepo || "LakeshoreLegends"}{systemStatus?.mediaBranch ? ` • ${systemStatus.mediaBranch}` : ""}
+                    </div>
+                  </div>
+                  <div className="rounded-[24px] border border-white/10 bg-black/20 p-4">
+                    <Sparkles size={20} className="text-cyan-200" />
+                    <div className="mt-3 font-black text-white">Teacher Tools</div>
+                    <div className="mt-1 text-sm font-bold text-cyan-100">Ready</div>
+                    <button type="button" onClick={reloadSystemStatus} disabled={statusLoading} className="mt-3 rounded-xl border border-cyan-300/15 bg-cyan-300/10 px-3 py-2 text-xs font-black text-cyan-100 disabled:opacity-50">
+                      {statusLoading ? "Checking..." : "Recheck System"}
+                    </button>
+                  </div>
+                </div>
+              </AdminPanel>
+            )}
+          </main>
         </div>
-
-        {section === "students" && (
-          <div className="space-y-5">
-            <AdminPanel
-              kicker="Roster Setup"
-              title="Bulk Paste Students"
-              description="Copy names directly from your school spreadsheet. Choose the class once, paste the names, verify the generated IDs, and import the whole group together."
-            >
-              <StudentImportPanel
-                students={students}
-                busy={busy || !playerStateReady}
-                onImport={handleImport}
-              />
-            </AdminPanel>
-
-            <AdminPanel
-              kicker="Active Roster"
-              title="Edit / Archive Students"
-              description="Fix student names without changing their ID, or archive a student while preserving their game history. Homeroom moves are intentionally separated because they require an ID migration."
-            >
-              <StudentManagePanel
-                students={students}
-                busy={busy || !playerStateReady}
-                onUpdate={handleUpdateStudent}
-                onArchive={handleArchiveStudent}
-              />
-            </AdminPanel>
-          </div>
-        )}
-
-        {section === "guilds" && (
-          <AdminPanel
-            kicker="Guilds"
-            title="Assign / Manage Guilds"
-            description="Filter the roster, select any group of students, then move them together. Guild changes synchronize the roster and HP guild state."
-          >
-            <GuildManagerPanel
-              students={students}
-              loading={loading}
-              busy={busy}
-              onAssign={handleAssignGuild}
-              onRefresh={reloadStudents}
-            />
-          </AdminPanel>
-        )}
-
-        {section === "currency" && (
-          <AdminPanel
-            kicker="Rewards & Corrections"
-            title="XP / Skill Token Manager"
-            description="See current balances, target a student, guild, class, or filtered group, and add or remove currency with a reason recorded in the transaction logs."
-          >
-            <CurrencyManagerPanel
-              students={students}
-              busy={busy}
-              onAdjust={handleAdjustCurrency}
-            />
-          </AdminPanel>
-        )}
-
-        {section === "abilities" && (
-          <AdminPanel
-            kicker="Attributes & Skills"
-            title="Abilities Manager"
-            description="Correct base attributes, purchased/admin bonuses, roster skills, and purchased or teacher-granted skills without editing class sheets by hand."
-          >
-            <AbilitiesManagerPanel
-              students={students}
-              busy={busy || !playerStateReady}
-              onSave={handleUpdateAbilities}
-              onAdjustSkill={handleAdjustSkill}
-            />
-          </AdminPanel>
-        )}
-
-        {section === "inventory" && (
-          <AdminPanel
-            kicker="Cards & Rewards"
-            title="Inventory / Card Manager"
-            description="Choose any card from the live card library, target students by class or guild, and give or remove cards with an audit reason."
-          >
-            <InventoryManagerPanel
-              students={students}
-              busy={busy || !playerStateReady}
-              onAdjust={handleAdjustInventory}
-            />
-          </AdminPanel>
-        )}
       </div>
     </div>
   );
