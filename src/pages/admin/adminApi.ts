@@ -4,9 +4,11 @@ import { HP_API_URL } from "../battle/battleConstants";
 import { getBattleTeacherToken } from "../battle/battleTeacherApi";
 import type {
   AdminAttributeValues,
+  AdminCompanionStatus,
   AdminCurrency,
   AdminCurrencyMode,
   AdminInventoryMode,
+  AdminMediaKind,
   AdminSkillMode,
 } from "./adminConstants";
 
@@ -109,6 +111,9 @@ export type AdminSystemStatusResult = {
   idIntegrityOk?: boolean;
   missingPlayerStateIds?: string[];
   invalidPlayerStateIds?: string[];
+  mediaConfigured?: boolean;
+  mediaRepo?: string;
+  mediaBranch?: string;
   [key: string]: any;
 };
 
@@ -119,6 +124,15 @@ export type AdminUpdateStudentResult = {
   first?: string;
   last?: string;
   name?: string;
+  [key: string]: any;
+};
+
+export type AdminMoveStudentResult = {
+  ok?: boolean;
+  error?: string;
+  oldStudentId?: string;
+  studentId?: string;
+  homeroom?: string;
   [key: string]: any;
 };
 
@@ -151,6 +165,34 @@ export type AdminSkillAdjustmentResult = AdminAbilitySnapshotResult & {
   skillName?: string;
 };
 
+export type AdminMediaUploadResult = {
+  ok?: boolean;
+  error?: string;
+  studentId?: string;
+  kind?: AdminMediaKind;
+  publicUrl?: string;
+  repoPath?: string;
+  [key: string]: any;
+};
+
+export type AdminConfigureMediaResult = {
+  ok?: boolean;
+  error?: string;
+  mediaConfigured?: boolean;
+  mediaRepo?: string;
+  mediaBranch?: string;
+  [key: string]: any;
+};
+
+export type AdminCompanionUpdateResult = {
+  ok?: boolean;
+  error?: string;
+  studentId?: string;
+  companionUrl?: string;
+  companionStatus?: AdminCompanionStatus;
+  [key: string]: any;
+};
+
 type AdminAction =
   | "adminimportstudents"
   | "adminassignguildbatch"
@@ -161,10 +203,14 @@ type AdminAction =
   | "adminsystemstatus"
   | "adminmigrateplayerstate"
   | "adminupdatestudent"
+  | "adminmovestudent"
   | "adminarchivestudent"
   | "adminabilitysnapshot"
   | "adminupdateabilities"
-  | "adminadjustskill";
+  | "adminadjustskill"
+  | "adminconfiguremedia"
+  | "adminuploadmedia"
+  | "adminupdatecompanion";
 
 async function postAdminAction<T>(
   action: AdminAction,
@@ -290,6 +336,14 @@ export async function adminUpdateStudent(args: {
   );
 }
 
+export async function adminMoveStudent(args: {
+  studentId: string;
+  homeroom: string;
+  reason: string;
+}) {
+  return postAdminAction<AdminMoveStudentResult>("adminmovestudent", args);
+}
+
 export async function adminArchiveStudent(args: {
   studentId: string;
   reason: string;
@@ -328,6 +382,38 @@ export async function adminAdjustSkill(args: {
 }) {
   return postAdminAction<AdminSkillAdjustmentResult>(
     "adminadjustskill",
+    args
+  );
+}
+
+export async function adminConfigureMedia(args: {
+  token: string;
+  branch?: string;
+}) {
+  return postAdminAction<AdminConfigureMediaResult>(
+    "adminconfiguremedia",
+    args
+  );
+}
+
+export async function adminUploadMedia(args: {
+  studentId: string;
+  kind: AdminMediaKind;
+  fileName: string;
+  mimeType: string;
+  base64: string;
+  companionStatus?: AdminCompanionStatus;
+}) {
+  return postAdminAction<AdminMediaUploadResult>("adminuploadmedia", args);
+}
+
+export async function adminUpdateCompanion(args: {
+  studentId: string;
+  companionUrl: string;
+  companionStatus: AdminCompanionStatus;
+}) {
+  return postAdminAction<AdminCompanionUpdateResult>(
+    "adminupdatecompanion",
     args
   );
 }
