@@ -1,0 +1,35 @@
+name: Run R2 Move Lifecycle Hardening
+on:
+  push:
+    branches: [fluffy-cloud]
+    paths:
+      - .github/workflows/run-r2-move-lifecycle.yml
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fluffy-cloud
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Apply R2 lifecycle patch
+        run: python scripts/patch_r2_move_lifecycle.py
+      - name: Validate Apps Script syntax
+        run: |
+          cp docs/LakeshoreLegendsAppsScript-TeacherAdmin-FULL.gs /tmp/LakeshoreLegendsAppsScript-TeacherAdmin-FULL.js
+          node --check /tmp/LakeshoreLegendsAppsScript-TeacherAdmin-FULL.js
+      - name: Install dependencies
+        run: npm ci
+      - name: Validate production build
+        run: npm run build
+      - name: Commit patch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/LakeshoreLegendsAppsScript-TeacherAdmin-FULL.gs src/pages/admin/adminApi.ts
+          git commit -m "Migrate R2 media keys on homeroom moves"
+          git push origin HEAD:fluffy-cloud
