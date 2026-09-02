@@ -85,7 +85,13 @@ export default function ArchivedStudentsPanel({
     const answer = window.prompt(
       `PERMANENT DELETE\n\nThis erases ${row.studentName || row.studentId}'s stored game data and transaction records. The StudentID remains permanently reserved.\n\nType DELETE to continue.`
     );
-    if (answer !== "DELETE") return;
+    if (answer === null) return;
+
+    if (answer !== "DELETE") {
+      setNotice("");
+      setError("Permanent deletion cancelled. Type DELETE exactly (all caps) to confirm.");
+      return;
+    }
 
     const reason = window.prompt("Reason for permanent deletion:", "Roster cleanup");
     if (!reason?.trim()) return;
