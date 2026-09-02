@@ -197,13 +197,15 @@ export default function SkillTrainingPanel({
                 className={[
                   "group relative overflow-hidden rounded-[18px] border px-3 py-3 text-left transition-all duration-300",
                   isSelected
-                    ? `${guildTheme.border} ${guildTheme.softPanel} ${guildTheme.cardGlow} ring-1 ring-cyan-300/15`
-                    : "border-white/[0.05] bg-[linear-gradient(180deg,rgba(18,22,31,0.62),rgba(8,10,16,0.78))] hover:border-white/[0.09]",
-                  owned ? "opacity-70" : "",
+                    ? "border-cyan-200/80 bg-[linear-gradient(180deg,rgba(17,83,96,0.58),rgba(6,25,34,0.96))] ring-2 ring-cyan-300/30 shadow-[0_0_30px_rgba(34,211,238,0.24),inset_0_1px_0_rgba(255,255,255,0.08)] scale-[1.012]"
+                    : "border-white/[0.05] bg-[linear-gradient(180deg,rgba(18,22,31,0.62),rgba(8,10,16,0.78))] hover:border-white/[0.10] hover:bg-white/[0.045]",
+                  owned && !isSelected ? "opacity-65" : "",
                 ].join(" ")}
               >
                 <div
-                  className={`pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r ${guildTheme.accent}`}
+                  className={`pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r ${
+                    isSelected ? "from-transparent via-cyan-200 to-transparent" : guildTheme.accent
+                  }`}
                 />
 
                 <div className="min-h-[44px] pr-1">
@@ -213,8 +215,12 @@ export default function SkillTrainingPanel({
                 </div>
 
                 <div className="mt-2 flex items-center justify-between gap-2">
-                  <div className="text-[10px] uppercase tracking-[0.18em] text-white/36">
-                    {owned ? "Owned" : "Available"}
+                  <div
+                    className={`text-[10px] font-semibold uppercase tracking-[0.18em] ${
+                      isSelected ? "text-cyan-100" : "text-white/36"
+                    }`}
+                  >
+                    {owned ? "Owned" : isSelected ? "✓ Selected" : "Available"}
                   </div>
 
                   <span
@@ -223,7 +229,7 @@ export default function SkillTrainingPanel({
                       owned
                         ? "border-emerald-300/20 bg-emerald-400/[0.10] text-emerald-100"
                         : isSelected
-                        ? "border-cyan-300/20 bg-cyan-400/[0.12] text-cyan-100"
+                        ? "border-cyan-200/50 bg-cyan-300 text-slate-950 shadow-[0_0_14px_rgba(34,211,238,0.34)]"
                         : "border-white/[0.06] bg-white/[0.04] text-white/56",
                     ].join(" ")}
                   >
