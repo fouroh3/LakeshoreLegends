@@ -1,0 +1,34 @@
+name: Run Image Storage Auth Helper Patch
+
+on:
+  push:
+    branches: [fluffy-cloud]
+    paths:
+      - .github/workflows/run-add-media-auth-helper.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fluffy-cloud
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - run: python scripts/add_media_auth_helper.py
+      - name: Validate Apps Script syntax
+        run: |
+          cp docs/LakeshoreLegendsAppsScript-TeacherAdmin-FULL.gs /tmp/admin-appscript.js
+          node --check /tmp/admin-appscript.js
+      - name: Commit helper
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/LakeshoreLegendsAppsScript-TeacherAdmin-FULL.gs
+          git commit -m "Add image storage authorization helper"
+          git push origin HEAD:fluffy-cloud
