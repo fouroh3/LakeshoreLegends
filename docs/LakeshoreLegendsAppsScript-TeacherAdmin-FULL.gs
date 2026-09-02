@@ -6673,6 +6673,19 @@ function parsePost_(e) {
 // =========================================================
 // Manual run helpers
 // =========================================================
+function RUN_authorizeImageStorage() {
+  const response = UrlFetchApp.fetch("https://api.github.com", {
+    method: "get",
+    muteHttpExceptions: true,
+  });
+
+  return {
+    ok: true,
+    status: response.getResponseCode(),
+    message: "External web requests are authorized for image storage.",
+  };
+}
+
 function RUN_seedXpState_DISABLED() {
   return seedXpStateFromMaster_();
 }
