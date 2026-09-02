@@ -184,7 +184,7 @@ export default function SkillTrainingPanel({
           </div>
         )}
 
-        <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2 xl:mt-5 xl:grid-cols-3">
+        <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2 xl:mt-5">
           {skillLibrary.map((skill) => {
             const owned = allOwnedSkillIds.has(skill.id);
             const isSelected = selectedSkillId === skill.id;
@@ -206,14 +206,15 @@ export default function SkillTrainingPanel({
                   className={`pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r ${guildTheme.accent}`}
                 />
 
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="truncate text-sm font-semibold text-white">
-                      {skill.name}
-                    </div>
-                    <div className="mt-1 text-[10px] uppercase tracking-[0.18em] text-white/36">
-                      {owned ? "Owned" : "Available"}
-                    </div>
+                <div className="min-h-[44px] pr-1">
+                  <div className="whitespace-normal break-words text-[15px] font-semibold leading-[1.35] text-white">
+                    {skill.name}
+                  </div>
+                </div>
+
+                <div className="mt-2 flex items-center justify-between gap-2">
+                  <div className="text-[10px] uppercase tracking-[0.18em] text-white/36">
+                    {owned ? "Owned" : "Available"}
                   </div>
 
                   <span
@@ -228,12 +229,6 @@ export default function SkillTrainingPanel({
                   >
                     {owned ? "Owned" : `${skillCost} Token${skillCost === 1 ? "" : "s"}`}
                   </span>
-                </div>
-
-                <div className="mt-3 text-xs leading-5 text-white/50">
-                  {owned
-                    ? "This skill is already on this legend."
-                    : "Unlock this skill for this legend."}
                 </div>
               </button>
             );
