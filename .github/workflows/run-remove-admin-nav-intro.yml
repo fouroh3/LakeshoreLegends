@@ -23,29 +23,13 @@ jobs:
           p = Path('src/pages/admin/AdminPage.tsx')
           s = p.read_text()
           s = s.replace('  PanelLeft,\n', '', 1)
-          old = '''            <div className="mb-1 rounded-[22px] border border-cyan-300/10 bg-[linear-gradient(145deg,rgba(34,211,238,0.08),rgba(139,92,246,0.04),rgba(0,0,0,0.20))] p-3.5">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[15px] border border-cyan-300/15 bg-cyan-300/10 text-cyan-100 shadow-[0_0_24px_rgba(34,211,238,0.08)]">
-                  <PanelLeft size={19} />
-                </div>
-                <div className="min-w-0">
-                  <div className="text-[10px] font-black uppercase tracking-[0.22em] text-cyan-100/60">
-                    Navigation
-                  </div>
-                  <div className="mt-0.5 text-sm font-black text-white">
-                    Choose a workspace
-                  </div>
-                </div>
-              </div>
-              <div className="mt-3 text-[11px] leading-4 text-zinc-500">
-                Everything in Global Manager is grouped by the kind of teacher task it controls.
-              </div>
-            </div>
-
-'''
-          if old not in s:
-              raise SystemExit('sidebar intro block not found')
-          s = s.replace(old, '', 1)
+          start_marker = '            <div className="mb-1 rounded-[22px] border border-cyan-300/10'
+          end_marker = '            <NavGroupLabel tone="cyan">Overview</NavGroupLabel>'
+          start = s.find(start_marker)
+          end = s.find(end_marker)
+          if start < 0 or end < 0 or end <= start:
+              raise SystemExit('sidebar intro markers not found')
+          s = s[:start] + s[end:]
           p.write_text(s)
           PY
       - run: npm ci
