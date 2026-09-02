@@ -1,0 +1,51 @@
+name: Fix Admin Toast
+
+on:
+  push:
+    branches: [fluffy-cloud]
+    paths:
+      - .github/workflows/fix-admin-toast.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fluffy-cloud
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - name: Convert admin notice to floating toast
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          p = Path("src/pages/admin/AdminPage.tsx")
+          s = p.read_text(encoding="utf-8")
+
+          old = '''        {notice && (\n          <div className={[\n            "mb-5 rounded-2xl border px-4 py-3 text-sm font-medium",\n            notice.type === "ok"\n              ? "border-emerald-400/20 bg-emerald-950/30 text-emerald-100"\n              : "border-red-400/20 bg-red-950/30 text-red-100",\n          ].join(" ")}>\n            {notice.msg}\n          </div>\n        )}\n'''
+
+          new = '''        {notice && (\n          <div\n            className="pointer-events-none fixed inset-x-3 top-3 z-[100] flex justify-end sm:left-auto sm:right-5 sm:top-5 sm:w-[420px]"\n            aria-live={notice.type === "err" ? "assertive" : "polite"}\n            role={notice.type === "err" ? "alert" : "status"}\n          >\n            <div\n              className={[\n                "pointer-events-auto flex w-full items-start gap-3 rounded-2xl border px-4 py-3.5 text-sm font-medium shadow-[0_18px_55px_rgba(0,0,0,0.45)] backdrop-blur-xl",\n                notice.type === "ok"\n                  ? "border-emerald-300/25 bg-emerald-950/90 text-emerald-50"\n                  : "border-red-300/25 bg-red-950/90 text-red-50",\n              ].join(" ")}\n            >\n              <div className="min-w-0 flex-1 leading-5">{notice.msg}</div>\n              <button\n                type="button"\n                onClick={() => setNotice(null)}\n                className="shrink-0 rounded-lg px-2 py-0.5 text-lg leading-none text-white/55 transition hover:bg-white/10 hover:text-white"\n                aria-label="Dismiss message"\n              >\n                ×\n              </button>\n            </div>\n          </div>\n        )}\n'''
+
+          if old not in s:
+              raise RuntimeError("Could not find unlocked admin notice block")
+
+          p.write_text(s.replace(old, new, 1), encoding="utf-8")
+          PY
+      - name: Validate production build
+        run: |
+          npm ci
+          npm run build
+      - name: Commit validated toast
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/admin/AdminPage.tsx
+          git commit -m "Show Global Manager feedback as floating toast"
+          git push origin HEAD:fluffy-cloud
