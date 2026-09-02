@@ -9,6 +9,15 @@ export type Guild =
   | "Diplomats"
   | string;
 
+export type AttributeValues = {
+  str: number;
+  dex: number;
+  con: number;
+  int: number;
+  wis: number;
+  cha: number;
+};
+
 export type Student = {
   id: string;
   first: string;
@@ -23,15 +32,20 @@ export type Student = {
   wis: number;
   cha: number;
 
+  // Admin/editor source values from Master. Core stats above remain totals.
+  baseAttributes?: AttributeValues;
+  bonusAttributes?: AttributeValues;
+
   // gameplay data
   skills: string[] | string;
+  purchasedSkills?: string[];
   inventory?: string[];
 
-// optional visuals / metadata
-portraitUrl?: string;
-companionUrl?: string;
-companionStatus?: "Active" | "Fallen" | string;
-guild?: Guild;
+  // optional visuals / metadata
+  portraitUrl?: string;
+  companionUrl?: string;
+  companionStatus?: "Active" | "Fallen" | string;
+  guild?: Guild;
 
   // HP (from Apps Script)
   baseHP?: number;

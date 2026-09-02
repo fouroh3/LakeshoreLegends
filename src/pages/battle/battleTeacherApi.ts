@@ -75,7 +75,22 @@ async function postTeacherAction(
 }
 
 export async function loginBattleTeacher(passcode: string) {
-  return postTeacherAction("battleteacherlogin", { passcode });
+  let lastError: unknown = null;
+
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      return await postTeacherAction("battleteacherlogin", { passcode });
+    } catch (err) {
+      lastError = err;
+      const message = String((err as any)?.message || err || "");
+      const retryable = /non-JSON \(404\)|failed: 404/i.test(message);
+
+      if (!retryable || attempt === 1) throw err;
+      await new Promise((resolve) => window.setTimeout(resolve, 350));
+    }
+  }
+
+  throw lastError;
 }
 
 export async function startRegularBattle(args: {

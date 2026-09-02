@@ -37,6 +37,31 @@ function RouteLink({
   );
 }
 
+function TeacherAdminLink() {
+  return (
+    <a
+      href="/admin"
+      title="Teacher Admin"
+      aria-label="Teacher Admin"
+      className="flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white/65 transition hover:border-cyan-300/30 hover:bg-cyan-400/10 hover:text-cyan-100"
+    >
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className="h-[17px] w-[17px]"
+        aria-hidden="true"
+      >
+        <rect x="5" y="10" width="14" height="10" rx="2" />
+        <path d="M8 10V7a4 4 0 0 1 8 0v3" />
+      </svg>
+    </a>
+  );
+}
+
 export default function AppTopBar({
   title,
   activeView,
@@ -59,10 +84,19 @@ export default function AppTopBar({
           </div>
 
           <nav className="flex flex-wrap items-center justify-center gap-2 md:justify-end">
-            <RouteLink href="/" active={activeView === "dashboard"}>Dashboard</RouteLink>
-            <RouteLink href="/store" active={activeView === "store"}>Store</RouteLink>
-            <RouteLink href="/cards" active={activeView === "cards"}>Cards</RouteLink>
-            <RouteLink href="/battle" active={activeView === "battle"}>Battle Mode</RouteLink>
+            <RouteLink href="/" active={activeView === "dashboard"}>
+              Dashboard
+            </RouteLink>
+            <RouteLink href="/store" active={activeView === "store"}>
+              Store
+            </RouteLink>
+            <RouteLink href="/cards" active={activeView === "cards"}>
+              Cards
+            </RouteLink>
+            <RouteLink href="/battle" active={activeView === "battle"}>
+              Battle Mode
+            </RouteLink>
+            <TeacherAdminLink />
 
             {shownText ? (
               <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold text-white/70">

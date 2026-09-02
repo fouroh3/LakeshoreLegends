@@ -28,6 +28,21 @@ const tileSelected =
   "border-cyan-300/70 bg-cyan-400/[0.07] ring-2 ring-cyan-300/35";
 const tileUnselected = "border-zinc-800/70";
 
+function uniqueSkills(skills: string[]) {
+  const seen = new Set<string>();
+  const out: string[] = [];
+
+  for (const skill of skills) {
+    const clean = String(skill ?? "").trim();
+    const key = clean.toLowerCase();
+    if (!clean || seen.has(key)) continue;
+    seen.add(key);
+    out.push(clean);
+  }
+
+  return out;
+}
+
 function StatPill({
   label,
   value,
@@ -67,8 +82,11 @@ function StatPill({
 }
 
 function TileSkills({ student, muted }: { student: Student; muted?: boolean }) {
+  const purchasedSkillsRaw = (student as any).purchasedSkills;
+
   const skills = useMemo(() => {
     const baseSkills = skillsToArray(student.skills);
+    const purchasedSkills = skillsToArray(purchasedSkillsRaw);
 
     const hasCompanion = !!String(student.companionUrl || "").trim();
     const companionStatus = String(student.companionStatus || "")
@@ -77,11 +95,12 @@ function TileSkills({ student, muted }: { student: Student; muted?: boolean }) {
 
     const companionIsActive = hasCompanion && companionStatus === "active";
 
-    return [
+    return uniqueSkills([
       ...baseSkills,
+      ...purchasedSkills,
       ...(companionIsActive ? ["Companion Bond"] : []),
-    ];
-  }, [student.skills, student.companionUrl, student.companionStatus]);
+    ]);
+  }, [student.skills, purchasedSkillsRaw, student.companionUrl, student.companionStatus]);
 
   if (skills.length === 0) return null;
 

@@ -113,8 +113,8 @@ export default function AttributeGrid({
                 "shadow-[inset_0_1px_0_rgba(255,255,255,0.025)]",
 
                 isSelected
-                  ? `${guildTheme.border} ${guildTheme.softPanel} ${guildTheme.cardGlow} scale-[1.01] shadow-[0_12px_24px_rgba(0,0,0,0.26)]`
-                  : "border-white/[0.05] bg-[linear-gradient(180deg,rgba(18,22,31,0.62),rgba(8,10,16,0.78))] hover:border-white/[0.08]",
+                  ? "border-cyan-200/80 bg-[linear-gradient(180deg,rgba(17,83,96,0.58),rgba(6,25,34,0.96))] ring-2 ring-cyan-300/30 scale-[1.018] shadow-[0_0_32px_rgba(34,211,238,0.24),inset_0_1px_0_rgba(255,255,255,0.08)]"
+                  : "border-white/[0.05] bg-[linear-gradient(180deg,rgba(18,22,31,0.62),rgba(8,10,16,0.78))] hover:border-white/[0.10] hover:bg-white/[0.045]",
 
                 !canSelectAttribute ? "cursor-not-allowed opacity-75" : "",
               ].join(" ")}
@@ -126,7 +126,9 @@ export default function AttributeGrid({
               />
 
               <div
-                className={`pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r ${guildTheme.accent}`}
+                className={`pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r ${
+                  isSelected ? "from-transparent via-cyan-200 to-transparent" : guildTheme.accent
+                }`}
               />
 
               <div className="relative flex items-center gap-2">
@@ -175,16 +177,15 @@ export default function AttributeGrid({
                 </div>
               </div>
 
-              <button
-                type="button"
-                className={`mt-3 xl:mt-4 h-10 xl:h-11 w-full rounded-xl text-xs xl:text-sm font-semibold transition ${
+              <div
+                className={`mt-3 xl:mt-4 flex h-10 xl:h-11 w-full items-center justify-center rounded-xl text-xs xl:text-sm font-semibold transition ${
                   isSelected
-                    ? "bg-cyan-400 text-slate-950 shadow-[0_0_20px_rgba(34,211,238,0.28)]"
+                    ? "bg-cyan-300 text-slate-950 ring-2 ring-cyan-100/30 shadow-[0_0_24px_rgba(34,211,238,0.40)]"
                     : "border border-white/[0.05] bg-white/[0.04] text-white/70 hover:bg-white/[0.07]"
                 }`}
               >
-                {isSelected ? "Selected" : "Select"}
-              </button>
+                {isSelected ? "✓ Selected" : "Select"}
+              </div>
             </button>
           );
         })}

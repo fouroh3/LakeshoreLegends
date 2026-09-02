@@ -7,10 +7,13 @@ import CharacterProfileModal from "./components/CharacterProfileModal";
 import BattlePage from "./pages/BattlePage";
 import CardLibraryPage from "./pages/CardLibraryPage";
 import StorePage from "./pages/store/StorePage";
+import AdminPage from "./pages/admin/AdminPage";
 import { loadStudents } from "./data";
+import { normalizeSkillName } from "./data/skillLibrary";
 import type { Student } from "./types";
 import "./index.css";
 import { fetchHpMap } from "./hpApi";
+import { getPurchasedSkillSnapshot } from "./skillApi";
 import BossDisplayPage from "./pages/battle/BossDisplayPage";
 import BattleTeacherConsole from "./pages/battle/BattleTeacherConsole";
 
@@ -23,11 +26,57 @@ function normId(id: string | undefined | null) {
     .toUpperCase();
 }
 
+function skillsToList(value: unknown) {
+  if (Array.isArray(value)) {
+    return value.map((skill) => String(skill ?? "").trim()).filter(Boolean);
+  }
+
+  return String(value ?? "")
+    .split(/[;,|]/g)
+    .map((skill) => skill.trim())
+    .filter(Boolean);
+}
+
+function mergeSkillLists(base: unknown, purchased: unknown) {
+  const seen = new Set<string>();
+  const out: string[] = [];
+
+  for (const skill of [...skillsToList(base), ...skillsToList(purchased)]) {
+    const key = normalizeSkillName(skill);
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    out.push(skill);
+  }
+
+  return out;
+}
+
+function applyPurchasedSkills(
+  student: Student,
+  purchasedByStudent: Map<string, string[]>
+): Student {
+  const purchasedSkills = purchasedByStudent.get(normId(String(student.id ?? ""))) ?? [];
+
+  if (purchasedSkills.length === 0) {
+    return {
+      ...student,
+      purchasedSkills: [],
+    };
+  }
+
+  return {
+    ...student,
+    purchasedSkills,
+    skills: mergeSkillLists(student.skills, purchasedSkills),
+  };
+}
+
 type ViewMode =
   | ""
   | "store"
   | "battle"
   | "battle-teacher"
+  | "admin"
   | "cards"
   | "boss-display";
 
@@ -40,6 +89,7 @@ export default function App() {
     if (path === "store") return "store";
     if (path === "battle") return "battle";
     if (path === "battle/teacher") return "battle-teacher";
+    if (path === "admin" || path === "teacher") return "admin";
     if (path === "cards") return "cards";
     if (path === "bossdisplay") return "boss-display";
 
@@ -54,6 +104,11 @@ export default function App() {
 
     if (view === "battle-teacher") {
       document.title = "Battle Teacher Console";
+      return;
+    }
+
+    if (view === "admin") {
+      document.title = "Teacher Admin";
       return;
     }
 
@@ -81,6 +136,7 @@ export default function App() {
       store: "/store",
       battle: "/battle",
       "battle-teacher": "/battle/teacher",
+      admin: "/admin",
       cards: "/cards",
       "boss-display": "/bossdisplay",
     };
@@ -106,14 +162,19 @@ export default function App() {
 
     (async () => {
       try {
-        const data = await loadStudents();
-        const hpMap = await fetchHpMap();
+        const [data, hpMap, purchasedByStudent] = await Promise.all([
+          loadStudents(),
+          fetchHpMap(),
+          getPurchasedSkillSnapshot().catch(() => new Map<string, string[]>()),
+        ]);
 
         const merged = data.map((s) => {
           const hp = hpMap.get(normId(String(s.id ?? "")));
-          return hp
+          const withHp = hp
             ? { ...s, baseHP: hp.baseHP, currentHP: hp.currentHP }
             : { ...s };
+
+          return applyPurchasedSkills(withHp, purchasedByStudent);
         });
 
         if (!alive) return;
@@ -151,17 +212,21 @@ export default function App() {
 
     const tick = async () => {
       try {
-        const hpMap = await fetchHpMap();
+        const [hpMap, purchasedByStudent] = await Promise.all([
+          fetchHpMap(),
+          getPurchasedSkillSnapshot().catch(() => new Map<string, string[]>()),
+        ]);
+
         if (!alive) return;
 
         setStudents((prev) =>
           prev.map((s) => {
             const hp = hpMap.get(normId(String(s.id ?? "")));
-            if (!hp) return s;
-            if (s.baseHP === hp.baseHP && s.currentHP === hp.currentHP) {
-              return s;
-            }
-            return { ...s, baseHP: hp.baseHP, currentHP: hp.currentHP };
+            const withHp = hp
+              ? { ...s, baseHP: hp.baseHP, currentHP: hp.currentHP }
+              : { ...s };
+
+            return applyPurchasedSkills(withHp, purchasedByStudent);
           })
         );
       } catch {
@@ -202,12 +267,8 @@ export default function App() {
       int: Number(s.int ?? 0),
       wis: Number(s.wis ?? 0),
       cha: Number(s.cha ?? 0),
-      skills: Array.isArray(s.skills)
-        ? s.skills
-        : (s.skills ?? "")
-            .split(/[;,]/)
-            .map((t) => t.trim())
-            .filter(Boolean),
+      skills: mergeSkillLists(s.skills, s.purchasedSkills),
+      purchasedSkills: skillsToList(s.purchasedSkills),
       baseHP: Number((s as any).baseHP ?? 20),
       currentHP: Number((s as any).currentHP ?? 20),
     }));
@@ -266,14 +327,7 @@ export default function App() {
       list = list.filter((p: any) => {
         const fullA = `${p.first} ${p.last}`.toLowerCase();
         const fullB = `${p.last} ${p.first}`.toLowerCase();
-        const skills = (
-          Array.isArray(p.skills)
-            ? p.skills
-            : String(p.skills ?? "")
-                .split(/[;,|]/)
-                .map((t) => t.trim())
-                .filter(Boolean)
-        )
+        const skills = mergeSkillLists(p.skills, p.purchasedSkills)
           .join(" ")
           .toLowerCase();
         const guild = String(p.guild || "").toLowerCase();
@@ -367,6 +421,10 @@ export default function App() {
 
   if (view === "battle-teacher") {
     return <BattleTeacherConsole />;
+  }
+
+  if (view === "admin") {
+    return <AdminPage />;
   }
 
   if (view === "boss-display") {

@@ -452,6 +452,22 @@ function rowsToStudents(rows: string[][]): Student[] {
       int,
       wis,
       cha,
+      baseAttributes: {
+        str: baseStr,
+        dex: baseDex,
+        con: baseCon,
+        int: baseInt,
+        wis: baseWis,
+        cha: baseCha,
+      },
+      bonusAttributes: {
+        str: bonusStr,
+        dex: bonusDex,
+        con: bonusCon,
+        int: bonusInt,
+        wis: bonusWis,
+        cha: bonusCha,
+      },
 
       skills: skills.length
         ? skills
@@ -475,10 +491,10 @@ function rowsToStudents(rows: string[][]): Student[] {
 
 /* ---------------- public API ---------------- */
 
-export async function loadStudents(): Promise<Student[]> {
+export async function loadStudents(options?: { force?: boolean }): Promise<Student[]> {
   const now = Date.now();
 
-  if (cache && now - cache.at < CACHE_MS) {
+  if (!options?.force && cache && now - cache.at < CACHE_MS) {
     return cache.students;
   }
 
