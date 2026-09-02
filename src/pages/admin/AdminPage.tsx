@@ -944,7 +944,7 @@ export default function AdminPage() {
 
         <div className="grid gap-5 lg:grid-cols-[270px_minmax(0,1fr)]">
           <aside className="self-start rounded-[28px] border border-white/10 bg-zinc-950/65 p-3 lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto lg:overscroll-contain">
-            <div className="px-3 pb-2 pt-2 text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-600">
+            <div className="px-3 pb-2 pt-2 text-[11px] font-black uppercase tracking-[0.18em] text-zinc-400">
               Overview
             </div>
             <SectionButton
@@ -954,7 +954,7 @@ export default function AdminPage() {
               onClick={() => setSection("overview")}
             />
 
-            <div className="px-3 pb-2 pt-5 text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-600">
+            <div className="px-3 pb-2 pt-5 text-[11px] font-black uppercase tracking-[0.18em] text-zinc-400">
               Players
             </div>
             <div className="space-y-2">
@@ -972,7 +972,7 @@ export default function AdminPage() {
               />
             </div>
 
-            <div className="px-3 pb-2 pt-5 text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-600">
+            <div className="px-3 pb-2 pt-5 text-[11px] font-black uppercase tracking-[0.18em] text-zinc-400">
               Characters
             </div>
             <div className="space-y-2">
@@ -996,7 +996,7 @@ export default function AdminPage() {
               />
             </div>
 
-            <div className="px-3 pb-2 pt-5 text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-600">
+            <div className="px-3 pb-2 pt-5 text-[11px] font-black uppercase tracking-[0.18em] text-zinc-400">
               Groups & Rewards
             </div>
             <div className="space-y-2">
@@ -1020,7 +1020,7 @@ export default function AdminPage() {
               />
             </div>
 
-            <div className="px-3 pb-2 pt-5 text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-600">
+            <div className="px-3 pb-2 pt-5 text-[11px] font-black uppercase tracking-[0.18em] text-zinc-400">
               System
             </div>
             <SectionButton
