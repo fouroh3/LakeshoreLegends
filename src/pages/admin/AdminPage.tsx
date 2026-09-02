@@ -873,13 +873,29 @@ export default function AdminPage() {
         </header>
 
         {notice && (
-          <div className={[
-            "mb-5 rounded-2xl border px-4 py-3 text-sm font-medium",
-            notice.type === "ok"
-              ? "border-emerald-400/20 bg-emerald-950/30 text-emerald-100"
-              : "border-red-400/20 bg-red-950/30 text-red-100",
-          ].join(" ")}>
-            {notice.msg}
+          <div
+            className="pointer-events-none fixed inset-x-3 top-3 z-[100] flex justify-end sm:left-auto sm:right-5 sm:top-5 sm:w-[420px]"
+            aria-live={notice.type === "err" ? "assertive" : "polite"}
+            role={notice.type === "err" ? "alert" : "status"}
+          >
+            <div
+              className={[
+                "pointer-events-auto flex w-full items-start gap-3 rounded-2xl border px-4 py-3.5 text-sm font-medium shadow-[0_18px_55px_rgba(0,0,0,0.45)] backdrop-blur-xl",
+                notice.type === "ok"
+                  ? "border-emerald-300/25 bg-emerald-950/90 text-emerald-50"
+                  : "border-red-300/25 bg-red-950/90 text-red-50",
+              ].join(" ")}
+            >
+              <div className="min-w-0 flex-1 leading-5">{notice.msg}</div>
+              <button
+                type="button"
+                onClick={() => setNotice(null)}
+                className="shrink-0 rounded-lg px-2 py-0.5 text-lg leading-none text-white/55 transition hover:bg-white/10 hover:text-white"
+                aria-label="Dismiss message"
+              >
+                ×
+              </button>
+            </div>
           </div>
         )}
 
