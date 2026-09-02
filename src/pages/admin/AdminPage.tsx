@@ -176,6 +176,7 @@ export default function AdminPage() {
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [archivedRefreshKey, setArchivedRefreshKey] = useState(0);
   const [systemStatus, setSystemStatus] = useState<AdminSystemStatusResult | null>(null);
   const [statusLoading, setStatusLoading] = useState(false);
   const [systemStatusError, setSystemStatusError] = useState(false);
@@ -607,6 +608,7 @@ export default function AdminPage() {
       const student = students.find((row) => normId(row.id) === id);
 
       setStudents((prev) => prev.filter((row) => normId(row.id) !== id));
+      setArchivedRefreshKey((value) => value + 1);
 
       // Archive is confirmed by the backend. Avoid an immediate published-CSV
       // reload that can briefly re-add the archived student while Google
@@ -1286,7 +1288,10 @@ export default function AdminPage() {
                   title="Restore or Permanently Delete"
                   description="Archived students stay recoverable and keep their StudentID reserved. Restore mistakes safely, or permanently erase their stored game data when you are certain it is no longer needed."
                 >
-                  <ArchivedStudentsPanel onRosterChanged={reloadStudents} />
+                  <ArchivedStudentsPanel
+                    refreshKey={archivedRefreshKey}
+                    onRosterChanged={reloadStudents}
+                  />
                 </AdminPanel>
               </div>
             )}

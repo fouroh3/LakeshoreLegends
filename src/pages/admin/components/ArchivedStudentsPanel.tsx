@@ -10,8 +10,10 @@ import {
 } from "../adminApi";
 
 export default function ArchivedStudentsPanel({
+  refreshKey,
   onRosterChanged,
 }: {
+  refreshKey: number;
   onRosterChanged: () => Promise<void>;
 }) {
   const [rows, setRows] = useState<AdminArchivedStudentRow[]>([]);
@@ -35,8 +37,19 @@ export default function ArchivedStudentsPanel({
   };
 
   useEffect(() => {
+    setNotice("");
     void load();
-  }, []);
+  }, [refreshKey]);
+
+  useEffect(() => {
+    if (!notice) return;
+
+    const timer = window.setTimeout(() => {
+      setNotice("");
+    }, 4000);
+
+    return () => window.clearTimeout(timer);
+  }, [notice]);
 
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
