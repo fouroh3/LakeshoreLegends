@@ -31,7 +31,7 @@
  *   overwritten by the Teacher Admin importer.
  * ========================================================= */
 
-const ADMIN_API_VERSION = "2026-09-01.5";
+const ADMIN_API_VERSION = "2026-09-01.6";
 
 const CFG = {
   // Master
@@ -138,6 +138,40 @@ function normId_(v) {
     .replace(/[–—]/g, "-")
     .replace(/\s+/g, "")
     .toUpperCase();
+}
+
+function normStoredStudentId_(v) {
+  if (v instanceof Date && !Number.isNaN(v.getTime())) {
+    const tz = Session.getScriptTimeZone() || "GMT";
+    const month = Number(Utilities.formatDate(v, tz, "M"));
+    const day = Number(Utilities.formatDate(v, tz, "d"));
+    const year = Number(Utilities.formatDate(v, tz, "yyyy"));
+
+    if (
+      month === 8 &&
+      day >= 1 &&
+      day <= 10 &&
+      Number.isFinite(year)
+    ) {
+      return `8-${day}-${String(year % 100).padStart(3, "0")}`;
+    }
+  }
+
+  return normId_(v);
+}
+
+function normHomeroom_(v) {
+  if (v instanceof Date && !Number.isNaN(v.getTime())) {
+    const tz = Session.getScriptTimeZone() || "GMT";
+    const month = Number(Utilities.formatDate(v, tz, "M"));
+    const day = Number(Utilities.formatDate(v, tz, "d"));
+
+    if (month === 8 && day >= 1 && day <= 10) {
+      return `8-${day}`;
+    }
+  }
+
+  return norm_(v);
 }
 
 function normPin_(v) {
@@ -323,10 +357,45 @@ function findRowByIdInCol_(sh, col, idValue) {
   return cell ? cell.getRow() : -1;
 }
 
+const TEXT_COLUMNS_BY_SHEET_ = {
+  HP_State: [1, 3],
+  HP_Log: [3],
+  XP_State: [2, 3],
+  XP_Transactions: [2, 4],
+  Skill_State: [1],
+  Purchased_Skills: [2],
+  Skill_Transactions: [2],
+  Player_State: [1, 14],
+  Inventory_Transactions: [2],
+  Roster_Transactions: [2, 5],
+  Archived_Roster: [1, 3],
+  Ability_Transactions: [2],
+  Media_Transactions: [2],
+};
+
+function prepareTextColumnsForWrite_(sh, startRow, rowCount, rowWidth) {
+  if (!sh || rowCount < 1 || rowWidth < 1) return;
+  const columns = TEXT_COLUMNS_BY_SHEET_[sh.getName()] || [];
+  columns.forEach((column) => {
+    if (column > 0 && column <= rowWidth) {
+      sh.getRange(startRow, column, rowCount, 1).setNumberFormat("@");
+    }
+  });
+}
+
 function appendRowFast_(sh, rowArr) {
   const r = sh.getLastRow() + 1;
+  prepareTextColumnsForWrite_(sh, r, 1, rowArr.length);
   sh.getRange(r, 1, 1, rowArr.length).setValues([rowArr]);
   return r;
+}
+
+function appendRowsFast_(sh, rows) {
+  if (!Array.isArray(rows) || !rows.length) return 0;
+  const startRow = sh.getLastRow() + 1;
+  prepareTextColumnsForWrite_(sh, startRow, rows.length, rows[0].length);
+  sh.getRange(startRow, 1, rows.length, rows[0].length).setValues(rows);
+  return rows.length;
 }
 
 // =========================================================
@@ -1950,7 +2019,7 @@ function loadSkillStateIndex_() {
 
   for (let r = 1; r < values.length; r++) {
     const row = values[r];
-    const studentId = normId_(row[iId]);
+    const studentId = normStoredStudentId_(row[iId]);
 
     if (!studentId) continue;
 
@@ -2224,7 +2293,7 @@ function purchaseSkill_(args) {
       .getRange(state.sheetRow, state.col.SkillTokens, 1, 2)
       .setValues([[afterTokens, nowIso]]);
 
-    ensurePurchasedSkillsSheet_().appendRow([
+    appendRowFast_(ensurePurchasedSkillsSheet_(), [
       new Date(),
       studentId,
       studentName,
@@ -2235,7 +2304,7 @@ function purchaseSkill_(args) {
       requestId,
     ]);
 
-    ensureSkillTxnSheet_().appendRow([
+    appendRowFast_(ensureSkillTxnSheet_(), [
       new Date(),
       studentId,
       studentName,
@@ -3356,7 +3425,7 @@ function adminEnsureHpStudent_(student) {
   if (existingRow >= 2) {
     const { col } = hpHeaderIdx_();
     sh.getRange(existingRow, col.Name).setValue(student.rosterName);
-    sh.getRange(existingRow, col.Homeroom).setValue(student.homeroom);
+    sh.getRange(existingRow, col.Homeroom).setNumberFormat("@").setValue(student.homeroom);
     sh.getRange(existingRow, col.Guild).setValue(student.guild || "");
     return;
   }
@@ -3918,14 +3987,7 @@ function adminAdjustCurrency_(args) {
       });
 
       if (txnRows.length) {
-        txn
-          .getRange(
-            txn.getLastRow() + 1,
-            1,
-            txnRows.length,
-            txnRows[0].length
-          )
-          .setValues(txnRows);
+        appendRowsFast_(txn, txnRows);
       }
     } else {
       const txn = ensureSkillTxnSheet_();
@@ -3965,14 +4027,7 @@ function adminAdjustCurrency_(args) {
       });
 
       if (txnRows.length) {
-        txn
-          .getRange(
-            txn.getLastRow() + 1,
-            1,
-            txnRows.length,
-            txnRows[0].length
-          )
-          .setValues(txnRows);
+        appendRowsFast_(txn, txnRows);
       }
     }
 
@@ -4687,7 +4742,7 @@ function adminAdjustInventory_(args) {
     });
 
     if (txnRows.length) {
-      txn.getRange(txn.getLastRow() + 1, 1, txnRows.length, txnRows[0].length).setValues(txnRows);
+      appendRowsFast_(txn, txnRows);
     }
 
     SpreadsheetApp.flush();
@@ -4723,7 +4778,7 @@ function adminArchivedSnapshotRow_(studentIdRaw) {
     sheetRow: row,
     studentId,
     studentName: norm_(values[1]),
-    homeroom: norm_(values[2]),
+    homeroom: normHomeroom_(values[2]),
     guild: norm_(values[3]),
     rosterJson: String(values[4] || ""),
     hpJson: String(values[5] || ""),
@@ -4777,6 +4832,7 @@ function adminSaveArchivedRosterSnapshot_(resolved, reasonRaw) {
   const existing = findRowByIdInCol_(sh, 1, resolved.studentId);
   const rowNumber = existing >= 2 ? existing : sh.getLastRow() + 1;
   sh.getRange(rowNumber, 1).setNumberFormat("@");
+  sh.getRange(rowNumber, 3).setNumberFormat("@");
   sh.getRange(rowNumber, 1, 1, payload.length).setValues([payload]);
 
   return {
@@ -4803,7 +4859,7 @@ function adminArchivedStudents_(args) {
     rows.push({
       studentId,
       studentName: norm_(values[r][1]),
-      homeroom: norm_(values[r][2]),
+      homeroom: normHomeroom_(values[r][2]),
       guild: norm_(values[r][3]),
       archivedAt:
         values[r][6] instanceof Date
@@ -4889,7 +4945,7 @@ function adminRestoreStudent_(args) {
     const currentHP = Math.max(0, Math.min(baseHP, Math.round(asNum_(hpSnapshot.currentHP, baseHP))));
     if (hpSheetRow >= 2) {
       hp.sh.getRange(hpSheetRow, hp.col.Name).setValue(snapshot.studentName);
-      hp.sh.getRange(hpSheetRow, hp.col.Homeroom).setValue(snapshot.homeroom);
+      hp.sh.getRange(hpSheetRow, hp.col.Homeroom).setNumberFormat("@").setValue(snapshot.homeroom);
       hp.sh.getRange(hpSheetRow, hp.col.Guild).setValue(snapshot.guild);
       hp.sh.getRange(hpSheetRow, hp.col.BaseHP).setValue(baseHP);
       hp.sh.getRange(hpSheetRow, hp.col.CurrentHP).setValue(currentHP);
@@ -4947,10 +5003,10 @@ function adminDeleteRowsForStudentId_(sheetName, studentIdRaw) {
   if (iId < 0) return 0;
 
   const studentId = normId_(studentIdRaw);
-  const values = sh.getRange(2, iId + 1, sh.getLastRow() - 1, 1).getDisplayValues();
+  const values = sh.getRange(2, iId + 1, sh.getLastRow() - 1, 1).getValues();
   const rows = [];
   values.forEach((row, index) => {
-    if (normId_(row[0]) === studentId) rows.push(index + 2);
+    if (normStoredStudentId_(row[0]) === studentId) rows.push(index + 2);
   });
   rows.sort((a, b) => b - a).forEach((rowNumber) => sh.deleteRow(rowNumber));
   return rows.length;
@@ -5580,9 +5636,7 @@ function adminUpdateAbilities_(args) {
 
     if (rows.length) {
       const txn = ensureAbilityTxnSheet_();
-      txn
-        .getRange(txn.getLastRow() + 1, 1, rows.length, rows[0].length)
-        .setValues(rows);
+      appendRowsFast_(txn, rows);
     }
 
     cacheRemove_(`studentsMap:${CFG.STUDENTS_SHEET}`);
@@ -5637,7 +5691,7 @@ function adminAdjustSkill_(args) {
     const state = index.get(studentId);
     const tokens = state ? state.skillTokens : 0;
 
-    ensurePurchasedSkillsSheet_().appendRow([
+    appendRowFast_(ensurePurchasedSkillsSheet_(), [
       new Date(),
       studentId,
       student.name || "",
@@ -5648,7 +5702,7 @@ function adminAdjustSkill_(args) {
       "",
     ]);
 
-    ensureSkillTxnSheet_().appendRow([
+    appendRowFast_(ensureSkillTxnSheet_(), [
       new Date(),
       studentId,
       student.name || "",
@@ -5695,7 +5749,7 @@ function adminAdjustSkill_(args) {
     const state = index.get(studentId);
     const tokens = state ? state.skillTokens : 0;
 
-    ensureSkillTxnSheet_().appendRow([
+    appendRowFast_(ensureSkillTxnSheet_(), [
       new Date(),
       studentId,
       student.name || "",
@@ -6045,11 +6099,11 @@ function adminReplaceStudentIdInSheet_(sheetName, oldStudentIdRaw, newStudentIdR
 
   const oldId = normId_(oldStudentIdRaw);
   const newId = normId_(newStudentIdRaw);
-  const values = sh.getRange(2, iId + 1, sh.getLastRow() - 1, 1).getDisplayValues();
+  const values = sh.getRange(2, iId + 1, sh.getLastRow() - 1, 1).getValues();
   let changed = 0;
 
   for (let i = 0; i < values.length; i++) {
-    if (normId_(values[i][0]) !== oldId) continue;
+    if (normStoredStudentId_(values[i][0]) !== oldId) continue;
     sh.getRange(i + 2, iId + 1).setNumberFormat("@").setValue(newId);
     changed++;
   }
@@ -6182,7 +6236,7 @@ function adminMoveStudent_(args) {
 
     const hp = loadHpIndex_();
     const hpRow = hp.index.get(newStudentId);
-    if (hpRow) hp.sh.getRange(hpRow.sheetRow, hp.col.Homeroom).setValue(newHomeroom);
+    if (hpRow) hp.sh.getRange(hpRow.sheetRow, hp.col.Homeroom).setNumberFormat("@").setValue(newHomeroom);
 
     const xp = ensureXpStateSheet_();
     const xpValues = xp.getDataRange().getValues();
