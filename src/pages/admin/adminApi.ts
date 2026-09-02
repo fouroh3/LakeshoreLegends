@@ -303,7 +303,8 @@ async function postAdminAction<T>(
   action: AdminAction,
   body: Record<string, any>
 ): Promise<T> {
-  const maxAttempts = RETRYABLE_ADMIN_READS.has(action) ? 2 : 1;
+  const retryableRead = RETRYABLE_ADMIN_READS.has(action);
+  const maxAttempts = 3;
   let lastError: Error | null = null;
 
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
@@ -343,9 +344,15 @@ async function postAdminAction<T>(
       return data as T;
     } catch (err: any) {
       lastError = err instanceof Error ? err : new Error(String(err || "Admin API failed."));
-      if (attempt + 1 < maxAttempts) {
-        await new Promise((resolve) => window.setTimeout(resolve, 300));
-      }
+      const unknownAction = /^Unknown action:/i.test(lastError.message.trim());
+      const canRetryUnknownAction = unknownAction && attempt < 2;
+      const canRetryRead = retryableRead && attempt < 1;
+
+      if (!canRetryUnknownAction && !canRetryRead) break;
+
+      await new Promise((resolve) =>
+        window.setTimeout(resolve, canRetryUnknownAction ? 650 : 300)
+      );
     }
   }
 
