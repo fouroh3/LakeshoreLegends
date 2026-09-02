@@ -1,0 +1,17 @@
+name: Inspect R2 Lifecycle
+on:
+  push:
+    branches: [fluffy-cloud]
+    paths:
+      - .github/workflows/run-inspect-r2-lifecycle.yml
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fluffy-cloud
+      - name: Inspect lifecycle functions
+        run: python scripts/inspect_r2_lifecycle.py
