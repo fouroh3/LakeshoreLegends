@@ -131,13 +131,7 @@ export default function AttributeGrid({
                 }`}
               />
 
-              {isSelected ? (
-                <div className="absolute right-3 top-3 z-20 flex h-7 w-7 items-center justify-center rounded-full border border-cyan-100/50 bg-cyan-300 text-[14px] font-black text-slate-950 shadow-[0_0_18px_rgba(34,211,238,0.45)]">
-                  ✓
-                </div>
-              ) : null}
-
-              <div className="relative flex items-center gap-2 pr-8">
+              <div className="relative flex items-center gap-2">
                 <div className="shrink-0 text-lg xl:text-2xl leading-none">
                   {icon}
                 </div>

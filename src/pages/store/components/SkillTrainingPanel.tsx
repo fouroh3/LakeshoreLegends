@@ -195,45 +195,88 @@ export default function SkillTrainingPanel({
                 type="button"
                 onClick={() => setSelectedSkillId(isSelected ? null : skill.id)}
                 className={[
-                  "group relative overflow-hidden rounded-[18px] border px-3 py-3 text-left transition-all duration-300",
-                  isSelected
-                    ? "border-cyan-200/80 bg-[linear-gradient(180deg,rgba(17,83,96,0.58),rgba(6,25,34,0.96))] ring-2 ring-cyan-300/30 shadow-[0_0_30px_rgba(34,211,238,0.24),inset_0_1px_0_rgba(255,255,255,0.08)] scale-[1.012]"
-                    : "border-white/[0.05] bg-[linear-gradient(180deg,rgba(18,22,31,0.62),rgba(8,10,16,0.78))] hover:border-white/[0.10] hover:bg-white/[0.045]",
-                  owned && !isSelected ? "opacity-65" : "",
+                  "group relative overflow-hidden rounded-[18px] border px-3.5 py-3.5 text-left transition-all duration-300",
+                  isSelected && !owned
+                    ? "border-cyan-200/85 bg-[linear-gradient(180deg,rgba(17,88,104,0.64),rgba(5,24,33,0.98))] ring-2 ring-cyan-300/35 shadow-[0_0_32px_rgba(34,211,238,0.26),inset_0_1px_0_rgba(255,255,255,0.09)] scale-[1.012]"
+                    : isSelected && owned
+                    ? "border-emerald-200/70 bg-[linear-gradient(180deg,rgba(16,94,72,0.48),rgba(5,29,23,0.98))] ring-2 ring-emerald-300/28 shadow-[0_0_28px_rgba(52,211,153,0.20),inset_0_1px_0_rgba(255,255,255,0.07)] scale-[1.008]"
+                    : owned
+                    ? "border-emerald-300/22 bg-[linear-gradient(180deg,rgba(16,74,58,0.24),rgba(7,20,18,0.88))] hover:border-emerald-300/34 hover:bg-[linear-gradient(180deg,rgba(16,82,63,0.30),rgba(7,22,19,0.92))]"
+                    : "border-cyan-200/[0.10] bg-[linear-gradient(180deg,rgba(17,23,33,0.80),rgba(7,10,16,0.94))] hover:border-cyan-200/24 hover:bg-[linear-gradient(180deg,rgba(20,31,43,0.90),rgba(8,13,21,0.96))] hover:shadow-[0_0_20px_rgba(34,211,238,0.08)]",
                 ].join(" ")}
               >
                 <div
-                  className={`pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r ${
-                    isSelected ? "from-transparent via-cyan-200 to-transparent" : guildTheme.accent
-                  }`}
+                  className={[
+                    "pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r",
+                    isSelected && !owned
+                      ? "from-transparent via-cyan-100 to-transparent"
+                      : owned
+                      ? "from-transparent via-emerald-300/70 to-transparent"
+                      : "from-transparent via-cyan-300/30 to-transparent",
+                  ].join(" ")}
                 />
 
-                <div className="min-h-[44px] pr-1">
-                  <div className="whitespace-normal break-words text-[15px] font-semibold leading-[1.35] text-white">
+                <div
+                  className={[
+                    "pointer-events-none absolute bottom-0 left-0 top-0 w-[3px] transition-all duration-300",
+                    isSelected && !owned
+                      ? "bg-cyan-300 shadow-[0_0_14px_rgba(34,211,238,0.60)]"
+                      : owned
+                      ? "bg-emerald-400/70"
+                      : "bg-cyan-300/18",
+                  ].join(" ")}
+                />
+
+                <div className="min-h-[44px] pr-1 pl-1">
+                  <div
+                    className={[
+                      "whitespace-normal break-words text-[15px] font-semibold leading-[1.35]",
+                      owned && !isSelected ? "text-emerald-50/88" : "text-white",
+                    ].join(" ")}
+                  >
                     {skill.name}
                   </div>
                 </div>
 
-                <div className="mt-2 flex items-center justify-between gap-2">
+                <div className="mt-2 flex items-center justify-between gap-2 pl-1">
                   <div
-                    className={`text-[10px] font-semibold uppercase tracking-[0.18em] ${
-                      isSelected ? "text-cyan-100" : "text-white/36"
-                    }`}
+                    className={[
+                      "flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.17em]",
+                      owned
+                        ? "text-emerald-200"
+                        : isSelected
+                        ? "text-cyan-100"
+                        : "text-cyan-100/58",
+                    ].join(" ")}
                   >
-                    {owned ? "Owned" : isSelected ? "✓ Selected" : "Available"}
+                    <span
+                      className={[
+                        "flex h-4 w-4 items-center justify-center rounded-full border text-[9px] leading-none",
+                        owned
+                          ? "border-emerald-300/30 bg-emerald-400/15 text-emerald-200"
+                          : isSelected
+                          ? "border-cyan-100/40 bg-cyan-300 text-slate-950"
+                          : "border-cyan-300/25 bg-cyan-300/[0.06] text-cyan-200/70",
+                      ].join(" ")}
+                    >
+                      {owned || isSelected ? "✓" : "•"}
+                    </span>
+                    {owned ? "Owned" : isSelected ? "Selected" : "Available"}
                   </div>
 
                   <span
                     className={[
-                      "shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-semibold",
+                      "shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-semibold",
                       owned
-                        ? "border-emerald-300/20 bg-emerald-400/[0.10] text-emerald-100"
+                        ? "border-emerald-300/22 bg-emerald-400/[0.10] text-emerald-100/88"
                         : isSelected
-                        ? "border-cyan-200/50 bg-cyan-300 text-slate-950 shadow-[0_0_14px_rgba(34,211,238,0.34)]"
-                        : "border-white/[0.06] bg-white/[0.04] text-white/56",
+                        ? "border-cyan-100/50 bg-cyan-300 text-slate-950 shadow-[0_0_14px_rgba(34,211,238,0.34)]"
+                        : "border-cyan-200/[0.10] bg-cyan-300/[0.04] text-cyan-50/60",
                     ].join(" ")}
                   >
-                    {owned ? "Owned" : `${skillCost} Token${skillCost === 1 ? "" : "s"}`}
+                    {owned
+                      ? "Already owned"
+                      : `${skillCost} Token${skillCost === 1 ? "" : "s"}`}
                   </span>
                 </div>
               </button>
