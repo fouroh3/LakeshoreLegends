@@ -8,12 +8,17 @@ import {
 } from "react";
 import {
   Activity,
+  ChevronRight,
   Coins,
   Database,
   Image as ImageIcon,
+  LayoutDashboard,
   PackageOpen,
+  PanelLeft,
   PawPrint,
   Shield,
+  ShoppingBag,
+  SlidersHorizontal,
   Sparkles,
   Users,
 } from "lucide-react";
@@ -84,32 +89,166 @@ function Pill({ children }: { children: ReactNode }) {
   );
 }
 
+type NavTone = "cyan" | "sky" | "violet" | "amber" | "emerald";
+
+const NAV_TONES: Record<
+  NavTone,
+  {
+    active: string;
+    icon: string;
+    rail: string;
+    dot: string;
+    label: string;
+    divider: string;
+  }
+> = {
+  cyan: {
+    active:
+      "border-cyan-300/30 bg-cyan-300/[0.10] shadow-[0_12px_34px_rgba(34,211,238,0.10)]",
+    icon: "border-cyan-300/20 bg-cyan-300/10 text-cyan-100",
+    rail: "bg-cyan-300 shadow-[0_0_14px_rgba(34,211,238,0.65)]",
+    dot: "bg-cyan-300",
+    label: "text-cyan-100/75",
+    divider: "bg-cyan-300/15",
+  },
+  sky: {
+    active:
+      "border-sky-300/30 bg-sky-300/[0.09] shadow-[0_12px_34px_rgba(125,211,252,0.09)]",
+    icon: "border-sky-300/20 bg-sky-300/10 text-sky-100",
+    rail: "bg-sky-300 shadow-[0_0_14px_rgba(125,211,252,0.60)]",
+    dot: "bg-sky-300",
+    label: "text-sky-100/75",
+    divider: "bg-sky-300/15",
+  },
+  violet: {
+    active:
+      "border-violet-300/30 bg-violet-300/[0.09] shadow-[0_12px_34px_rgba(196,181,253,0.09)]",
+    icon: "border-violet-300/20 bg-violet-300/10 text-violet-100",
+    rail: "bg-violet-300 shadow-[0_0_14px_rgba(196,181,253,0.60)]",
+    dot: "bg-violet-300",
+    label: "text-violet-100/75",
+    divider: "bg-violet-300/15",
+  },
+  amber: {
+    active:
+      "border-amber-300/30 bg-amber-300/[0.08] shadow-[0_12px_34px_rgba(252,211,77,0.08)]",
+    icon: "border-amber-300/20 bg-amber-300/10 text-amber-100",
+    rail: "bg-amber-300 shadow-[0_0_14px_rgba(252,211,77,0.55)]",
+    dot: "bg-amber-300",
+    label: "text-amber-100/75",
+    divider: "bg-amber-300/15",
+  },
+  emerald: {
+    active:
+      "border-emerald-300/30 bg-emerald-300/[0.08] shadow-[0_12px_34px_rgba(110,231,183,0.08)]",
+    icon: "border-emerald-300/20 bg-emerald-300/10 text-emerald-100",
+    rail: "bg-emerald-300 shadow-[0_0_14px_rgba(110,231,183,0.55)]",
+    dot: "bg-emerald-300",
+    label: "text-emerald-100/75",
+    divider: "bg-emerald-300/15",
+  },
+};
+
+function NavGroupLabel({
+  children,
+  tone,
+}: {
+  children: ReactNode;
+  tone: NavTone;
+}) {
+  const cfg = NAV_TONES[tone];
+
+  return (
+    <div className="flex items-center gap-2 px-2 pb-2 pt-5">
+      <span className={`h-1.5 w-1.5 rounded-full ${cfg.dot}`} />
+      <span
+        className={`text-[10px] font-black uppercase tracking-[0.20em] ${cfg.label}`}
+      >
+        {children}
+      </span>
+      <span className={`h-px flex-1 ${cfg.divider}`} />
+    </div>
+  );
+}
+
 function SectionButton({
   active,
   title,
   detail,
+  icon,
+  tone,
   onClick,
 }: {
   active: boolean;
   title: string;
   detail: string;
+  icon: ReactNode;
+  tone: NavTone;
   onClick: () => void;
 }) {
+  const cfg = NAV_TONES[tone];
+
   return (
     <button
       type="button"
       onClick={onClick}
+      aria-current={active ? "page" : undefined}
       className={[
-        "w-full rounded-2xl border px-4 py-3 text-left transition",
+        "group relative w-full overflow-hidden rounded-[18px] border px-3 py-3 text-left transition-all duration-200",
         active
-          ? "border-cyan-300/30 bg-cyan-300/10 shadow-[0_0_24px_rgba(34,211,238,0.08)]"
-          : "border-white/10 bg-white/[0.03] hover:bg-white/[0.06]",
+          ? cfg.active
+          : "border-white/[0.06] bg-white/[0.025] hover:-translate-y-px hover:border-white/10 hover:bg-white/[0.055]",
       ].join(" ")}
     >
-      <div className={active ? "font-black text-cyan-100" : "font-bold text-white"}>
-        {title}
+      <span
+        className={[
+          "absolute inset-y-3 left-0 w-[3px] rounded-r-full transition-opacity duration-200",
+          cfg.rail,
+          active ? "opacity-100" : "opacity-0 group-hover:opacity-35",
+        ].join(" ")}
+      />
+
+      <div className="flex items-center gap-3">
+        <div
+          className={[
+            "flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] border transition-all duration-200",
+            active
+              ? cfg.icon
+              : "border-white/[0.07] bg-black/20 text-zinc-500 group-hover:border-white/10 group-hover:text-zinc-300",
+          ].join(" ")}
+        >
+          {icon}
+        </div>
+
+        <div className="min-w-0 flex-1">
+          <div
+            className={[
+              "truncate text-[13px] font-black tracking-[-0.01em] transition-colors",
+              active ? "text-white" : "text-zinc-200 group-hover:text-white",
+            ].join(" ")}
+          >
+            {title}
+          </div>
+          <div
+            className={[
+              "mt-0.5 line-clamp-2 text-[11px] leading-[1.35] transition-colors",
+              active ? "text-zinc-300/75" : "text-zinc-600 group-hover:text-zinc-400",
+            ].join(" ")}
+          >
+            {detail}
+          </div>
+        </div>
+
+        <ChevronRight
+          size={15}
+          className={[
+            "shrink-0 transition-all duration-200",
+            active
+              ? "translate-x-0 text-white/80"
+              : "-translate-x-1 text-zinc-700 group-hover:translate-x-0 group-hover:text-zinc-400",
+          ].join(" ")}
+        />
       </div>
-      <div className="mt-1 text-xs leading-5 text-zinc-500">{detail}</div>
     </button>
   );
 }
@@ -912,7 +1051,7 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,rgba(34,211,238,0.10),transparent_42%),#070707] px-3 py-5 text-zinc-100 sm:px-5">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.12),transparent_34%),radial-gradient(circle_at_82%_8%,rgba(139,92,246,0.08),transparent_28%),#070707] px-3 py-5 text-zinc-100 sm:px-5">
       <div className="mx-auto max-w-[1700px]">
         <header className="mb-4 rounded-[26px] border border-white/10 bg-zinc-950/70 px-5 py-4 shadow-[0_20px_70px_rgba(0,0,0,0.35)] backdrop-blur-xl">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
@@ -1010,93 +1149,127 @@ export default function AdminPage() {
           </div>
         )}
 
-        <div className="grid gap-5 lg:grid-cols-[270px_minmax(0,1fr)]">
-          <aside className="self-start rounded-[28px] border border-white/10 bg-zinc-950/65 p-3 lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto lg:overscroll-contain">
-            <div className="px-3 pb-2 pt-2 text-[11px] font-black uppercase tracking-[0.18em] text-zinc-400">
-              Overview
+        <div className="grid gap-5 lg:grid-cols-[292px_minmax(0,1fr)] xl:gap-6">
+          <aside className="self-start rounded-[28px] border border-white/[0.08] bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.07),transparent_28%),rgba(9,9,11,0.82)] p-3 shadow-[0_20px_70px_rgba(0,0,0,0.30)] backdrop-blur-xl lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto lg:overscroll-contain">
+            <div className="mb-1 rounded-[22px] border border-cyan-300/10 bg-[linear-gradient(145deg,rgba(34,211,238,0.08),rgba(139,92,246,0.04),rgba(0,0,0,0.20))] p-3.5">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[15px] border border-cyan-300/15 bg-cyan-300/10 text-cyan-100 shadow-[0_0_24px_rgba(34,211,238,0.08)]">
+                  <PanelLeft size={19} />
+                </div>
+                <div className="min-w-0">
+                  <div className="text-[10px] font-black uppercase tracking-[0.22em] text-cyan-100/60">
+                    Navigation
+                  </div>
+                  <div className="mt-0.5 text-sm font-black text-white">
+                    Choose a workspace
+                  </div>
+                </div>
+              </div>
+              <div className="mt-3 text-[11px] leading-4 text-zinc-500">
+                Everything in Global Manager is grouped by the kind of teacher task it controls.
+              </div>
             </div>
+
+            <NavGroupLabel tone="cyan">Overview</NavGroupLabel>
             <SectionButton
               active={section === "overview"}
               title="Control Center"
-              detail="See what needs attention and jump to common tasks."
+              detail="What needs attention right now."
+              icon={<LayoutDashboard size={18} />}
+              tone="cyan"
               onClick={() => setSection("overview")}
             />
 
-            <div className="px-3 pb-2 pt-5 text-[11px] font-black uppercase tracking-[0.18em] text-zinc-400">
-              Players
-            </div>
+            <NavGroupLabel tone="sky">Players</NavGroupLabel>
             <div className="space-y-2">
               <SectionButton
                 active={section === "students"}
                 title="Roster & Demographics"
-                detail="Import, rename, move classes, or archive students."
+                detail="Import, rename, move, or archive."
+                icon={<Users size={18} />}
+                tone="sky"
                 onClick={() => setSection("students")}
               />
               <SectionButton
                 active={section === "heroImages"}
                 title="Hero Images"
-                detail="Bulk-match and upload student portraits."
+                detail="Bulk-match and upload portraits."
+                icon={<ImageIcon size={18} />}
+                tone="sky"
                 onClick={() => setSection("heroImages")}
               />
             </div>
 
-            <div className="px-3 pb-2 pt-5 text-[11px] font-black uppercase tracking-[0.18em] text-zinc-400">
-              Characters
-            </div>
+            <NavGroupLabel tone="violet">Characters</NavGroupLabel>
             <div className="space-y-2">
               <SectionButton
                 active={section === "companions"}
                 title="Companions"
-                detail="Images, living/fallen status, and replacements."
+                detail="Images and living/fallen state."
+                icon={<PawPrint size={18} />}
+                tone="violet"
                 onClick={() => setSection("companions")}
               />
               <SectionButton
                 active={section === "abilities"}
                 title="Attributes & Skills"
-                detail="Base values, bonuses, roster skills, and grants."
+                detail="Stats, bonuses, skills, and grants."
+                icon={<SlidersHorizontal size={18} />}
+                tone="violet"
                 onClick={() => setSection("abilities")}
               />
               <SectionButton
                 active={section === "inventory"}
                 title="Inventory & Cards"
-                detail="Give or remove cards for any group."
+                detail="Give or remove cards in bulk."
+                icon={<PackageOpen size={18} />}
+                tone="violet"
                 onClick={() => setSection("inventory")}
               />
             </div>
 
-            <div className="px-3 pb-2 pt-5 text-[11px] font-black uppercase tracking-[0.18em] text-zinc-400">
-              Groups & Rewards
-            </div>
+            <NavGroupLabel tone="amber">Groups & Rewards</NavGroupLabel>
             <div className="space-y-2">
               <SectionButton
                 active={section === "guilds"}
                 title="Guilds"
                 detail="Assign and move students in bulk."
+                icon={<Shield size={18} />}
+                tone="amber"
                 onClick={() => setSection("guilds")}
               />
               <SectionButton
                 active={section === "currency"}
                 title="XP & Skill Tokens"
                 detail="Balances, rewards, and corrections."
+                icon={<Coins size={18} />}
+                tone="amber"
                 onClick={() => setSection("currency")}
               />
               <SectionButton
                 active={section === "store"}
                 title="Store"
-                detail="Open/close, PIN, costs, and purchase limits."
+                detail="Open/close, PIN, costs, and limits."
+                icon={<ShoppingBag size={18} />}
+                tone="amber"
                 onClick={() => setSection("store")}
               />
             </div>
 
-            <div className="px-3 pb-2 pt-5 text-[11px] font-black uppercase tracking-[0.18em] text-zinc-400">
-              System
-            </div>
+            <NavGroupLabel tone="emerald">System</NavGroupLabel>
             <SectionButton
               active={section === "system"}
               title="Data Health"
-              detail="Player State, media connection, and integrity checks."
+              detail="Integrity checks and connections."
+              icon={<Database size={18} />}
+              tone="emerald"
               onClick={() => setSection("system")}
             />
+
+            <div className="mt-4 flex items-center gap-2 rounded-2xl border border-white/[0.05] bg-black/20 px-3 py-2.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-600">
+              <Sparkles size={13} className="text-cyan-200/50" />
+              Teacher tools • live data
+            </div>
           </aside>
 
           <main className="min-w-0">
