@@ -1,0 +1,33 @@
+name: Run Delete Confirmation Feedback Fix
+
+on:
+  push:
+    branches: [fluffy-cloud]
+    paths:
+      - .github/workflows/run-fix-delete-confirmation-feedback.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fluffy-cloud
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - run: python scripts/fix_delete_confirmation_feedback.py
+      - run: |
+          npm ci
+          npm run build
+      - run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/admin/components/ArchivedStudentsPanel.tsx
+          git commit -m "Explain rejected permanent delete confirmation"
+          git push origin HEAD:fluffy-cloud
