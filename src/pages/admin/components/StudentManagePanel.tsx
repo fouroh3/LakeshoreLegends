@@ -276,6 +276,9 @@ export default function StudentManagePanel({
               <div className="mt-2 rounded-2xl border border-white/10 bg-black/25 px-3 py-3 text-sm text-zinc-300">
                 {clean(editingStudent.homeroom)}
               </div>
+              <div className="mt-1 text-[11px] leading-4 text-zinc-500">
+                Use Move Homeroom below to change classes safely.
+              </div>
             </div>
             <div className="flex gap-2">
               <button
@@ -421,7 +424,7 @@ export default function StudentManagePanel({
                         onClick={() => beginMove(student)}
                         className="rounded-xl border border-violet-300/20 bg-violet-300/10 px-3 py-1.5 text-xs font-bold text-violet-100"
                       >
-                        Move
+                        Move Homeroom
                       </button>
                       <button
                         type="button"

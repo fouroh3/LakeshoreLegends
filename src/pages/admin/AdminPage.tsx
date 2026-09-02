@@ -479,7 +479,12 @@ export default function AdminPage() {
         type: "ok",
         msg: `Moved student to ${args.homeroom}. New StudentID: ${nextId}. All linked game state migrated automatically.`,
       });
-      await Promise.all([reloadStudents(), reloadSystemStatus()]);
+
+      // Do not immediately replace the backend-confirmed move with the
+      // published Master CSV; Google can briefly publish the old homeroom/ID.
+      // The local student already contains the authoritative moved identity
+      // while preserving the rest of the migrated player data.
+      await reloadSystemStatus();
       return result;
     } catch (err: any) {
       setNotice({
@@ -602,7 +607,11 @@ export default function AdminPage() {
       const student = students.find((row) => normId(row.id) === id);
 
       setStudents((prev) => prev.filter((row) => normId(row.id) !== id));
-      await Promise.all([reloadStudents(), reloadSystemStatus()]);
+
+      // Archive is confirmed by the backend. Avoid an immediate published-CSV
+      // reload that can briefly re-add the archived student while Google
+      // propagation catches up.
+      await reloadSystemStatus();
       setNotice({
         type: "ok",
         msg: `${student ? `${student.first} ${student.last}` : id} archived. Their StudentID and history are preserved and will not be reused.`,
