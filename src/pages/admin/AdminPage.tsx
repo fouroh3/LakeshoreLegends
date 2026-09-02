@@ -14,7 +14,6 @@ import {
   Image as ImageIcon,
   LayoutDashboard,
   PackageOpen,
-  PanelLeft,
   PawPrint,
   Shield,
   ShoppingBag,
@@ -1151,25 +1150,6 @@ export default function AdminPage() {
 
         <div className="grid gap-5 lg:grid-cols-[292px_minmax(0,1fr)] xl:gap-6">
           <aside className="self-start rounded-[28px] border border-white/[0.08] bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.07),transparent_28%),rgba(9,9,11,0.82)] p-3 shadow-[0_20px_70px_rgba(0,0,0,0.30)] backdrop-blur-xl lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto lg:overscroll-contain">
-            <div className="mb-1 rounded-[22px] border border-cyan-300/10 bg-[linear-gradient(145deg,rgba(34,211,238,0.08),rgba(139,92,246,0.04),rgba(0,0,0,0.20))] p-3.5">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[15px] border border-cyan-300/15 bg-cyan-300/10 text-cyan-100 shadow-[0_0_24px_rgba(34,211,238,0.08)]">
-                  <PanelLeft size={19} />
-                </div>
-                <div className="min-w-0">
-                  <div className="text-[10px] font-black uppercase tracking-[0.22em] text-cyan-100/60">
-                    Navigation
-                  </div>
-                  <div className="mt-0.5 text-sm font-black text-white">
-                    Choose a workspace
-                  </div>
-                </div>
-              </div>
-              <div className="mt-3 text-[11px] leading-4 text-zinc-500">
-                Everything in Global Manager is grouped by the kind of teacher task it controls.
-              </div>
-            </div>
-
             <NavGroupLabel tone="cyan">Overview</NavGroupLabel>
             <SectionButton
               active={section === "overview"}
