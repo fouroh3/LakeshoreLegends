@@ -1,0 +1,31 @@
+name: Run Global Manager Sidebar Polish v2
+on:
+  push:
+    branches: [fluffy-cloud]
+    paths:
+      - .github/workflows/run-admin-sidebar-polish-v2.yml
+permissions:
+  contents: write
+jobs:
+  polish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fluffy-cloud
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Apply sidebar polish
+        run: python scripts/polish_admin_sidebar.py
+      - name: Install dependencies
+        run: npm ci
+      - name: Validate production build
+        run: npm run build
+      - name: Commit polish
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/admin/AdminPage.tsx
+          git commit -m "Polish Global Manager navigation sidebar"
+          git push origin HEAD:fluffy-cloud
