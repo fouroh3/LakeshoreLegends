@@ -10,6 +10,7 @@ import {
   ShieldAlert,
   Trash2,
 } from "lucide-react";
+import { getFinalExaminerState } from "../../battle/finalExaminerApi";
 import {
   adminStartNewSchoolYear,
   adminYearRolloverPreview,
@@ -63,16 +64,27 @@ export default function AnnualRolloverPanel({ onCompleted }: Props) {
   const [acknowledged, setAcknowledged] = useState(false);
   const [confirmation, setConfirmation] = useState("");
   const [result, setResult] = useState<AdminStartNewSchoolYearResult | null>(null);
+  const [finalExaminerActive, setFinalExaminerActive] = useState(false);
 
   const loadPreview = async () => {
     setLoading(true);
     setError("");
     try {
-      const next = await adminYearRolloverPreview();
+      const [next, finalExaminer] = await Promise.all([
+        adminYearRolloverPreview(),
+        getFinalExaminerState(),
+      ]);
       setPreview(next);
+      setFinalExaminerActive(
+        Boolean(finalExaminer.active && finalExaminer.phase !== "VICTORY")
+      );
     } catch (err: any) {
       setPreview(null);
-      setError(err?.message || "Could not load the school-year rollover preview.");
+      setFinalExaminerActive(false);
+      setError(
+        err?.message ||
+          "Could not verify the school-year rollover preview and battle state."
+      );
     } finally {
       setLoading(false);
     }
@@ -89,12 +101,16 @@ export default function AnnualRolloverPanel({ onCompleted }: Props) {
     !loading &&
     !running &&
     activeBattles.length === 0 &&
+    !finalExaminerActive &&
     archiveLabel.trim().length > 0 &&
     acknowledged &&
     exactConfirmation;
 
   const firstIdEntries = useMemo(
-    () => Object.entries(preview?.firstIds ?? {}).sort((a, b) => a[0].localeCompare(b[0], "en", { numeric: true })),
+    () =>
+      Object.entries(preview?.firstIds ?? {}).sort((a, b) =>
+        a[0].localeCompare(b[0], "en", { numeric: true })
+      ),
     [preview?.firstIds]
   );
 
@@ -105,12 +121,23 @@ export default function AnnualRolloverPanel({ onCompleted }: Props) {
     setResult(null);
 
     try {
+      // Re-check immediately before the destructive call so a Final Examiner
+      // raid that started after the preview cannot slip through the UI guard.
+      const finalExaminer = await getFinalExaminerState();
+      if (finalExaminer.active && finalExaminer.phase !== "VICTORY") {
+        setFinalExaminerActive(true);
+        throw new Error(
+          "End the active Final Examiner raid before starting a new school year."
+        );
+      }
+
       const next = await adminStartNewSchoolYear({
         archiveLabel: archiveLabel.trim(),
         confirmation,
         acknowledged,
       });
       setResult(next);
+      setFinalExaminerActive(false);
       setPreview((current) =>
         current
           ? {
@@ -177,7 +204,9 @@ export default function AnnualRolloverPanel({ onCompleted }: Props) {
           <div className="flex items-start gap-3">
             <CheckCircle2 size={22} className="mt-0.5 shrink-0 text-emerald-200" />
             <div className="min-w-0 flex-1">
-              <div className="text-lg font-black text-emerald-50">New school year is ready.</div>
+              <div className="text-lg font-black text-emerald-50">
+                New school year is ready.
+              </div>
               <p className="mt-1 text-sm leading-6 text-emerald-100/65">
                 Live StudentIDs are released and the next fresh roster can begin at 001. The Store was closed automatically.
               </p>
@@ -193,7 +222,8 @@ export default function AnnualRolloverPanel({ onCompleted }: Props) {
               </a>
               {result.media?.failed ? (
                 <div className="mt-3 text-xs leading-5 text-amber-200/75">
-                  Student data reset successfully, but {result.media.failed} old media object{result.media.failed === 1 ? "" : "s"} could not be removed from R2. The archive is safe and the new roster can still be imported.
+                  Student data reset successfully, but {result.media.failed} old media object
+                  {result.media.failed === 1 ? "" : "s"} could not be removed from R2. The archive is safe and the new roster can still be imported.
                 </div>
               ) : null}
             </div>
@@ -232,14 +262,20 @@ export default function AnnualRolloverPanel({ onCompleted }: Props) {
         />
       </div>
 
-      {activeBattles.length > 0 && (
+      {(activeBattles.length > 0 || finalExaminerActive) && (
         <div className="rounded-[24px] border border-red-300/25 bg-red-500/[0.09] p-4">
           <div className="flex items-start gap-3">
             <ShieldAlert size={21} className="mt-0.5 shrink-0 text-red-200" />
             <div>
               <div className="font-black text-red-50">End active battles first.</div>
               <div className="mt-1 text-sm leading-6 text-red-100/70">
-                Annual rollover is blocked while these homerooms are active: {activeBattles.join(", ")}.
+                {activeBattles.length > 0
+                  ? `Regular battle activity: ${activeBattles.join(", ")}. `
+                  : ""}
+                {finalExaminerActive
+                  ? "The Final Examiner raid is also active. "
+                  : ""}
+                Annual rollover stays locked until all active battles are finished.
               </div>
             </div>
           </div>
@@ -254,10 +290,12 @@ export default function AnnualRolloverPanel({ onCompleted }: Props) {
           </div>
           <div className="mt-3 grid gap-2 text-sm leading-6 text-zinc-400 sm:grid-cols-2">
             <div className="rounded-2xl border border-white/[0.06] bg-white/[0.025] p-3">
-              <span className="font-bold text-zinc-200">Frozen year archive</span><br />Every current spreadsheet sheet is copied to a separate Google Spreadsheet and formulas are frozen to values.
+              <span className="font-bold text-zinc-200">Frozen year archive</span>
+              <br />Every current spreadsheet sheet is copied to a separate Google Spreadsheet and formulas are frozen to values.
             </div>
             <div className="rounded-2xl border border-white/[0.06] bg-white/[0.025] p-3">
-              <span className="font-bold text-zinc-200">Game configuration</span><br />Store PIN/cost rules, R2 connection, quest configuration, and the Global Manager itself stay configured.
+              <span className="font-bold text-zinc-200">Game configuration</span>
+              <br />Store PIN/cost rules, R2 connection, quest configuration, and the Global Manager itself stay configured.
             </div>
           </div>
 
@@ -368,7 +406,9 @@ export default function AnnualRolloverPanel({ onCompleted }: Props) {
           {!loading && preview?.lastArchiveLabel ? (
             <div className="mt-4 text-[11px] leading-5 text-zinc-600">
               Last annual archive: {preview.lastArchiveLabel}
-              {preview.lastRolloverAt ? ` • ${new Date(preview.lastRolloverAt).toLocaleString()}` : ""}
+              {preview.lastRolloverAt
+                ? ` • ${new Date(preview.lastRolloverAt).toLocaleString()}`
+                : ""}
             </div>
           ) : null}
         </div>
