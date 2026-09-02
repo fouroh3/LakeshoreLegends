@@ -96,62 +96,68 @@ const NAV_TONES: Record<
   {
     active: string;
     icon: string;
+    iconIdle: string;
     rail: string;
     dot: string;
     label: string;
     divider: string;
-    group: string;
+    track: string;
   }
 > = {
   cyan: {
     active:
-      "border-cyan-300/35 bg-cyan-300/[0.12] shadow-[0_10px_28px_rgba(34,211,238,0.11)]",
-    icon: "border-cyan-300/25 bg-cyan-300/12 text-cyan-50",
-    rail: "bg-cyan-300 shadow-[0_0_14px_rgba(34,211,238,0.70)]",
-    dot: "bg-cyan-300 shadow-[0_0_10px_rgba(34,211,238,0.70)]",
+      "bg-[linear-gradient(90deg,rgba(34,211,238,0.16),rgba(34,211,238,0.055)_58%,transparent_100%)] shadow-[inset_0_0_0_1px_rgba(34,211,238,0.10),0_12px_28px_rgba(34,211,238,0.045)]",
+    icon: "bg-cyan-300/14 text-cyan-50 shadow-[0_0_22px_rgba(34,211,238,0.10)]",
+    iconIdle: "bg-cyan-300/[0.055] text-cyan-200/55 group-hover:bg-cyan-300/[0.09] group-hover:text-cyan-100/90",
+    rail: "bg-cyan-300 shadow-[0_0_15px_rgba(34,211,238,0.70)]",
+    dot: "bg-cyan-300 shadow-[0_0_12px_rgba(34,211,238,0.80)]",
     label: "text-cyan-100/90",
-    divider: "bg-cyan-300/20",
-    group: "border-cyan-300/12 bg-cyan-300/[0.025]",
+    divider: "bg-gradient-to-r from-cyan-300/28 to-transparent",
+    track: "bg-cyan-300/16",
   },
   sky: {
     active:
-      "border-sky-300/35 bg-sky-300/[0.11] shadow-[0_10px_28px_rgba(125,211,252,0.10)]",
-    icon: "border-sky-300/25 bg-sky-300/12 text-sky-50",
-    rail: "bg-sky-300 shadow-[0_0_14px_rgba(125,211,252,0.65)]",
-    dot: "bg-sky-300 shadow-[0_0_10px_rgba(125,211,252,0.65)]",
-    label: "text-sky-100/90",
-    divider: "bg-sky-300/20",
-    group: "border-sky-300/12 bg-sky-300/[0.025]",
+      "bg-[linear-gradient(90deg,rgba(125,211,252,0.145),rgba(125,211,252,0.05)_58%,transparent_100%)] shadow-[inset_0_0_0_1px_rgba(125,211,252,0.09),0_12px_28px_rgba(125,211,252,0.04)]",
+    icon: "bg-sky-300/14 text-sky-50 shadow-[0_0_22px_rgba(125,211,252,0.09)]",
+    iconIdle: "bg-sky-300/[0.05] text-sky-200/50 group-hover:bg-sky-300/[0.085] group-hover:text-sky-100/90",
+    rail: "bg-sky-300 shadow-[0_0_15px_rgba(125,211,252,0.65)]",
+    dot: "bg-sky-300 shadow-[0_0_12px_rgba(125,211,252,0.72)]",
+    label: "text-sky-100/88",
+    divider: "bg-gradient-to-r from-sky-300/25 to-transparent",
+    track: "bg-sky-300/14",
   },
   violet: {
     active:
-      "border-violet-300/35 bg-violet-300/[0.11] shadow-[0_10px_28px_rgba(196,181,253,0.10)]",
-    icon: "border-violet-300/25 bg-violet-300/12 text-violet-50",
-    rail: "bg-violet-300 shadow-[0_0_14px_rgba(196,181,253,0.65)]",
-    dot: "bg-violet-300 shadow-[0_0_10px_rgba(196,181,253,0.65)]",
-    label: "text-violet-100/90",
-    divider: "bg-violet-300/20",
-    group: "border-violet-300/12 bg-violet-300/[0.025]",
+      "bg-[linear-gradient(90deg,rgba(196,181,253,0.145),rgba(196,181,253,0.05)_58%,transparent_100%)] shadow-[inset_0_0_0_1px_rgba(196,181,253,0.09),0_12px_28px_rgba(196,181,253,0.04)]",
+    icon: "bg-violet-300/14 text-violet-50 shadow-[0_0_22px_rgba(196,181,253,0.09)]",
+    iconIdle: "bg-violet-300/[0.05] text-violet-200/50 group-hover:bg-violet-300/[0.085] group-hover:text-violet-100/90",
+    rail: "bg-violet-300 shadow-[0_0_15px_rgba(196,181,253,0.65)]",
+    dot: "bg-violet-300 shadow-[0_0_12px_rgba(196,181,253,0.72)]",
+    label: "text-violet-100/88",
+    divider: "bg-gradient-to-r from-violet-300/25 to-transparent",
+    track: "bg-violet-300/14",
   },
   amber: {
     active:
-      "border-amber-300/35 bg-amber-300/[0.10] shadow-[0_10px_28px_rgba(252,211,77,0.09)]",
-    icon: "border-amber-300/25 bg-amber-300/12 text-amber-50",
-    rail: "bg-amber-300 shadow-[0_0_14px_rgba(252,211,77,0.60)]",
-    dot: "bg-amber-300 shadow-[0_0_10px_rgba(252,211,77,0.60)]",
-    label: "text-amber-100/90",
-    divider: "bg-amber-300/20",
-    group: "border-amber-300/12 bg-amber-300/[0.025]",
+      "bg-[linear-gradient(90deg,rgba(252,211,77,0.13),rgba(252,211,77,0.045)_58%,transparent_100%)] shadow-[inset_0_0_0_1px_rgba(252,211,77,0.085),0_12px_28px_rgba(252,211,77,0.035)]",
+    icon: "bg-amber-300/13 text-amber-50 shadow-[0_0_22px_rgba(252,211,77,0.085)]",
+    iconIdle: "bg-amber-300/[0.045] text-amber-200/48 group-hover:bg-amber-300/[0.08] group-hover:text-amber-100/90",
+    rail: "bg-amber-300 shadow-[0_0_15px_rgba(252,211,77,0.60)]",
+    dot: "bg-amber-300 shadow-[0_0_12px_rgba(252,211,77,0.68)]",
+    label: "text-amber-100/88",
+    divider: "bg-gradient-to-r from-amber-300/24 to-transparent",
+    track: "bg-amber-300/13",
   },
   emerald: {
     active:
-      "border-emerald-300/35 bg-emerald-300/[0.10] shadow-[0_10px_28px_rgba(110,231,183,0.09)]",
-    icon: "border-emerald-300/25 bg-emerald-300/12 text-emerald-50",
-    rail: "bg-emerald-300 shadow-[0_0_14px_rgba(110,231,183,0.60)]",
-    dot: "bg-emerald-300 shadow-[0_0_10px_rgba(110,231,183,0.60)]",
-    label: "text-emerald-100/90",
-    divider: "bg-emerald-300/20",
-    group: "border-emerald-300/12 bg-emerald-300/[0.025]",
+      "bg-[linear-gradient(90deg,rgba(110,231,183,0.13),rgba(110,231,183,0.045)_58%,transparent_100%)] shadow-[inset_0_0_0_1px_rgba(110,231,183,0.085),0_12px_28px_rgba(110,231,183,0.035)]",
+    icon: "bg-emerald-300/13 text-emerald-50 shadow-[0_0_22px_rgba(110,231,183,0.085)]",
+    iconIdle: "bg-emerald-300/[0.045] text-emerald-200/48 group-hover:bg-emerald-300/[0.08] group-hover:text-emerald-100/90",
+    rail: "bg-emerald-300 shadow-[0_0_15px_rgba(110,231,183,0.60)]",
+    dot: "bg-emerald-300 shadow-[0_0_12px_rgba(110,231,183,0.68)]",
+    label: "text-emerald-100/88",
+    divider: "bg-gradient-to-r from-emerald-300/24 to-transparent",
+    track: "bg-emerald-300/13",
   },
 };
 
@@ -167,10 +173,12 @@ function NavGroup({
   const cfg = NAV_TONES[tone];
 
   return (
-    <section
-      className={`relative overflow-hidden rounded-[22px] border p-2.5 ${cfg.group}`}
-    >
-      <div className="flex items-center gap-2 px-1.5 pb-2 pt-0.5">
+    <section className="relative pl-3">
+      <span
+        aria-hidden="true"
+        className={`absolute bottom-1 left-[3px] top-8 w-px ${cfg.track}`}
+      />
+      <div className="flex items-center gap-2 px-1 pb-1.5">
         <span className={`h-2 w-2 rounded-full ${cfg.dot}`} />
         <span
           className={`text-[10px] font-black uppercase tracking-[0.22em] ${cfg.label}`}
@@ -179,7 +187,7 @@ function NavGroup({
         </span>
         <span className={`h-px flex-1 ${cfg.divider}`} />
       </div>
-      <div className="space-y-1.5">{children}</div>
+      <div className="space-y-0.5">{children}</div>
     </section>
   );
 }
@@ -207,27 +215,25 @@ function SectionButton({
       onClick={onClick}
       aria-current={active ? "page" : undefined}
       className={[
-        "group relative w-full overflow-hidden rounded-[16px] border px-2.5 py-2.5 text-left transition-all duration-200",
+        "group relative w-full overflow-hidden rounded-[14px] px-2 py-2.5 text-left transition-all duration-200",
         active
           ? cfg.active
-          : "border-white/[0.055] bg-black/10 hover:translate-x-[2px] hover:border-white/10 hover:bg-white/[0.055]",
+          : "bg-transparent hover:translate-x-[2px] hover:bg-white/[0.035]",
       ].join(" ")}
     >
       <span
         className={[
-          "absolute inset-y-2.5 left-0 w-[3px] rounded-r-full transition-opacity duration-200",
+          "absolute inset-y-2.5 left-0 w-[3px] rounded-r-full transition-all duration-200",
           cfg.rail,
-          active ? "opacity-100" : "opacity-0 group-hover:opacity-35",
+          active ? "opacity-100" : "opacity-0 group-hover:opacity-30",
         ].join(" ")}
       />
 
       <div className="flex items-center gap-2.5">
         <div
           className={[
-            "flex h-9 w-9 shrink-0 items-center justify-center rounded-[12px] border transition-all duration-200",
-            active
-              ? cfg.icon
-              : "border-white/[0.07] bg-black/20 text-zinc-500 group-hover:border-white/10 group-hover:text-zinc-300",
+            "flex h-9 w-9 shrink-0 items-center justify-center rounded-[12px] transition-all duration-200",
+            active ? cfg.icon : cfg.iconIdle,
           ].join(" ")}
         >
           {icon}
@@ -237,15 +243,15 @@ function SectionButton({
           <div
             className={[
               "truncate text-[13px] font-black tracking-[-0.01em] transition-colors",
-              active ? "text-white" : "text-zinc-200 group-hover:text-white",
+              active ? "text-white" : "text-zinc-300 group-hover:text-white",
             ].join(" ")}
           >
             {title}
           </div>
           <div
             className={[
-              "mt-0.5 line-clamp-2 text-[10.5px] leading-[1.3] transition-colors",
-              active ? "text-zinc-300/75" : "text-zinc-600 group-hover:text-zinc-400",
+              "mt-0.5 truncate text-[10.5px] leading-[1.3] transition-colors",
+              active ? "text-zinc-300/70" : "text-zinc-600 group-hover:text-zinc-400",
             ].join(" ")}
           >
             {detail}
@@ -253,12 +259,12 @@ function SectionButton({
         </div>
 
         <ChevronRight
-          size={15}
+          size={14}
           className={[
             "shrink-0 transition-all duration-200",
             active
-              ? "translate-x-0 text-white/80"
-              : "-translate-x-1 text-zinc-700 group-hover:translate-x-0 group-hover:text-zinc-400",
+              ? "translate-x-0 text-white/65"
+              : "-translate-x-1 text-zinc-800 opacity-0 group-hover:translate-x-0 group-hover:text-zinc-500 group-hover:opacity-100",
           ].join(" ")}
         />
       </div>
@@ -371,12 +377,14 @@ export default function AdminPage() {
         if (!sidebar) return;
 
         if (window.innerWidth < 1024) {
+          sidebar.style.height = "";
           sidebar.style.maxHeight = "";
           return;
         }
 
         const top = Math.max(16, sidebar.getBoundingClientRect().top);
         const available = Math.max(360, window.innerHeight - top - 16);
+        sidebar.style.height = `${available}px`;
         sidebar.style.maxHeight = `${available}px`;
       });
     };
@@ -1197,9 +1205,13 @@ export default function AdminPage() {
         <div className="grid gap-5 lg:grid-cols-[310px_minmax(0,1fr)] xl:gap-6">
           <aside
             ref={sidebarRef}
-            className="self-start rounded-[28px] border border-white/[0.09] bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.08),transparent_30%),rgba(8,8,10,0.90)] p-2.5 shadow-[0_24px_80px_rgba(0,0,0,0.38)] backdrop-blur-xl lg:sticky lg:top-4 lg:overflow-y-auto lg:overscroll-contain"
+            className="relative self-start overflow-hidden rounded-[30px] bg-[radial-gradient(circle_at_0%_8%,rgba(34,211,238,0.085),transparent_26%),radial-gradient(circle_at_0%_48%,rgba(167,139,250,0.065),transparent_30%),radial-gradient(circle_at_0%_78%,rgba(251,191,36,0.05),transparent_26%),radial-gradient(circle_at_0%_100%,rgba(110,231,183,0.05),transparent_24%),rgba(7,7,9,0.94)] p-3 shadow-[0_26px_90px_rgba(0,0,0,0.42)] ring-1 ring-white/[0.045] backdrop-blur-xl lg:sticky lg:top-4 lg:overflow-y-auto lg:overscroll-contain"
           >
-            <nav aria-label="Global Manager sections" className="space-y-2.5">
+            <span
+              aria-hidden="true"
+              className="pointer-events-none absolute bottom-8 left-0 top-8 w-px bg-[linear-gradient(to_bottom,rgba(34,211,238,0.55),rgba(125,211,252,0.34)_24%,rgba(196,181,253,0.36)_52%,rgba(252,211,77,0.30)_78%,rgba(110,231,183,0.42))]"
+            />
+            <nav aria-label="Global Manager sections" className="space-y-4 pb-1 pt-1">
               <NavGroup title="Overview" tone="cyan">
                 <SectionButton
                   active={section === "overview"}
