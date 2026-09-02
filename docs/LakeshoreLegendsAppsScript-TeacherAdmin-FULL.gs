@@ -31,7 +31,7 @@
  *   overwritten by the Teacher Admin importer.
  * ========================================================= */
 
-const ADMIN_API_VERSION = "2026-09-01.4";
+const ADMIN_API_VERSION = "2026-09-01.5";
 
 const CFG = {
   // Master
@@ -6303,7 +6303,7 @@ function adminUpdateStore_(args) {
     const nowIso = new Date().toISOString();
     const openNonce = Utilities.getUuid();
 
-    adminSetStoreControlValue_("StoreLocked", storeLocked);
+    adminSetStoreControlValue_("StoreLocked", storeLocked ? "TRUE" : "FALSE");
     adminSetStoreControlValue_("StorePIN", storePin);
     adminSetStoreControlValue_("XPPerPoint", xpPerPoint);
     adminSetStoreControlValue_("SkillTokenCost", skillTokenCost);

@@ -217,8 +217,10 @@ export default function StoreSettingsPanel() {
           </p>
 
           <div className="mt-4 grid gap-3 sm:grid-cols-3">
-            <div>
-              <FieldLabel>XP per +1 Attribute</FieldLabel>
+            <div className="flex min-w-0 flex-col">
+              <div className="flex min-h-[38px] items-end">
+                <FieldLabel>XP per +1 Attribute</FieldLabel>
+              </div>
               <input
                 type="number"
                 min={1}
@@ -234,12 +236,14 @@ export default function StoreSettingsPanel() {
                       : prev
                   )
                 }
-                className="mt-2 w-full rounded-2xl border border-white/10 bg-zinc-950 px-4 py-3 text-center text-lg font-black text-white outline-none"
+                className="mt-2 h-[58px] w-full rounded-2xl border border-white/10 bg-zinc-950 px-4 py-3 text-center text-lg font-black text-white outline-none"
               />
             </div>
 
-            <div>
-              <FieldLabel>Tokens per Skill</FieldLabel>
+            <div className="flex min-w-0 flex-col">
+              <div className="flex min-h-[38px] items-end">
+                <FieldLabel>Tokens per Skill</FieldLabel>
+              </div>
               <input
                 type="number"
                 min={1}
@@ -258,12 +262,14 @@ export default function StoreSettingsPanel() {
                       : prev
                   )
                 }
-                className="mt-2 w-full rounded-2xl border border-white/10 bg-zinc-950 px-4 py-3 text-center text-lg font-black text-white outline-none"
+                className="mt-2 h-[58px] w-full rounded-2xl border border-white/10 bg-zinc-950 px-4 py-3 text-center text-lg font-black text-white outline-none"
               />
             </div>
 
-            <div>
-              <FieldLabel>Max Attribute Buys</FieldLabel>
+            <div className="flex min-w-0 flex-col">
+              <div className="flex min-h-[38px] items-end">
+                <FieldLabel>Max Attribute Buys</FieldLabel>
+              </div>
               <input
                 type="number"
                 min={1}
@@ -282,7 +288,7 @@ export default function StoreSettingsPanel() {
                       : prev
                   )
                 }
-                className="mt-2 w-full rounded-2xl border border-white/10 bg-zinc-950 px-4 py-3 text-center text-lg font-black text-white outline-none"
+                className="mt-2 h-[58px] w-full rounded-2xl border border-white/10 bg-zinc-950 px-4 py-3 text-center text-lg font-black text-white outline-none"
               />
             </div>
           </div>
