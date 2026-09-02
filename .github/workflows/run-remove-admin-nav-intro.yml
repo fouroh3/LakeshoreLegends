@@ -1,0 +1,59 @@
+name: Run Admin Sidebar Intro Removal
+on:
+  push:
+    branches: [fluffy-cloud]
+    paths:
+      - .github/workflows/run-remove-admin-nav-intro.yml
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fluffy-cloud
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Remove sidebar intro block
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('src/pages/admin/AdminPage.tsx')
+          s = p.read_text()
+          s = s.replace('  PanelLeft,\n', '', 1)
+          old = '''            <div className="mb-1 rounded-[22px] border border-cyan-300/10 bg-[linear-gradient(145deg,rgba(34,211,238,0.08),rgba(139,92,246,0.04),rgba(0,0,0,0.20))] p-3.5">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[15px] border border-cyan-300/15 bg-cyan-300/10 text-cyan-100 shadow-[0_0_24px_rgba(34,211,238,0.08)]">
+                  <PanelLeft size={19} />
+                </div>
+                <div className="min-w-0">
+                  <div className="text-[10px] font-black uppercase tracking-[0.22em] text-cyan-100/60">
+                    Navigation
+                  </div>
+                  <div className="mt-0.5 text-sm font-black text-white">
+                    Choose a workspace
+                  </div>
+                </div>
+              </div>
+              <div className="mt-3 text-[11px] leading-4 text-zinc-500">
+                Everything in Global Manager is grouped by the kind of teacher task it controls.
+              </div>
+            </div>
+
+'''
+          if old not in s:
+              raise SystemExit('sidebar intro block not found')
+          s = s.replace(old, '', 1)
+          p.write_text(s)
+          PY
+      - run: npm ci
+      - run: npm run build
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/admin/AdminPage.tsx
+          git commit -m "Remove redundant admin sidebar intro"
+          git push origin HEAD:fluffy-cloud
