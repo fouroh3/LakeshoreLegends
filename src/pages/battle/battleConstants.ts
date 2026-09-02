@@ -2,7 +2,16 @@
 export const BATTLE_CONTROL_CSV =
   "https://docs.google.com/spreadsheets/d/e/2PACX-1vSsHQNK1vvVY-V6nI4kOEilMlAdcnPCdM50QC3-mO4OQsoBDN0l_ROeTUoob3OhJpKD7zIZPXP1VrJw/pub?gid=653070188&single=true&output=csv";
 
-export const HP_API_URL = "/ll-api";
+const APPS_SCRIPT_API_URL =
+  (import.meta as any).env?.VITE_HP_WEB_APP_URL ||
+  "https://script.google.com/macros/s/AKfycbw6gMIFYPvaljF3Ls-waojzprU6bygZZonOIJeKLopN2NSKgkDT-EsRKznxQiGpth_6/exec";
+
+// Local Vite development uses the explicit redirect-aware proxy in vite.config.ts.
+// Production talks directly to Apps Script so long-running teacher/admin actions
+// are not constrained by Netlify's external-proxy timeout.
+export const HP_API_URL = (import.meta as any).env?.DEV
+  ? "/ll-api"
+  : APPS_SCRIPT_API_URL;
 
 export const BATTLE_GUILD_TOTALS_CSV =
   "https://docs.google.com/spreadsheets/d/e/2PACX-1vSsHQNK1vvVY-V6nI4kOEilMlAdcnPCdM50QC3-mO4OQsoBDN0l_ROeTUoob3OhJpKD7zIZPXP1VrJw/pub?gid=2001284714&single=true&output=csv";
