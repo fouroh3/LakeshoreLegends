@@ -1158,11 +1158,13 @@ function HeroBanner({
   person,
   healthState,
   guildTheme,
+  setExpandedHeroUrl,
 }: {
   fullName: string;
   person: any;
   healthState: { label: string; pillClass: string };
   guildTheme: GuildTheme;
+  setExpandedHeroUrl: (url: string | null) => void;
 }) {
   return (
     <div
@@ -1194,12 +1196,29 @@ function HeroBanner({
             <div className={`absolute inset-0 ${guildTheme.portraitGlow}`} />
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.12),transparent_48%)]" />
             <div className="relative flex h-full w-full items-center justify-center">
-              <Avatar
-                name={fullName}
-                src={person.portraitUrl}
-                size={176}
-                className="h-full w-full"
-              />
+              {person.portraitUrl ? (
+                <button
+                  type="button"
+                  onClick={() => setExpandedHeroUrl(person.portraitUrl || null)}
+                  className="h-full w-full cursor-zoom-in transition-transform duration-300 hover:scale-[1.025]"
+                  aria-label={`View ${fullName} hero image`}
+                  title="Click to view full hero image"
+                >
+                  <Avatar
+                    name={fullName}
+                    src={person.portraitUrl}
+                    size={176}
+                    className="h-full w-full"
+                  />
+                </button>
+              ) : (
+                <Avatar
+                  name={fullName}
+                  src={person.portraitUrl}
+                  size={176}
+                  className="h-full w-full"
+                />
+              )}
             </div>
           </div>
         </div>
@@ -1651,6 +1670,7 @@ const skillList = useMemo(() => {
   const [expandedCompanionUrl, setExpandedCompanionUrl] = useState<string | null>(
     null
   );
+  const [expandedHeroUrl, setExpandedHeroUrl] = useState<string | null>(null);
 
   console.log("PERSON", person);
   console.log("COMPANION", companion);
@@ -1789,6 +1809,7 @@ console.log({
                         person={person}
                         healthState={healthState}
                         guildTheme={guildTheme}
+                        setExpandedHeroUrl={setExpandedHeroUrl}
                       />
                     </div>
 
@@ -1913,6 +1934,29 @@ console.log({
             <img
               src={expandedCompanionUrl}
               alt="Expanded companion"
+              className="max-h-[85vh] max-w-[85vw] object-contain drop-shadow-[0_25px_40px_rgba(0,0,0,0.7)]"
+            />
+
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/30 to-transparent" />
+
+            <div className="absolute right-2 top-2 rounded-full border border-white/10 bg-black/60 px-3 py-1 text-xs text-zinc-300">
+              Click anywhere to close
+            </div>
+          </div>
+        </button>
+      )}
+
+      {expandedHeroUrl && (
+        <button
+          type="button"
+          onClick={() => setExpandedHeroUrl(null)}
+          className="fixed inset-0 z-[200] flex items-center justify-center bg-black/88 backdrop-blur-sm"
+          aria-label="Close expanded hero image"
+        >
+          <div className="relative max-h-[90vh] max-w-[90vw] p-4">
+            <img
+              src={expandedHeroUrl}
+              alt={`Expanded hero portrait of ${fullName}`}
               className="max-h-[85vh] max-w-[85vw] object-contain drop-shadow-[0_25px_40px_rgba(0,0,0,0.7)]"
             />
 
