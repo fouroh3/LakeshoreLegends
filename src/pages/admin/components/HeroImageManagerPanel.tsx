@@ -37,11 +37,14 @@ type Props = {
   students: Student[];
   busy: boolean;
   mediaConfigured: boolean;
-  mediaRepo?: string;
-  mediaBranch?: string;
+  mediaBucket?: string;
+  mediaPublicBaseUrl?: string;
   onConfigureMedia: (args: {
-    token: string;
-    branch?: string;
+    accountId: string;
+    accessKeyId: string;
+    secretAccessKey: string;
+    bucket: string;
+    publicBaseUrl: string;
   }) => Promise<AdminConfigureMediaResult>;
   onUpload: (args: {
     studentId: string;
@@ -169,16 +172,19 @@ export default function HeroImageManagerPanel({
   students,
   busy,
   mediaConfigured,
-  mediaRepo,
-  mediaBranch,
+  mediaBucket,
+  mediaPublicBaseUrl,
   onConfigureMedia,
   onUpload,
 }: Props) {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [queue, setQueue] = useState<QueuedImage[]>([]);
   const [dragging, setDragging] = useState(false);
-  const [token, setToken] = useState("");
-  const [branch, setBranch] = useState(mediaBranch || "main");
+  const [accountId, setAccountId] = useState("");
+  const [accessKeyId, setAccessKeyId] = useState("");
+  const [secretAccessKey, setSecretAccessKey] = useState("");
+  const [bucket, setBucket] = useState(mediaBucket || "lakeshore-legends-media");
+  const [publicBaseUrl, setPublicBaseUrl] = useState(mediaPublicBaseUrl || "");
   const [connecting, setConnecting] = useState(false);
   const [connectionError, setConnectionError] = useState("");
 
@@ -288,16 +294,27 @@ export default function HeroImageManagerPanel({
   };
 
   const connectMedia = async () => {
-    if (!token.trim()) return;
+    if (
+      !accountId.trim() ||
+      !accessKeyId.trim() ||
+      !secretAccessKey.trim() ||
+      !bucket.trim() ||
+      !publicBaseUrl.trim()
+    ) return;
+
     setConnecting(true);
     setConnectionError("");
 
     try {
       await onConfigureMedia({
-        token: token.trim(),
-        branch: branch.trim() || "main",
+        accountId: accountId.trim(),
+        accessKeyId: accessKeyId.trim(),
+        secretAccessKey: secretAccessKey.trim(),
+        bucket: bucket.trim(),
+        publicBaseUrl: publicBaseUrl.trim(),
       });
-      setToken("");
+      setAccessKeyId("");
+      setSecretAccessKey("");
     } catch (err: any) {
       setConnectionError(err?.message || "Could not connect image storage.");
     } finally {
@@ -367,33 +384,59 @@ export default function HeroImageManagerPanel({
               <Link2 size={20} />
             </div>
             <div className="min-w-0 flex-1">
-              <div className="font-black text-amber-100">Connect image storage once</div>
+              <div className="font-black text-amber-100">Connect Cloudflare R2 once</div>
               <p className="mt-1 max-w-3xl text-sm leading-6 text-amber-100/65">
-                Hero and companion images are stored with the website so they deploy automatically. Paste a GitHub fine-grained token with Contents read/write access to the LakeshoreLegends repository. The token is stored only in Apps Script properties, never in the browser or spreadsheet.
+                Hero and companion images are stored in Cloudflare R2, so teacher uploads do not create Git commits or trigger Netlify deploys. R2 credentials are stored only in Apps Script properties and are never written to the spreadsheet or returned to the browser.
               </p>
-              <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1fr)_180px_auto]">
+              <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+                <input
+                  value={accountId}
+                  onChange={(event) => setAccountId(event.target.value)}
+                  placeholder="R2 Account ID"
+                  className="rounded-2xl border border-white/10 bg-black/35 px-4 py-3 text-sm text-white outline-none placeholder:text-zinc-600"
+                />
                 <input
                   type="password"
-                  value={token}
-                  onChange={(event) => setToken(event.target.value)}
-                  placeholder="GitHub token"
+                  value={accessKeyId}
+                  onChange={(event) => setAccessKeyId(event.target.value)}
+                  placeholder="Access Key ID"
                   className="rounded-2xl border border-white/10 bg-black/35 px-4 py-3 text-sm text-white outline-none placeholder:text-zinc-600"
                 />
                 <input
-                  value={branch}
-                  onChange={(event) => setBranch(event.target.value)}
-                  placeholder="main"
+                  type="password"
+                  value={secretAccessKey}
+                  onChange={(event) => setSecretAccessKey(event.target.value)}
+                  placeholder="Secret Access Key"
                   className="rounded-2xl border border-white/10 bg-black/35 px-4 py-3 text-sm text-white outline-none placeholder:text-zinc-600"
                 />
-                <button
-                  type="button"
-                  onClick={connectMedia}
-                  disabled={connecting || !token.trim()}
-                  className="rounded-2xl bg-amber-300 px-4 py-3 text-sm font-black text-zinc-950 disabled:opacity-50"
-                >
-                  {connecting ? "Connecting..." : "Connect Media"}
-                </button>
+                <input
+                  value={bucket}
+                  onChange={(event) => setBucket(event.target.value)}
+                  placeholder="lakeshore-legends-media"
+                  className="rounded-2xl border border-white/10 bg-black/35 px-4 py-3 text-sm text-white outline-none placeholder:text-zinc-600"
+                />
+                <input
+                  value={publicBaseUrl}
+                  onChange={(event) => setPublicBaseUrl(event.target.value)}
+                  placeholder="https://...r2.dev"
+                  className="rounded-2xl border border-white/10 bg-black/35 px-4 py-3 text-sm text-white outline-none placeholder:text-zinc-600"
+                />
               </div>
+              <button
+                type="button"
+                onClick={connectMedia}
+                disabled={
+                  connecting ||
+                  !accountId.trim() ||
+                  !accessKeyId.trim() ||
+                  !secretAccessKey.trim() ||
+                  !bucket.trim() ||
+                  !publicBaseUrl.trim()
+                }
+                className="mt-3 rounded-2xl bg-amber-300 px-5 py-3 text-sm font-black text-zinc-950 disabled:opacity-50"
+              >
+                {connecting ? "Connecting..." : "Connect R2 Media"}
+              </button>
               {connectionError && (
                 <div className="mt-3 text-sm font-semibold text-red-200">
                   {connectionError}
@@ -409,8 +452,9 @@ export default function HeroImageManagerPanel({
           <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/15 bg-emerald-400/5 px-3 py-1.5 font-semibold text-emerald-100/80">
             <CheckCircle2 size={13} /> Media connected
           </span>
-          {mediaRepo && <span>{mediaRepo}</span>}
-          {mediaBranch && <span>• branch {mediaBranch}</span>}
+          <span>Cloudflare R2</span>
+          {mediaBucket && <span>• bucket {mediaBucket}</span>}
+          {mediaPublicBaseUrl && <span>• {mediaPublicBaseUrl}</span>}
         </div>
       )}
 

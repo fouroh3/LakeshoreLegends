@@ -2,7 +2,7 @@
 
 import { HP_API_URL } from "../battle/battleConstants";
 import { getBattleTeacherToken } from "../battle/battleTeacherApi";
-export const ADMIN_API_VERSION = "2026-09-01.6";
+export const ADMIN_API_VERSION = "2026-09-01.7";
 
 import type {
   AdminAttributeValues,
@@ -114,6 +114,9 @@ export type AdminSystemStatusResult = {
   missingPlayerStateIds?: string[];
   invalidPlayerStateIds?: string[];
   mediaConfigured?: boolean;
+  mediaProvider?: string;
+  mediaBucket?: string;
+  mediaPublicBaseUrl?: string;
   mediaRepo?: string;
   mediaBranch?: string;
   adminApiVersion?: string;
@@ -245,6 +248,9 @@ export type AdminConfigureMediaResult = {
   ok?: boolean;
   error?: string;
   mediaConfigured?: boolean;
+  mediaProvider?: string;
+  mediaBucket?: string;
+  mediaPublicBaseUrl?: string;
   mediaRepo?: string;
   mediaBranch?: string;
   [key: string]: any;
@@ -520,8 +526,11 @@ export async function adminAdjustSkill(args: {
 }
 
 export async function adminConfigureMedia(args: {
-  token: string;
-  branch?: string;
+  accountId: string;
+  accessKeyId: string;
+  secretAccessKey: string;
+  bucket: string;
+  publicBaseUrl: string;
 }) {
   return postAdminAction<AdminConfigureMediaResult>(
     "adminconfiguremedia",

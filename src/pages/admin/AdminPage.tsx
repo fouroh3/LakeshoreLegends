@@ -499,8 +499,11 @@ export default function AdminPage() {
   };
 
   const handleConfigureMedia = async (args: {
-    token: string;
-    branch?: string;
+    accountId: string;
+    accessKeyId: string;
+    secretAccessKey: string;
+    bucket: string;
+    publicBaseUrl: string;
   }): Promise<AdminConfigureMediaResult> => {
     setBusy(true);
     setNotice(null);
@@ -1306,8 +1309,8 @@ export default function AdminPage() {
                   students={students}
                   busy={busy}
                   mediaConfigured={Boolean(systemStatus?.mediaConfigured)}
-                  mediaRepo={systemStatus?.mediaRepo}
-                  mediaBranch={systemStatus?.mediaBranch}
+                  mediaBucket={systemStatus?.mediaBucket || systemStatus?.mediaRepo}
+                  mediaPublicBaseUrl={systemStatus?.mediaPublicBaseUrl || systemStatus?.mediaBranch}
                   onConfigureMedia={handleConfigureMedia}
                   onUpload={handleHeroUpload}
                 />

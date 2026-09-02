@@ -31,7 +31,7 @@
  *   overwritten by the Teacher Admin importer.
  * ========================================================= */
 
-const ADMIN_API_VERSION = "2026-09-01.6";
+const ADMIN_API_VERSION = "2026-09-01.7";
 
 const CFG = {
   // Master
@@ -5779,11 +5779,11 @@ function adminAdjustSkill_(args) {
 // Global Teacher Admin: Homeroom Moves + Media + Companions
 // =========================================================
 const ADMIN_MEDIA = {
-  TOKEN_PROP: "LL_GITHUB_TOKEN",
-  REPO_PROP: "LL_GITHUB_REPO",
-  BRANCH_PROP: "LL_GITHUB_MEDIA_BRANCH",
-  DEFAULT_REPO: "fouroh3/LakeshoreLegends",
-  DEFAULT_BRANCH: "main",
+  R2_ACCOUNT_ID_PROP: "LL_R2_ACCOUNT_ID",
+  R2_ACCESS_KEY_PROP: "LL_R2_ACCESS_KEY_ID",
+  R2_SECRET_KEY_PROP: "LL_R2_SECRET_ACCESS_KEY",
+  R2_BUCKET_PROP: "LL_R2_BUCKET",
+  R2_PUBLIC_BASE_URL_PROP: "LL_R2_PUBLIC_BASE_URL",
   TXN_SHEET: "Media_Transactions",
   MAX_BYTES: 8 * 1024 * 1024,
 };
@@ -5791,18 +5791,34 @@ const ADMIN_MEDIA = {
 function adminMediaConfig_() {
   const props = PropertiesService.getScriptProperties();
   return {
-    token: String(props.getProperty(ADMIN_MEDIA.TOKEN_PROP) || "").trim(),
-    repo: norm_(props.getProperty(ADMIN_MEDIA.REPO_PROP) || ADMIN_MEDIA.DEFAULT_REPO),
-    branch: norm_(props.getProperty(ADMIN_MEDIA.BRANCH_PROP) || ADMIN_MEDIA.DEFAULT_BRANCH),
+    accountId: String(props.getProperty(ADMIN_MEDIA.R2_ACCOUNT_ID_PROP) || "").trim(),
+    accessKeyId: String(props.getProperty(ADMIN_MEDIA.R2_ACCESS_KEY_PROP) || "").trim(),
+    secretAccessKey: String(props.getProperty(ADMIN_MEDIA.R2_SECRET_KEY_PROP) || "").trim(),
+    bucket: String(props.getProperty(ADMIN_MEDIA.R2_BUCKET_PROP) || "").trim(),
+    publicBaseUrl: String(props.getProperty(ADMIN_MEDIA.R2_PUBLIC_BASE_URL_PROP) || "")
+      .trim()
+      .replace(/\/+$/, ""),
   };
 }
 
 function adminMediaPublicStatus_() {
   const cfg = adminMediaConfig_();
+  const mediaConfigured = !!(
+    cfg.accountId &&
+    cfg.accessKeyId &&
+    cfg.secretAccessKey &&
+    cfg.bucket &&
+    cfg.publicBaseUrl
+  );
+
   return {
-    mediaConfigured: !!cfg.token,
-    mediaRepo: cfg.repo,
-    mediaBranch: cfg.branch,
+    mediaConfigured,
+    mediaProvider: "R2",
+    mediaBucket: cfg.bucket,
+    mediaPublicBaseUrl: cfg.publicBaseUrl,
+    // Legacy fields retained so older frontend builds degrade gracefully.
+    mediaRepo: cfg.bucket ? `Cloudflare R2 / ${cfg.bucket}` : "",
+    mediaBranch: cfg.publicBaseUrl,
   };
 }
 
@@ -5823,86 +5839,165 @@ function ensureMediaTxnSheet_() {
   ]);
 }
 
-function adminGithubHeaders_(token) {
+function adminR2Hex_(bytes) {
+  return (bytes || [])
+    .map((value) => ((Number(value) + 256) % 256).toString(16).padStart(2, "0"))
+    .join("");
+}
+
+function adminR2Bytes_(value) {
+  if (Array.isArray(value)) return value;
+  return Utilities.newBlob(String(value == null ? "" : value)).getBytes();
+}
+
+function adminR2Sha256Hex_(value) {
+  return adminR2Hex_(
+    Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, adminR2Bytes_(value))
+  );
+}
+
+function adminR2HmacBytes_(keyBytes, value) {
+  return Utilities.computeHmacSha256Signature(
+    adminR2Bytes_(value),
+    keyBytes
+  );
+}
+
+function adminR2EncodePathPart_(value) {
+  return encodeURIComponent(String(value || "")).replace(/[!'()*]/g, (ch) =>
+    `%${ch.charCodeAt(0).toString(16).toUpperCase()}`
+  );
+}
+
+function adminR2CanonicalUri_(cfg, objectKey) {
+  const keyPath = String(objectKey || "")
+    .split("/")
+    .map(adminR2EncodePathPart_)
+    .join("/");
+  return `/${adminR2EncodePathPart_(cfg.bucket)}/${keyPath}`;
+}
+
+function adminR2SignedHeaders_(cfg, method, objectKey, payloadBytes) {
+  const now = new Date();
+  const amzDate = Utilities.formatDate(now, "GMT", "yyyyMMdd'T'HHmmss'Z'");
+  const dateStamp = Utilities.formatDate(now, "GMT", "yyyyMMdd");
+  const host = `${cfg.accountId}.r2.cloudflarestorage.com`;
+  const payloadHash = adminR2Sha256Hex_(payloadBytes || []);
+  const canonicalUri = adminR2CanonicalUri_(cfg, objectKey);
+  const canonicalHeaders =
+    `host:${host}\n` +
+    `x-amz-content-sha256:${payloadHash}\n` +
+    `x-amz-date:${amzDate}\n`;
+  const signedHeaders = "host;x-amz-content-sha256;x-amz-date";
+  const canonicalRequest = [
+    String(method || "GET").toUpperCase(),
+    canonicalUri,
+    "",
+    canonicalHeaders,
+    signedHeaders,
+    payloadHash,
+  ].join("\n");
+  const credentialScope = `${dateStamp}/auto/s3/aws4_request`;
+  const stringToSign = [
+    "AWS4-HMAC-SHA256",
+    amzDate,
+    credentialScope,
+    adminR2Sha256Hex_(canonicalRequest),
+  ].join("\n");
+
+  const kDate = adminR2HmacBytes_(adminR2Bytes_(`AWS4${cfg.secretAccessKey}`), dateStamp);
+  const kRegion = adminR2HmacBytes_(kDate, "auto");
+  const kService = adminR2HmacBytes_(kRegion, "s3");
+  const kSigning = adminR2HmacBytes_(kService, "aws4_request");
+  const signature = adminR2Hex_(adminR2HmacBytes_(kSigning, stringToSign));
+
   return {
-    Authorization: `Bearer ${String(token || "")}`,
-    Accept: "application/vnd.github+json",
-    "X-GitHub-Api-Version": "2022-11-28",
-    "User-Agent": "Lakeshore-Legends-Teacher-Admin",
+    url: `https://${host}${canonicalUri}`,
+    headers: {
+      Authorization:
+        `AWS4-HMAC-SHA256 Credential=${cfg.accessKeyId}/${credentialScope}, ` +
+        `SignedHeaders=${signedHeaders}, Signature=${signature}`,
+      "x-amz-content-sha256": payloadHash,
+      "x-amz-date": amzDate,
+    },
   };
 }
 
-function adminGithubContentsUrl_(repo, path) {
-  const encodedPath = String(path || "")
-    .split("/")
-    .map((part) => encodeURIComponent(part))
-    .join("/");
-  return `https://api.github.com/repos/${repo}/contents/${encodedPath}`;
-}
-
-function adminGithubValidateConfig_(cfg) {
-  if (!cfg.token) throw new Error("Image storage is not connected yet.");
-  if (!cfg.repo || cfg.repo.indexOf("/") < 1) throw new Error("Invalid GitHub repository setting.");
-
-  const response = UrlFetchApp.fetch(`https://api.github.com/repos/${cfg.repo}`, {
-    method: "get",
-    headers: adminGithubHeaders_(cfg.token),
-    muteHttpExceptions: true,
-  });
-  const code = response.getResponseCode();
-  if (code !== 200) {
-    throw new Error(
-      `GitHub connection failed (${code}). Make sure the token can read and write repository Contents.`
-    );
+function adminR2ValidateConfig_(cfg) {
+  if (!cfg.accountId) throw new Error("Paste the Cloudflare R2 Account ID.");
+  if (!cfg.accessKeyId) throw new Error("Paste the R2 Access Key ID.");
+  if (!cfg.secretAccessKey) throw new Error("Paste the R2 Secret Access Key.");
+  if (!cfg.bucket) throw new Error("Enter the R2 bucket name.");
+  if (!/^https:\/\//i.test(cfg.publicBaseUrl || "")) {
+    throw new Error("Public media URL must start with https://");
   }
+
+  const objectKey = `__lakeshore_legends_connection_test_${Date.now()}.txt`;
+  const bytes = adminR2Bytes_("Lakeshore Legends R2 connection test");
+  adminR2Request_(cfg, "PUT", objectKey, bytes, "text/plain");
+  adminR2Request_(cfg, "DELETE", objectKey, [], "text/plain");
   return true;
 }
 
-function adminGithubPutFile_(cfg, repoPath, base64, message) {
-  const url = adminGithubContentsUrl_(cfg.repo, repoPath);
-  const existing = UrlFetchApp.fetch(
-    `${url}?ref=${encodeURIComponent(cfg.branch)}`,
-    {
-      method: "get",
-      headers: adminGithubHeaders_(cfg.token),
-      muteHttpExceptions: true,
-    }
-  );
+function adminR2Request_(cfg, method, objectKey, payloadBytes, contentType) {
+  const bytes = payloadBytes || [];
+  const signed = adminR2SignedHeaders_(cfg, method, objectKey, bytes);
+  const options = {
+    method: String(method || "GET").toLowerCase(),
+    headers: signed.headers,
+    muteHttpExceptions: true,
+  };
 
-  const existingCode = existing.getResponseCode();
-  let existingSha = "";
-  if (existingCode === 200) {
-    try {
-      existingSha = String(JSON.parse(existing.getContentText()).sha || "");
-    } catch (_) {}
-  } else if (existingCode !== 404) {
-    throw new Error(`Could not check existing image in GitHub (${existingCode}).`);
+  if (String(method || "").toUpperCase() === "PUT") {
+    options.payload = bytes;
+    options.contentType = contentType || "application/octet-stream";
   }
 
-  const payload = {
-    message: message || "Update Lakeshore Legends player media",
-    content: String(base64 || "").replace(/\s+/g, ""),
-    branch: cfg.branch,
-  };
-  if (existingSha) payload.sha = existingSha;
-
-  const response = UrlFetchApp.fetch(url, {
-    method: "put",
-    headers: adminGithubHeaders_(cfg.token),
-    contentType: "application/json",
-    payload: JSON.stringify(payload),
-    muteHttpExceptions: true,
-  });
+  const response = UrlFetchApp.fetch(signed.url, options);
   const code = response.getResponseCode();
   if (code < 200 || code >= 300) {
-    let detail = "";
-    try {
-      detail = norm_(JSON.parse(response.getContentText()).message || "");
-    } catch (_) {}
-    throw new Error(`GitHub image upload failed (${code})${detail ? `: ${detail}` : "."}`);
+    const body = String(response.getContentText() || "").replace(/\s+/g, " ").slice(0, 280);
+    throw new Error(
+      `Cloudflare R2 ${String(method || "").toUpperCase()} failed (${code})${body ? `: ${body}` : "."}`
+    );
   }
+  return response;
+}
 
-  return { created: !existingSha, replaced: !!existingSha };
+function adminR2PutObject_(cfg, objectKey, base64, mimeType) {
+  const bytes = Utilities.base64Decode(String(base64 || "").replace(/\s+/g, ""));
+  adminR2Request_(cfg, "PUT", objectKey, bytes, mimeType || "application/octet-stream");
+  return { bytes: bytes.length };
+}
+
+function adminR2DeleteObject_(cfg, objectKey) {
+  if (!objectKey) return false;
+  adminR2Request_(cfg, "DELETE", objectKey, [], "application/octet-stream");
+  return true;
+}
+
+function adminR2PublicUrl_(cfg, objectKey) {
+  const path = String(objectKey || "")
+    .split("/")
+    .map(adminR2EncodePathPart_)
+    .join("/");
+  return `${cfg.publicBaseUrl}/${path}?v=${Date.now()}`;
+}
+
+function adminR2KeyFromPublicUrl_(cfg, publicUrlRaw) {
+  const publicUrl = String(publicUrlRaw || "").trim();
+  if (!publicUrl || !cfg.publicBaseUrl) return "";
+  const base = cfg.publicBaseUrl.replace(/\/+$/, "");
+  if (publicUrl.indexOf(`${base}/`) !== 0) return "";
+  const remainder = publicUrl.slice(base.length + 1).split("?")[0];
+  try {
+    return remainder
+      .split("/")
+      .map((part) => decodeURIComponent(part))
+      .join("/");
+  } catch (_) {
+    return remainder;
+  }
 }
 
 function adminMediaExtension_(mimeTypeRaw, fileNameRaw) {
@@ -5958,21 +6053,22 @@ function adminWriteCompanionState_(studentIdRaw, companionUrlRaw, statusRaw) {
 
 function adminConfigureMedia_(args) {
   const verified = verifyTeacher_(args || {});
-  const token = String(args.token || "").trim();
-  const branch = norm_(args.branch || ADMIN_MEDIA.DEFAULT_BRANCH) || ADMIN_MEDIA.DEFAULT_BRANCH;
-  if (!token) throw new Error("Paste the GitHub token first.");
-
   const cfg = {
-    token,
-    repo: ADMIN_MEDIA.DEFAULT_REPO,
-    branch,
+    accountId: String(args.accountId || "").trim(),
+    accessKeyId: String(args.accessKeyId || "").trim(),
+    secretAccessKey: String(args.secretAccessKey || "").trim(),
+    bucket: String(args.bucket || "").trim(),
+    publicBaseUrl: String(args.publicBaseUrl || "").trim().replace(/\/+$/, ""),
   };
-  adminGithubValidateConfig_(cfg);
+
+  adminR2ValidateConfig_(cfg);
 
   const props = PropertiesService.getScriptProperties();
-  props.setProperty(ADMIN_MEDIA.TOKEN_PROP, token);
-  props.setProperty(ADMIN_MEDIA.REPO_PROP, cfg.repo);
-  props.setProperty(ADMIN_MEDIA.BRANCH_PROP, cfg.branch);
+  props.setProperty(ADMIN_MEDIA.R2_ACCOUNT_ID_PROP, cfg.accountId);
+  props.setProperty(ADMIN_MEDIA.R2_ACCESS_KEY_PROP, cfg.accessKeyId);
+  props.setProperty(ADMIN_MEDIA.R2_SECRET_KEY_PROP, cfg.secretAccessKey);
+  props.setProperty(ADMIN_MEDIA.R2_BUCKET_PROP, cfg.bucket);
+  props.setProperty(ADMIN_MEDIA.R2_PUBLIC_BASE_URL_PROP, cfg.publicBaseUrl);
 
   return {
     ok: true,
@@ -6004,17 +6100,19 @@ function adminUploadMedia_(args) {
   }
 
   const cfg = adminMediaConfig_();
-  adminGithubValidateConfig_(cfg);
+  if (!adminMediaPublicStatus_().mediaConfigured) {
+    throw new Error("Cloudflare R2 image storage is not connected yet.");
+  }
+
   const ext = adminMediaExtension_(mimeType, fileName);
   const folder = kind === "PORTRAIT" ? "portraits" : "companions";
-  const repoPath = `public/${folder}/${studentId}.${ext}`;
-  const publicUrl = `/${folder}/${studentId}.${ext}`;
-  const result = adminGithubPutFile_(
-    cfg,
-    repoPath,
-    base64,
-    `Teacher Admin: ${kind === "PORTRAIT" ? "hero portrait" : "companion"} for ${studentId}`
-  );
+  const objectKey = `${folder}/${studentId}.${ext}`;
+  const replaced = kind === "PORTRAIT"
+    ? !!norm_(student.portraitUrl || "")
+    : !!norm_(student.companionUrl || "");
+
+  adminR2PutObject_(cfg, objectKey, base64, mimeType);
+  const publicUrl = adminR2PublicUrl_(cfg, objectKey);
 
   if (kind === "PORTRAIT") {
     adminWritePortraitUrl_(studentId, publicUrl);
@@ -6031,10 +6129,10 @@ function adminUploadMedia_(args) {
     studentId,
     student.name || "",
     kind,
-    result.replaced ? "REPLACE" : "UPLOAD",
-    repoPath,
+    replaced ? "REPLACE" : "UPLOAD",
+    objectKey,
     publicUrl,
-    cfg.branch,
+    `R2:${cfg.bucket}`,
     fileName,
   ]);
 
@@ -6047,9 +6145,10 @@ function adminUploadMedia_(args) {
     studentId,
     kind,
     publicUrl,
-    repoPath,
-    branch: cfg.branch,
-    replaced: result.replaced,
+    repoPath: objectKey,
+    mediaProvider: "R2",
+    mediaBucket: cfg.bucket,
+    replaced,
     now: new Date().toISOString(),
   };
 }
@@ -6059,9 +6158,20 @@ function adminUpdateCompanion_(args) {
   const studentId = normId_(args.studentId);
   if (!studentId) throw new Error("Missing studentId.");
 
+  const loaded = loadPlayerStateIndex_();
+  const prior = loaded.index.get(studentId);
+  const priorUrl = prior ? norm_(prior.companionUrl || "") : "";
+  const nextUrl = norm_(args.companionUrl || "");
+  const cfg = adminMediaConfig_();
+
+  if (!nextUrl && priorUrl && adminMediaPublicStatus_().mediaConfigured) {
+    const objectKey = adminR2KeyFromPublicUrl_(cfg, priorUrl);
+    if (objectKey) adminR2DeleteObject_(cfg, objectKey);
+  }
+
   const result = adminWriteCompanionState_(
     studentId,
-    args.companionUrl || "",
+    nextUrl,
     args.companionStatus || "Active"
   );
 
@@ -6072,10 +6182,10 @@ function adminUpdateCompanion_(args) {
     studentId,
     student ? student.name || "" : "",
     "COMPANION",
-    "UPDATE_STATE",
+    !nextUrl && priorUrl ? "REMOVE" : "UPDATE_STATE",
     "",
     result.companionUrl,
-    adminMediaConfig_().branch,
+    cfg.bucket ? `R2:${cfg.bucket}` : "",
     `Status=${result.companionStatus}`,
   ]);
 
