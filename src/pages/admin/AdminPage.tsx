@@ -9,6 +9,7 @@ import {
 } from "react";
 import {
   Activity,
+  CalendarRange,
   ChevronRight,
   Coins,
   Database,
@@ -80,6 +81,7 @@ import HeroImageManagerPanel from "./components/HeroImageManagerPanel";
 import CompanionManagerPanel from "./components/CompanionManagerPanel";
 import StoreSettingsPanel from "./components/StoreSettingsPanel";
 import ArchivedStudentsPanel from "./components/ArchivedStudentsPanel";
+import AnnualRolloverPanel from "./components/AnnualRolloverPanel";
 
 function Pill({ children }: { children: ReactNode }) {
   return (
@@ -351,6 +353,7 @@ export default function AdminPage() {
   const [systemStatus, setSystemStatus] = useState<AdminSystemStatusResult | null>(null);
   const [statusLoading, setStatusLoading] = useState(false);
   const [systemStatusError, setSystemStatusError] = useState(false);
+  const suppressRosterReloadUntilRef = useRef(0);
   const [notice, setNotice] = useState<{
     type: "ok" | "err";
     msg: string;
@@ -401,6 +404,11 @@ export default function AdminPage() {
   }, []);
 
   const reloadStudents = async () => {
+    if (Date.now() < suppressRosterReloadUntilRef.current) {
+      setStudents([]);
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -1305,6 +1313,14 @@ export default function AdminPage() {
                   tone="emerald"
                   onClick={() => setSection("system")}
                 />
+                <SectionButton
+                  active={section === "yearRollover"}
+                  title="Start New School Year"
+                  detail="Archive the year and reset roster IDs."
+                  icon={<CalendarRange size={17} />}
+                  tone="emerald"
+                  onClick={() => setSection("yearRollover")}
+                />
               </NavGroup>
             </nav>
           </aside>
@@ -1653,6 +1669,30 @@ export default function AdminPage() {
                 description="Open or close student purchases, change the purchase PIN, and set the live XP and Skill Token costs without touching Store_Control."
               >
                 <StoreSettingsPanel />
+              </AdminPanel>
+            )}
+
+            {section === "yearRollover" && (
+              <AdminPanel
+                kicker="School Year"
+                title="Start New School Year"
+                description="Create a frozen year-end archive, reset the live student layer, and release StudentIDs so the next roster can start cleanly at 001."
+              >
+                <AnnualRolloverPanel
+                  onCompleted={async () => {
+                    // The backend is authoritative. Master's published CSV can
+                    // briefly lag a destructive rollover, so keep the local
+                    // roster empty instead of allowing stale students to flash back.
+                    suppressRosterReloadUntilRef.current = Date.now() + 12000;
+                    setStudents([]);
+                    setArchivedRefreshKey((value) => value + 1);
+                    await reloadSystemStatus();
+                    setNotice({
+                      type: "ok",
+                      msg: "New school year ready. The live student roster is empty and StudentIDs can start again at 001.",
+                    });
+                  }}
+                />
               </AdminPanel>
             )}
 

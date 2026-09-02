@@ -195,21 +195,7 @@ export function parseStudentPaste(args: {
       error = "Duplicate student in pasted rows.";
     }
 
-    let previewId = "";
-
-    if (!error) {
-      const used = usedByHr.get(homeroom) ?? new Set<number>();
-      const suffix = nextAvailableSuffix(homeroom, used);
-
-      if (!suffix) {
-        error = `${homeroom} has no unused roster slots left.`;
-      } else {
-        previewId = buildPreviewId(homeroom, suffix);
-        used.add(suffix);
-        usedByHr.set(homeroom, used);
-        incomingKeys.add(nameKey);
-      }
-    }
+    if (!error) incomingKeys.add(nameKey);
 
     parsed.push({
       rowNumber: index + 1,
@@ -218,12 +204,37 @@ export function parseStudentPaste(args: {
       last,
       homeroom,
       guild: "",
-      previewId,
+      previewId: "",
       error: error || undefined,
     });
   });
 
-  return parsed;
+  const valid = parsed
+    .filter((row) => !row.error)
+    .sort((a, b) => {
+      const hr = a.homeroom.localeCompare(b.homeroom, "en", { numeric: true });
+      if (hr !== 0) return hr;
+      const last = a.last.localeCompare(b.last, "en", { sensitivity: "base" });
+      if (last !== 0) return last;
+      return a.first.localeCompare(b.first, "en", { sensitivity: "base" });
+    });
+
+  valid.forEach((row) => {
+    const used = usedByHr.get(row.homeroom) ?? new Set<number>();
+    const suffix = nextAvailableSuffix(row.homeroom, used);
+
+    if (!suffix) {
+      row.error = `${row.homeroom} has no unused roster slots left.`;
+      return;
+    }
+
+    row.previewId = buildPreviewId(row.homeroom, suffix);
+    used.add(suffix);
+    usedByHr.set(row.homeroom, used);
+  });
+
+  const invalid = parsed.filter((row) => row.error && !valid.includes(row));
+  return [...valid, ...invalid];
 }
 
 export function studentSort(a: Student, b: Student) {

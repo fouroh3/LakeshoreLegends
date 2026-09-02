@@ -46,7 +46,8 @@ export type AdminSection =
   | "abilities"
   | "inventory"
   | "store"
-  | "system";
+  | "system"
+  | "yearRollover";
 
 export type PasteFormat =
   | "last-first"

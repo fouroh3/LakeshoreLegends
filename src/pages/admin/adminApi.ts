@@ -2,7 +2,7 @@
 
 import { HP_API_URL } from "../battle/battleConstants";
 import { getBattleTeacherToken } from "../battle/battleTeacherApi";
-export const ADMIN_API_VERSION = "2026-09-01.9";
+export const ADMIN_API_VERSION = "2026-09-01.10";
 
 import type {
   AdminAttributeValues,
@@ -273,6 +273,49 @@ export type AdminCompanionUpdateResult = {
   [key: string]: any;
 };
 
+
+export type AdminYearRolloverPreviewResult = {
+  ok?: boolean;
+  error?: string;
+  activeStudents: number;
+  reservedStudentIds: number;
+  archivedStudents: number;
+  movedDeletedReservations: number;
+  mediaObjects: number;
+  mediaConfigured: boolean;
+  activeBattles: string[];
+  archiveSheetCount: number;
+  firstIds: Record<string, string>;
+  lastArchiveLabel?: string;
+  lastArchiveUrl?: string;
+  lastRolloverAt?: string;
+  adminApiVersion?: string;
+  now?: string;
+  [key: string]: any;
+};
+
+export type AdminStartNewSchoolYearResult = {
+  ok?: boolean;
+  error?: string;
+  archiveLabel: string;
+  archiveName: string;
+  archiveUrl: string;
+  archiveId?: string;
+  archiveSheets?: number;
+  clearedStudents: number;
+  clearedSheets?: Record<string, number>;
+  media?: {
+    attempted: number;
+    deleted: number;
+    failed: number;
+    warnings: string[];
+  };
+  storeClosed?: boolean;
+  firstIds: Record<string, string>;
+  now?: string;
+  [key: string]: any;
+};
+
 type AdminAction =
   | "adminimportstudents"
   | "adminassignguildbatch"
@@ -281,6 +324,8 @@ type AdminAction =
   | "admininventorysnapshot"
   | "adminadjustinventory"
   | "adminsystemstatus"
+  | "adminyearrolloverpreview"
+  | "adminstartnewschoolyear"
   | "adminmigrateplayerstate"
   | "adminupdatestudent"
   | "adminmovestudent"
@@ -302,6 +347,7 @@ const RETRYABLE_ADMIN_READS = new Set<AdminAction>([
   "admincurrencysnapshot",
   "admininventorysnapshot",
   "adminsystemstatus",
+  "adminyearrolloverpreview",
   "adminarchivedstudents",
   "adminabilitysnapshot",
   "adminupdateabilities",
@@ -439,6 +485,25 @@ export async function adminMigratePlayerState() {
   return postAdminAction<AdminSystemStatusResult>(
     "adminmigrateplayerstate",
     {}
+  );
+}
+
+
+export async function adminYearRolloverPreview() {
+  return postAdminAction<AdminYearRolloverPreviewResult>(
+    "adminyearrolloverpreview",
+    {}
+  );
+}
+
+export async function adminStartNewSchoolYear(args: {
+  archiveLabel: string;
+  confirmation: string;
+  acknowledged: boolean;
+}) {
+  return postAdminAction<AdminStartNewSchoolYearResult>(
+    "adminstartnewschoolyear",
+    args
   );
 }
 

@@ -31,7 +31,7 @@
  *   overwritten by the Teacher Admin importer.
  * ========================================================= */
 
-const ADMIN_API_VERSION = "2026-09-01.9";
+const ADMIN_API_VERSION = "2026-09-01.10";
 
 const CFG = {
   // Master
@@ -3551,7 +3551,31 @@ function adminImportStudents_(args) {
     const reservedIds = new Set(playerStateReservedIds_());
     const nowIso = new Date().toISOString();
 
-    students.forEach((student, index) => {
+    // A fresh annual roster should begin alphabetically at ...-001. Existing
+    // in-year students are never renumbered; this only controls allocation
+    // order among the students in the current import batch.
+    const orderedStudents = students
+      .map((student, sourceIndex) => ({ student, sourceIndex }))
+      .sort((a, b) => {
+        const aStudent = a.student || {};
+        const bStudent = b.student || {};
+        const hr = norm_(aStudent.homeroom).localeCompare(
+          norm_(bStudent.homeroom),
+          "en",
+          { numeric: true }
+        );
+        if (hr !== 0) return hr;
+        const last = norm_(aStudent.last).localeCompare(norm_(bStudent.last), "en", {
+          sensitivity: "base",
+        });
+        if (last !== 0) return last;
+        return norm_(aStudent.first).localeCompare(norm_(bStudent.first), "en", {
+          sensitivity: "base",
+        });
+      });
+
+    orderedStudents.forEach(({ student, sourceIndex }) => {
+      const index = sourceIndex;
       const first = norm_(student && student.first);
       const last = norm_(student && student.last);
       const homeroom = norm_(student && student.homeroom);
@@ -6612,6 +6636,507 @@ function adminMoveStudent_(args) {
 }
 
 // =========================================================
+// Global Teacher Admin: Annual School-Year Rollover
+// =========================================================
+const ADMIN_YEAR_ROLLOVER = {
+  CONFIRMATION: "START NEW SCHOOL YEAR",
+  ARCHIVE_PREFIX: "Lakeshore Legends Archive",
+  LAST_ARCHIVE_LABEL_PROP: "LL_LAST_ARCHIVE_LABEL",
+  LAST_ARCHIVE_URL_PROP: "LL_LAST_ARCHIVE_URL",
+  LAST_ROLLOVER_AT_PROP: "LL_LAST_ROLLOVER_AT",
+  CLEAR_SHEETS: [
+    CFG.HP_STATE_SHEET,
+    CFG.HP_LOG_SHEET,
+    CFG.XP_STATE_SHEET,
+    CFG.XP_TXN_SHEET,
+    CFG.SKILL_STATE_SHEET,
+    CFG.PURCHASED_SKILLS_SHEET,
+    CFG.SKILL_TXN_SHEET,
+    ADMIN_PLAYER_STATE.SHEET,
+    ADMIN_PLAYER_STATE.INVENTORY_TXN_SHEET,
+    ADMIN_PLAYER_STATE.ROSTER_TXN_SHEET,
+    ADMIN_PLAYER_STATE.ARCHIVED_ROSTER_SHEET,
+    ADMIN_ABILITIES.TXN_SHEET,
+    ADMIN_MEDIA.TXN_SHEET,
+    CFG.BOSS_STATE_SHEET,
+    CFG.BOSS_LOG_SHEET,
+    CFG.BATTLE_GUILD_TOTALS_SHEET,
+    FINAL_EXAMINER.CLASS_SHEET,
+    FINAL_EXAMINER.BOSS_SHEET,
+    FINAL_EXAMINER.LOG_SHEET,
+  ],
+};
+
+function adminYearRolloverFirstIds_() {
+  const out = {};
+  Object.keys(ADMIN_CLASS_MAX_ROW).forEach((homeroom) => {
+    out[homeroom] = `${homeroom}-001`;
+  });
+  return out;
+}
+
+function adminYearRolloverActiveBattles_() {
+  try {
+    const battle = battleControlRows_();
+    return (battle.rows || [])
+      .filter((row) => norm_(row.status).toUpperCase() === "ACTIVE")
+      .map((row) => norm_(row.homeroom))
+      .filter(Boolean);
+  } catch (_) {
+    return [];
+  }
+}
+
+function adminYearRolloverActiveStudentCount_() {
+  let count = 0;
+  Object.keys(ADMIN_CLASS_MAX_ROW).forEach((homeroom) => {
+    const sh = adminClassSheet_(homeroom);
+    const info = adminHeaderMapForSheet_(sh);
+    const iName = idx_(info.map, "Name", "StudentName", "Student Name");
+    if (iName < 0) return;
+    const rows = Math.max(
+      0,
+      Math.min(ADMIN_CLASS_MAX_ROW[homeroom], sh.getMaxRows()) - 1
+    );
+    if (!rows) return;
+    const values = sh.getRange(2, iName + 1, rows, 1).getDisplayValues();
+    values.forEach((row) => {
+      if (norm_(row[0])) count++;
+    });
+  });
+  return count;
+}
+
+function adminYearRolloverAddMediaKey_(set, raw) {
+  const value = String(raw || "").trim();
+  if (!value) return;
+
+  const direct = value
+    .split("?")[0]
+    .replace(/^\/+/, "")
+    .trim();
+  if (/^(portraits|companions)\/[^/]+\.[A-Za-z0-9]+$/i.test(direct)) {
+    set.add(direct);
+  }
+
+  const parsed = adminR2MediaPathFromUrl_(value);
+  if (
+    parsed &&
+    parsed.objectKey &&
+    /^(portraits|companions)\//i.test(parsed.objectKey)
+  ) {
+    set.add(parsed.objectKey);
+  }
+}
+
+function adminYearRolloverMediaKeys_() {
+  const keys = new Set();
+
+  Object.keys(ADMIN_CLASS_MAX_ROW).forEach((homeroom) => {
+    const sh = adminClassSheet_(homeroom);
+    const info = adminHeaderMapForSheet_(sh);
+    const rows = Math.max(
+      0,
+      Math.min(ADMIN_CLASS_MAX_ROW[homeroom], sh.getMaxRows()) - 1
+    );
+    if (!rows) return;
+
+    ["PortraitURL", "CompanionURL"].forEach((header) => {
+      const col = idx_(info.map, header, header.replace("URL", " URL"));
+      if (col < 0) return;
+      sh.getRange(2, col + 1, rows, 1)
+        .getDisplayValues()
+        .forEach((row) => adminYearRolloverAddMediaKey_(keys, row[0]));
+    });
+  });
+
+  const playerState = getSheetOptional_(ADMIN_PLAYER_STATE.SHEET);
+  if (playerState && playerState.getLastRow() >= 2) {
+    const values = playerState.getDataRange().getDisplayValues();
+    const map = headerMap_(values[0] || []);
+    const iCompanion = idx_(map, "CompanionURL", "Companion URL");
+    if (iCompanion >= 0) {
+      values
+        .slice(1)
+        .forEach((row) => adminYearRolloverAddMediaKey_(keys, row[iCompanion]));
+    }
+  }
+
+  const mediaTxn = getSheetOptional_(ADMIN_MEDIA.TXN_SHEET);
+  if (mediaTxn && mediaTxn.getLastRow() >= 2) {
+    const values = mediaTxn.getDataRange().getDisplayValues();
+    const map = headerMap_(values[0] || []);
+    const iPath = idx_(map, "RepoPath", "Repo Path", "ObjectKey", "Object Key");
+    const iUrl = idx_(map, "PublicURL", "Public URL");
+    values.slice(1).forEach((row) => {
+      if (iPath >= 0) adminYearRolloverAddMediaKey_(keys, row[iPath]);
+      if (iUrl >= 0) adminYearRolloverAddMediaKey_(keys, row[iUrl]);
+    });
+  }
+
+  const archived = getSheetOptional_(ADMIN_PLAYER_STATE.ARCHIVED_ROSTER_SHEET);
+  if (archived && archived.getLastRow() >= 2) {
+    const values = archived.getDataRange().getValues();
+    const map = headerMap_(values[0] || []);
+    const iRoster = idx_(map, "RosterJSON", "Roster JSON");
+    if (iRoster >= 0) {
+      values.slice(1).forEach((row) => {
+        try {
+          const roster = JSON.parse(String(row[iRoster] || "{}")) || {};
+          adminYearRolloverAddMediaKey_(
+            keys,
+            roster.PortraitURL || roster["Portrait URL"] || ""
+          );
+          adminYearRolloverAddMediaKey_(
+            keys,
+            roster.CompanionURL || roster["Companion URL"] || ""
+          );
+        } catch (_) {}
+      });
+    }
+  }
+
+  return Array.from(keys).sort();
+}
+
+function adminYearRolloverPreviewPayload_() {
+  const playerState = loadPlayerStateIndex_();
+  let archivedStudents = 0;
+  let movedDeletedReservations = 0;
+
+  playerState.index.forEach((row) => {
+    if (row.rosterStatus === "ARCHIVED") archivedStudents++;
+    if (row.rosterStatus === "MOVED" || row.rosterStatus === "DELETED") {
+      movedDeletedReservations++;
+    }
+  });
+
+  const mediaKeys = adminYearRolloverMediaKeys_();
+  const source = SpreadsheetApp.getActive();
+
+  return {
+    activeStudents: adminYearRolloverActiveStudentCount_(),
+    reservedStudentIds: playerState.index.size,
+    archivedStudents,
+    movedDeletedReservations,
+    mediaObjects: mediaKeys.length,
+    mediaConfigured: !!adminMediaPublicStatus_().mediaConfigured,
+    activeBattles: adminYearRolloverActiveBattles_(),
+    archiveSheetCount: source.getSheets().length,
+    firstIds: adminYearRolloverFirstIds_(),
+    lastArchiveLabel: getProp_(ADMIN_YEAR_ROLLOVER.LAST_ARCHIVE_LABEL_PROP),
+    lastArchiveUrl: getProp_(ADMIN_YEAR_ROLLOVER.LAST_ARCHIVE_URL_PROP),
+    lastRolloverAt: getProp_(ADMIN_YEAR_ROLLOVER.LAST_ROLLOVER_AT_PROP),
+    mediaKeys,
+  };
+}
+
+function adminYearRolloverPreview_(args) {
+  const verified = verifyTeacher_(args || {});
+  const preview = adminYearRolloverPreviewPayload_();
+  return {
+    ok: true,
+    teacherToken: verified.token,
+    adminApiVersion: ADMIN_API_VERSION,
+    ...preview,
+    mediaKeys: undefined,
+    now: new Date().toISOString(),
+  };
+}
+
+function adminYearRolloverArchiveLabel_(raw) {
+  const value = norm_(raw || "");
+  if (!value) throw new Error("Enter the school year being archived, such as 2026-27.");
+  if (value.length > 60) throw new Error("School-year archive label is too long.");
+  return value.replace(/[\\/:*?"<>|]+/g, "-");
+}
+
+function adminYearRolloverCreateArchive_(archiveLabel, preview) {
+  const source = SpreadsheetApp.getActive();
+  SpreadsheetApp.flush();
+
+  const tz = Session.getScriptTimeZone() || "GMT";
+  const stamp = Utilities.formatDate(new Date(), tz, "yyyy-MM-dd HHmmss");
+  const archiveName = `${ADMIN_YEAR_ROLLOVER.ARCHIVE_PREFIX} — ${archiveLabel} — ${stamp}`;
+  const archive = SpreadsheetApp.create(archiveName);
+  const info = archive.getSheets()[0];
+  info.setName("_Year_Archive_Info");
+
+  const infoRows = [
+    ["Lakeshore Legends Year Archive", archiveLabel],
+    ["Archived At", new Date().toISOString()],
+    ["Source Spreadsheet", source.getName()],
+    ["Source Spreadsheet ID", source.getId()],
+    ["Active students at rollover", preview.activeStudents],
+    ["Reserved StudentIDs at rollover", preview.reservedStudentIds],
+    ["Archived students at rollover", preview.archivedStudents],
+    ["Moved/deleted reservations", preview.movedDeletedReservations],
+    ["Managed media objects found", preview.mediaObjects],
+    ["Source sheets copied", source.getSheets().length],
+    ["Note", "This workbook is a frozen year-end snapshot. Formulas were converted to their displayed data values so this archive will not change with the live game database."],
+  ];
+  info.getRange(1, 1, infoRows.length, 2).setValues(infoRows);
+  info.getRange(1, 1, 1, 2).setFontWeight("bold");
+  info.setColumnWidth(1, 230);
+  info.setColumnWidth(2, 620);
+  info.setFrozenRows(1);
+
+  source.getSheets().forEach((sourceSheet) => {
+    const copied = sourceSheet.copyTo(archive);
+    copied.setName(sourceSheet.getName());
+
+    const sourceRange = sourceSheet.getDataRange();
+    const rows = sourceRange.getNumRows();
+    const cols = sourceRange.getNumColumns();
+    if (rows > 0 && cols > 0) {
+      copied.getRange(1, 1, rows, cols).setValues(sourceRange.getValues());
+    }
+  });
+
+  SpreadsheetApp.flush();
+  return {
+    name: archiveName,
+    url: archive.getUrl(),
+    id: archive.getId(),
+    sheets: source.getSheets().length,
+  };
+}
+
+function adminYearRolloverClearSheetData_(sheetName) {
+  const sh = getSheetOptional_(sheetName);
+  if (!sh) return 0;
+  const lastRow = sh.getLastRow();
+  const lastCol = Math.max(1, sh.getLastColumn());
+  if (lastRow < 2) return 0;
+  sh.getRange(2, 1, lastRow - 1, lastCol).clearContent();
+  return lastRow - 1;
+}
+
+function adminYearRolloverClearClassRosters_() {
+  let rowsCleared = 0;
+  Object.keys(ADMIN_CLASS_MAX_ROW).forEach((homeroom) => {
+    const sh = adminClassSheet_(homeroom);
+    const maxRow = Math.min(ADMIN_CLASS_MAX_ROW[homeroom], sh.getMaxRows());
+    const rowCount = Math.max(0, maxRow - 1);
+    if (!rowCount) return;
+
+    const info = adminHeaderMapForSheet_(sh);
+    const iName = idx_(info.map, "Name", "StudentName", "Student Name");
+    if (iName >= 0) {
+      sh.getRange(2, iName + 1, rowCount, 1)
+        .getDisplayValues()
+        .forEach((row) => {
+          if (norm_(row[0])) rowsCleared++;
+        });
+    }
+
+    // Columns B/C are ARRAYFORMULA outputs. Clear only teacher-owned cells.
+    sh.getRange(2, 1, rowCount, 1).clearContent();
+    const lastCol = Math.max(sh.getLastColumn(), 4);
+    if (lastCol >= 4) {
+      sh.getRange(2, 4, rowCount, lastCol - 3).clearContent();
+    }
+  });
+  return rowsCleared;
+}
+
+function adminYearRolloverResetBattleControl_() {
+  const sh = getSheetOptional_(CFG.BATTLE_CONTROL_SHEET);
+  if (!sh || sh.getLastRow() < 2) return 0;
+  const rowCount = Math.min(CFG.BATTLE_CONTROL_MAX_ROWS, sh.getLastRow() - 1);
+  const colCount = Math.max(1, sh.getLastColumn());
+  const headers = sh.getRange(1, 1, 1, colCount).getDisplayValues()[0];
+  const map = headerMap_(headers);
+  const values = sh.getRange(2, 1, rowCount, colCount).getValues();
+  const nowIso = new Date().toISOString();
+
+  const setIf = (row, key, value) => {
+    const i = map[String(key).toLowerCase()];
+    if (i != null && i >= 0) row[i] = value;
+  };
+
+  values.forEach((row) => {
+    setIf(row, "status", "INACTIVE");
+    setIf(row, "quest", "");
+    setIf(row, "round", 1);
+    setIf(row, "turn", "GUILD");
+    setIf(row, "pairto", "");
+    setIf(row, "leaderhomeroom", "");
+    setIf(row, "activebattlesessionid", "");
+    setIf(row, "bosskey", "");
+    setIf(row, "bossinstanceid", "");
+    setIf(row, "currentstatesummary", "Inactive");
+    setIf(row, "lastupdated", nowIso);
+  });
+
+  sh.getRange(2, 1, rowCount, colCount).setValues(values);
+  return rowCount;
+}
+
+function adminYearRolloverDeleteMediaBatch_(mediaKeys) {
+  const keys = Array.from(new Set(Array.isArray(mediaKeys) ? mediaKeys : []))
+    .map((value) => String(value || "").trim())
+    .filter((value) => /^(portraits|companions)\//i.test(value));
+
+  if (!keys.length) {
+    return { attempted: 0, deleted: 0, failed: 0, warnings: [] };
+  }
+
+  const cfg = adminMediaConfig_();
+  if (!adminMediaPublicStatus_().mediaConfigured) {
+    return {
+      attempted: 0,
+      deleted: 0,
+      failed: keys.length,
+      warnings: [
+        `${keys.length} managed media object${keys.length === 1 ? "" : "s"} could not be removed because R2 is not connected. The live roster reset still completed.`,
+      ],
+    };
+  }
+
+  let deleted = 0;
+  let failed = 0;
+  const warnings = [];
+  const chunkSize = 50;
+
+  for (let start = 0; start < keys.length; start += chunkSize) {
+    const chunk = keys.slice(start, start + chunkSize);
+    try {
+      const requests = chunk.map((objectKey) => {
+        const signed = adminR2SignedHeaders_(cfg, "DELETE", objectKey, []);
+        return {
+          url: signed.url,
+          method: "delete",
+          headers: signed.headers,
+          muteHttpExceptions: true,
+        };
+      });
+      const responses = UrlFetchApp.fetchAll(requests);
+      responses.forEach((response, index) => {
+        const code = response.getResponseCode();
+        if (code >= 200 && code < 300) {
+          deleted++;
+        } else {
+          failed++;
+          if (warnings.length < 5) {
+            warnings.push(`R2 cleanup failed for ${chunk[index]} (${code}).`);
+          }
+        }
+      });
+    } catch (err) {
+      failed += chunk.length;
+      if (warnings.length < 5) {
+        warnings.push(
+          String(err && err.message ? err.message : err || "R2 media cleanup failed.")
+        );
+      }
+    }
+  }
+
+  return { attempted: keys.length, deleted, failed, warnings };
+}
+
+function adminStartNewSchoolYear_(args) {
+  const verified = verifyTeacher_(args || {});
+  const archiveLabel = adminYearRolloverArchiveLabel_(args.archiveLabel);
+  const confirmation = norm_(args.confirmation || "");
+  const acknowledged = toBool_(args.acknowledged, false);
+
+  if (!acknowledged) {
+    throw new Error("Confirm that you understand the live student roster will be reset.");
+  }
+  if (confirmation !== ADMIN_YEAR_ROLLOVER.CONFIRMATION) {
+    throw new Error(`Type ${ADMIN_YEAR_ROLLOVER.CONFIRMATION} exactly to continue.`);
+  }
+
+  const lock = LockService.getScriptLock();
+  lock.waitLock(CFG.LOCK_WAIT_MS);
+
+  try {
+    const preview = adminYearRolloverPreviewPayload_();
+    if (preview.activeBattles.length) {
+      throw new Error(
+        `End active battles before starting a new school year: ${preview.activeBattles.join(", ")}`
+      );
+    }
+
+    let archive;
+    try {
+      archive = adminYearRolloverCreateArchive_(archiveLabel, preview);
+    } catch (err) {
+      throw new Error(
+        `Year-end archive could not be created, so NO live student data was reset. ${String(
+          err && err.message ? err.message : err || "Archive creation failed."
+        )}`
+      );
+    }
+
+    const nowIso = new Date().toISOString();
+    const clearedSheets = {};
+    let clearedRosterRows = 0;
+
+    try {
+      clearedRosterRows = adminYearRolloverClearClassRosters_();
+      ADMIN_YEAR_ROLLOVER.CLEAR_SHEETS.forEach((sheetName) => {
+        clearedSheets[sheetName] = adminYearRolloverClearSheetData_(sheetName);
+      });
+
+      // Store settings survive rollover, but student purchasing is closed until
+      // a teacher intentionally reopens it for the new cohort.
+      adminSetStoreControlValue_("StoreLocked", "TRUE");
+      adminSetStoreControlValue_("OpenNonce", Utilities.getUuid());
+      adminSetStoreControlValue_("UpdatedAt", nowIso);
+
+      // Battle configuration structure survives, but all live sessions are reset.
+      adminYearRolloverResetBattleControl_();
+
+      SpreadsheetApp.flush();
+      recomputeGuildTotals_();
+      SpreadsheetApp.flush();
+
+      cacheRemove_(`studentsMap:${CFG.STUDENTS_SHEET}`);
+      cacheRemove_("hpAll:v1");
+      setProp_(CFG.PROP_LAST_WRITE_ISO, nowIso);
+      setProp_(CFG.PROP_LAST_XP_WRITE_ISO, nowIso);
+      setProp_(ADMIN_YEAR_ROLLOVER.LAST_ARCHIVE_LABEL_PROP, archiveLabel);
+      setProp_(ADMIN_YEAR_ROLLOVER.LAST_ARCHIVE_URL_PROP, archive.url);
+      setProp_(ADMIN_YEAR_ROLLOVER.LAST_ROLLOVER_AT_PROP, nowIso);
+    } catch (err) {
+      throw new Error(
+        `The archive was created successfully (${archive.url}), but the live reset did not finish. Stop and inspect the archive before retrying. ${String(
+          err && err.message ? err.message : err || "Live reset failed."
+        )}`
+      );
+    }
+
+    // Media cleanup is deliberately last and non-fatal. At this point the live
+    // student layer is clean; a temporary R2 problem should only leave orphaned
+    // old files, never roll back or corrupt the new roster state.
+    const media = adminYearRolloverDeleteMediaBatch_(preview.mediaKeys);
+
+    return {
+      ok: true,
+      teacherToken: verified.token,
+      archiveLabel,
+      archiveName: archive.name,
+      archiveUrl: archive.url,
+      archiveId: archive.id,
+      archiveSheets: archive.sheets,
+      clearedStudents: clearedRosterRows,
+      clearedSheets,
+      media,
+      storeClosed: true,
+      firstIds: adminYearRolloverFirstIds_(),
+      now: nowIso,
+    };
+  } finally {
+    try {
+      lock.releaseLock();
+    } catch (_) {}
+  }
+}
+
+// =========================================================
 // Global Teacher Admin: Store Settings
 // =========================================================
 function adminStoreControlValue_(keyRaw) {
@@ -6898,6 +7423,12 @@ function doPost(e) {
 
       case "adminsystemstatus":
         return jsonOut_(adminSystemStatus_(body));
+
+      case "adminyearrolloverpreview":
+        return jsonOut_(adminYearRolloverPreview_(body));
+
+      case "adminstartnewschoolyear":
+        return jsonOut_(adminStartNewSchoolYear_(body));
 
       case "adminmigrateplayerstate":
         return jsonOut_(migratePlayerStateFromMaster_(body));
