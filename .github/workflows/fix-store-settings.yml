@@ -1,0 +1,113 @@
+name: Fix Store Settings
+
+on:
+  push:
+    branches: [fluffy-cloud]
+    paths:
+      - .github/workflows/fix-store-settings.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fluffy-cloud
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+
+      - name: Fix Store writes and field alignment
+        shell: python
+        run: |
+          from pathlib import Path
+
+          def replace_once(text, old, new, label):
+              if old not in text:
+                  raise RuntimeError(f"Missing patch target: {label}")
+              return text.replace(old, new, 1)
+
+          # Frontend/backend version handshake.
+          p = Path("src/pages/admin/adminApi.ts")
+          s = p.read_text(encoding="utf-8")
+          s = replace_once(
+              s,
+              'export const ADMIN_API_VERSION = "2026-09-01.4";',
+              'export const ADMIN_API_VERSION = "2026-09-01.5";',
+              "frontend API version",
+          )
+          p.write_text(s, encoding="utf-8")
+
+          # Store_Control B2 uses a TRUE/FALSE validation list, so write the
+          # exact validated strings rather than JS booleans.
+          p = Path("docs/LakeshoreLegendsAppsScript-TeacherAdmin-FULL.gs")
+          s = p.read_text(encoding="utf-8")
+          s = replace_once(
+              s,
+              'const ADMIN_API_VERSION = "2026-09-01.4";',
+              'const ADMIN_API_VERSION = "2026-09-01.5";',
+              "backend API version",
+          )
+          s = replace_once(
+              s,
+              '    adminSetStoreControlValue_("StoreLocked", storeLocked);',
+              '    adminSetStoreControlValue_("StoreLocked", storeLocked ? "TRUE" : "FALSE");',
+              "validated StoreLocked write",
+          )
+          p.write_text(s, encoding="utf-8")
+
+          # Equalize the three Purchase Costs & Limits controls regardless of
+          # whether their labels wrap to one or two lines.
+          p = Path("src/pages/admin/components/StoreSettingsPanel.tsx")
+          s = p.read_text(encoding="utf-8")
+          s = replace_once(
+              s,
+              '''          <div className="mt-4 grid gap-3 sm:grid-cols-3">\n            <div>\n              <FieldLabel>XP per +1 Attribute</FieldLabel>''',
+              '''          <div className="mt-4 grid gap-3 sm:grid-cols-3">\n            <div className="flex min-w-0 flex-col">\n              <div className="flex min-h-[38px] items-end">\n                <FieldLabel>XP per +1 Attribute</FieldLabel>\n              </div>''',
+              "first store field",
+          )
+          s = replace_once(
+              s,
+              '''                className="mt-2 w-full rounded-2xl border border-white/10 bg-zinc-950 px-4 py-3 text-center text-lg font-black text-white outline-none"\n              />\n            </div>\n\n            <div>\n              <FieldLabel>Tokens per Skill</FieldLabel>''',
+              '''                className="mt-2 h-[58px] w-full rounded-2xl border border-white/10 bg-zinc-950 px-4 py-3 text-center text-lg font-black text-white outline-none"\n              />\n            </div>\n\n            <div className="flex min-w-0 flex-col">\n              <div className="flex min-h-[38px] items-end">\n                <FieldLabel>Tokens per Skill</FieldLabel>\n              </div>''',
+              "second store field",
+          )
+          s = replace_once(
+              s,
+              '''                className="mt-2 w-full rounded-2xl border border-white/10 bg-zinc-950 px-4 py-3 text-center text-lg font-black text-white outline-none"\n              />\n            </div>\n\n            <div>\n              <FieldLabel>Max Attribute Buys</FieldLabel>''',
+              '''                className="mt-2 h-[58px] w-full rounded-2xl border border-white/10 bg-zinc-950 px-4 py-3 text-center text-lg font-black text-white outline-none"\n              />\n            </div>\n\n            <div className="flex min-w-0 flex-col">\n              <div className="flex min-h-[38px] items-end">\n                <FieldLabel>Max Attribute Buys</FieldLabel>\n              </div>''',
+              "third store field",
+          )
+          # Final numeric input is still the old class occurrence.
+          s = replace_once(
+              s,
+              '''                className="mt-2 w-full rounded-2xl border border-white/10 bg-zinc-950 px-4 py-3 text-center text-lg font-black text-white outline-none"\n              />\n            </div>\n          </div>''',
+              '''                className="mt-2 h-[58px] w-full rounded-2xl border border-white/10 bg-zinc-950 px-4 py-3 text-center text-lg font-black text-white outline-none"\n              />\n            </div>\n          </div>''',
+              "third store input height",
+          )
+          p.write_text(s, encoding="utf-8")
+
+      - name: Validate Apps Script syntax
+        run: |
+          cp docs/LakeshoreLegendsAppsScript-TeacherAdmin-FULL.gs /tmp/lakeshore-admin.js
+          node --check /tmp/lakeshore-admin.js
+          grep -q 'StoreLocked", storeLocked ? "TRUE" : "FALSE"' docs/LakeshoreLegendsAppsScript-TeacherAdmin-FULL.gs
+
+      - name: Validate production build
+        run: |
+          npm ci
+          npm run build
+
+      - name: Commit validated Store fix
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/admin/adminApi.ts src/pages/admin/components/StoreSettingsPanel.tsx docs/LakeshoreLegendsAppsScript-TeacherAdmin-FULL.gs
+          git commit -m "Fix Store settings saves and align cost fields"
+          git push origin HEAD:fluffy-cloud
