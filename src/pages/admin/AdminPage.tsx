@@ -33,6 +33,7 @@ import {
   adminSystemStatus,
   adminUpdateAbilities,
   adminUpdateCompanion,
+  adminUpdateMediaPublicUrl,
   adminUpdateStudent,
   adminUploadMedia,
   type AdminAbilityUpdateResult,
@@ -43,6 +44,7 @@ import {
   type AdminCompanionUpdateResult,
   type AdminInventoryAdjustmentResult,
   type AdminMediaUploadResult,
+  type AdminUpdateMediaPublicUrlResult,
   type AdminMoveStudentResult,
   type AdminSkillAdjustmentResult,
   type AdminSystemStatusResult,
@@ -165,6 +167,17 @@ function importedRecordToStudent(record: {
     baseHP: 20,
     currentHP: 20,
   };
+}
+
+function rebaseR2MediaUrl(value: unknown, newBaseRaw: string) {
+  const url = String(value || "").trim();
+  const newBase = String(newBaseRaw || "").trim().replace(/\/+$/, "");
+  const match = url.match(/\/((?:portraits|companions)\/[^?#]+)(\?[^#]*)?$/i);
+  if (!match || !newBase) return url;
+  if (!/\.r2\.cloudflarestorage\.com(?:\/|$)/i.test(url) && !/^https:\/\//i.test(url)) {
+    return url;
+  }
+  return `${newBase}/${match[1]}${match[2] || ""}`;
 }
 
 export default function AdminPage() {
@@ -518,6 +531,36 @@ export default function AdminPage() {
       return result;
     } catch (err: any) {
       setNotice({ type: "err", msg: err?.message || "Media connection failed." });
+      throw err;
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleUpdateMediaPublicUrl = async (
+    publicBaseUrl: string
+  ): Promise<AdminUpdateMediaPublicUrlResult> => {
+    setBusy(true);
+    setNotice(null);
+
+    try {
+      const result = await adminUpdateMediaPublicUrl(publicBaseUrl);
+      const nextBase = result.mediaPublicBaseUrl || publicBaseUrl;
+      setSystemStatus((prev) => ({ ...(prev || {}), ...result }));
+      setStudents((prev) =>
+        prev.map((student) => ({
+          ...student,
+          portraitUrl: rebaseR2MediaUrl(student.portraitUrl, nextBase),
+          companionUrl: rebaseR2MediaUrl(student.companionUrl, nextBase),
+        }))
+      );
+      setNotice({
+        type: "ok",
+        msg: `Public media URL updated${result.repaired?.total ? ` and ${result.repaired.total} stored media URL${result.repaired.total === 1 ? "" : "s"} repaired` : ""}.`,
+      });
+      return result;
+    } catch (err: any) {
+      setNotice({ type: "err", msg: err?.message || "Public media URL update failed." });
       throw err;
     } finally {
       setBusy(false);
@@ -1312,6 +1355,7 @@ export default function AdminPage() {
                   mediaBucket={systemStatus?.mediaBucket || systemStatus?.mediaRepo}
                   mediaPublicBaseUrl={systemStatus?.mediaPublicBaseUrl || systemStatus?.mediaBranch}
                   onConfigureMedia={handleConfigureMedia}
+                  onUpdatePublicUrl={handleUpdateMediaPublicUrl}
                   onUpload={handleHeroUpload}
                 />
               </AdminPanel>

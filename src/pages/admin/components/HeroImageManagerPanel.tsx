@@ -1,6 +1,6 @@
 // src/pages/admin/components/HeroImageManagerPanel.tsx
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   CheckCircle2,
   CloudUpload,
@@ -14,6 +14,7 @@ import type { Student } from "../../../types";
 import type {
   AdminConfigureMediaResult,
   AdminMediaUploadResult,
+  AdminUpdateMediaPublicUrlResult,
 } from "../adminApi";
 import { clean, fullName, normId, studentSort } from "../adminRosterUtils";
 
@@ -52,6 +53,7 @@ type Props = {
     mimeType: string;
     base64: string;
   }) => Promise<AdminMediaUploadResult>;
+  onUpdatePublicUrl: (publicBaseUrl: string) => Promise<AdminUpdateMediaPublicUrlResult>;
 };
 
 function normalizeText(value: unknown) {
@@ -176,6 +178,7 @@ export default function HeroImageManagerPanel({
   mediaPublicBaseUrl,
   onConfigureMedia,
   onUpload,
+  onUpdatePublicUrl,
 }: Props) {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [queue, setQueue] = useState<QueuedImage[]>([]);
@@ -187,6 +190,25 @@ export default function HeroImageManagerPanel({
   const [publicBaseUrl, setPublicBaseUrl] = useState(mediaPublicBaseUrl || "");
   const [connecting, setConnecting] = useState(false);
   const [connectionError, setConnectionError] = useState("");
+  const [savingPublicUrl, setSavingPublicUrl] = useState(false);
+
+  useEffect(() => {
+    if (mediaPublicBaseUrl) setPublicBaseUrl(mediaPublicBaseUrl);
+  }, [mediaPublicBaseUrl]);
+
+  const savePublicUrl = async () => {
+    if (!publicBaseUrl.trim()) return;
+    setSavingPublicUrl(true);
+    setConnectionError("");
+    try {
+      const result = await onUpdatePublicUrl(publicBaseUrl.trim());
+      if (result.mediaPublicBaseUrl) setPublicBaseUrl(result.mediaPublicBaseUrl);
+    } catch (err: any) {
+      setConnectionError(err?.message || "Could not update the public media URL.");
+    } finally {
+      setSavingPublicUrl(false);
+    }
+  };
 
   const sortedStudents = useMemo(
     () => students.slice().sort(studentSort),
@@ -448,13 +470,38 @@ export default function HeroImageManagerPanel({
       )}
 
       {mediaConfigured && (
-        <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-500">
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/15 bg-emerald-400/5 px-3 py-1.5 font-semibold text-emerald-100/80">
-            <CheckCircle2 size={13} /> Media connected
-          </span>
-          <span>Cloudflare R2</span>
-          {mediaBucket && <span>• bucket {mediaBucket}</span>}
-          {mediaPublicBaseUrl && <span>• {mediaPublicBaseUrl}</span>}
+        <div className="rounded-[22px] border border-white/10 bg-black/20 p-4">
+          <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-500">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/15 bg-emerald-400/5 px-3 py-1.5 font-semibold text-emerald-100/80">
+              <CheckCircle2 size={13} /> Media connected
+            </span>
+            <span>Cloudflare R2</span>
+            {mediaBucket && <span>• bucket {mediaBucket}</span>}
+          </div>
+          <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+            <input
+              value={publicBaseUrl}
+              onChange={(event) => setPublicBaseUrl(event.target.value)}
+              placeholder="https://...r2.dev"
+              className="min-w-0 flex-1 rounded-2xl border border-white/10 bg-black/35 px-4 py-3 text-sm text-white outline-none placeholder:text-zinc-600"
+            />
+            <button
+              type="button"
+              onClick={savePublicUrl}
+              disabled={savingPublicUrl || !publicBaseUrl.trim()}
+              className="rounded-2xl border border-cyan-300/20 bg-cyan-300/10 px-4 py-3 text-sm font-black text-cyan-100 disabled:opacity-50"
+            >
+              {savingPublicUrl ? "Saving..." : "Save Public URL"}
+            </button>
+          </div>
+          {/\.r2\.cloudflarestorage\.com(?:\/|$)/i.test(publicBaseUrl) && (
+            <div className="mt-2 text-xs font-semibold leading-5 text-red-200">
+              This is the private S3 API endpoint and cannot display images in the browser. Paste the bucket Public Development URL ending in r2.dev instead.
+            </div>
+          )}
+          {connectionError && (
+            <div className="mt-2 text-sm font-semibold text-red-200">{connectionError}</div>
+          )}
         </div>
       )}
 

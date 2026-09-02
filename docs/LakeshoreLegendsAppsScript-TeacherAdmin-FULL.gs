@@ -31,7 +31,7 @@
  *   overwritten by the Teacher Admin importer.
  * ========================================================= */
 
-const ADMIN_API_VERSION = "2026-09-01.7";
+const ADMIN_API_VERSION = "2026-09-01.8";
 
 const CFG = {
   // Master
@@ -5012,42 +5012,25 @@ function adminDeleteRowsForStudentId_(sheetName, studentIdRaw) {
   return rows.length;
 }
 
-function adminGithubDeletePublicUrl_(publicUrlRaw) {
-  const publicUrl = norm_(publicUrlRaw);
-  if (!/^\/(?:portraits|companions)\//i.test(publicUrl)) return true;
+function adminDeleteManagedPublicUrl_(publicUrlRaw) {
+  const publicUrl = String(publicUrlRaw || "").trim();
+  if (!publicUrl) return true;
   const cfg = adminMediaConfig_();
-  if (!cfg.token) return false;
+  if (!adminMediaPublicStatus_().mediaConfigured) return false;
 
-  const repoPath = `public${publicUrl}`;
-  const url = adminGithubContentsUrl_(cfg.repo, repoPath);
-  const existing = UrlFetchApp.fetch(
-    `${url}?ref=${encodeURIComponent(cfg.branch)}`,
-    {
-      method: "get",
-      headers: adminGithubHeaders_(cfg.token),
-      muteHttpExceptions: true,
-    }
-  );
-  if (existing.getResponseCode() === 404) return true;
-  if (existing.getResponseCode() !== 200) return false;
+  const isCurrentR2Url =
+    !!cfg.publicBaseUrl && publicUrl.indexOf(`${cfg.publicBaseUrl}/`) === 0;
+  const isPrivateR2Url = /\.r2\.cloudflarestorage\.com(?:\/|$)/i.test(publicUrl);
+  if (!isCurrentR2Url && !isPrivateR2Url) return true;
 
-  let sha = "";
-  try { sha = String(JSON.parse(existing.getContentText()).sha || ""); } catch (_) {}
-  if (!sha) return false;
-
-  const response = UrlFetchApp.fetch(url, {
-    method: "delete",
-    headers: adminGithubHeaders_(cfg.token),
-    contentType: "application/json",
-    payload: JSON.stringify({
-      message: "Teacher Admin: delete archived player media",
-      sha,
-      branch: cfg.branch,
-    }),
-    muteHttpExceptions: true,
-  });
-  const code = response.getResponseCode();
-  return code >= 200 && code < 300;
+  const parsed = adminR2MediaPathFromUrl_(publicUrl);
+  if (!parsed || !parsed.objectKey) return true;
+  try {
+    adminR2DeleteObject_(cfg, parsed.objectKey);
+    return true;
+  } catch (_) {
+    return false;
+  }
 }
 
 function adminDeleteArchivedStudent_(args) {
@@ -5078,7 +5061,7 @@ function adminDeleteArchivedStudent_(args) {
 
     const mediaCleanup = [portraitUrl, companionUrl]
       .filter(Boolean)
-      .map((url) => adminGithubDeletePublicUrl_(url));
+      .map((url) => adminDeleteManagedPublicUrl_(url));
     const mediaCleanupRequired = mediaCleanup.some((ok) => !ok);
 
     [
@@ -5923,14 +5906,25 @@ function adminR2SignedHeaders_(cfg, method, objectKey, payloadBytes) {
   };
 }
 
+function adminR2NormalizePublicBaseUrl_(raw) {
+  const value = String(raw || "").trim().replace(/\/+$/, "");
+  if (!/^https:\/\//i.test(value)) {
+    throw new Error("Public media URL must start with https://");
+  }
+  if (/\.r2\.cloudflarestorage\.com(?:\/|$)/i.test(value)) {
+    throw new Error(
+      "That is the private R2 S3 API endpoint. Use the bucket Public Development URL ending in r2.dev, or a custom public media domain."
+    );
+  }
+  return value;
+}
+
 function adminR2ValidateConfig_(cfg) {
   if (!cfg.accountId) throw new Error("Paste the Cloudflare R2 Account ID.");
   if (!cfg.accessKeyId) throw new Error("Paste the R2 Access Key ID.");
   if (!cfg.secretAccessKey) throw new Error("Paste the R2 Secret Access Key.");
   if (!cfg.bucket) throw new Error("Enter the R2 bucket name.");
-  if (!/^https:\/\//i.test(cfg.publicBaseUrl || "")) {
-    throw new Error("Public media URL must start with https://");
-  }
+  adminR2NormalizePublicBaseUrl_(cfg.publicBaseUrl);
 
   const objectKey = `__lakeshore_legends_connection_test_${Date.now()}.txt`;
   const bytes = adminR2Bytes_("Lakeshore Legends R2 connection test");
@@ -6058,7 +6052,7 @@ function adminConfigureMedia_(args) {
     accessKeyId: String(args.accessKeyId || "").trim(),
     secretAccessKey: String(args.secretAccessKey || "").trim(),
     bucket: String(args.bucket || "").trim(),
-    publicBaseUrl: String(args.publicBaseUrl || "").trim().replace(/\/+$/, ""),
+    publicBaseUrl: adminR2NormalizePublicBaseUrl_(args.publicBaseUrl),
   };
 
   adminR2ValidateConfig_(cfg);
@@ -6074,6 +6068,105 @@ function adminConfigureMedia_(args) {
     ok: true,
     teacherToken: verified.token,
     ...adminMediaPublicStatus_(),
+    now: new Date().toISOString(),
+  };
+}
+
+function adminR2MediaPathFromUrl_(raw) {
+  const value = String(raw || "").trim();
+  const match = value.match(/\/((?:portraits|companions)\/[^?#]+)(\?[^#]*)?$/i);
+  if (!match) return null;
+  return { objectKey: match[1], query: match[2] || "" };
+}
+
+function adminR2RebaseStoredUrl_(raw, oldBaseRaw, newBaseRaw) {
+  const value = String(raw || "").trim();
+  if (!value) return value;
+  const oldBase = String(oldBaseRaw || "").trim().replace(/\/+$/, "");
+  const newBase = String(newBaseRaw || "").trim().replace(/\/+$/, "");
+  const fromPrivateS3 = /\.r2\.cloudflarestorage\.com(?:\/|$)/i.test(value);
+  const fromOldPublicBase = !!oldBase && value.indexOf(`${oldBase}/`) === 0;
+  if (!fromPrivateS3 && !fromOldPublicBase) return value;
+  const parsed = adminR2MediaPathFromUrl_(value);
+  if (!parsed) return value;
+  return `${newBase}/${parsed.objectKey}${parsed.query}`;
+}
+
+function adminRepairStoredR2MediaUrls_(oldBase, newBase) {
+  let companionUrls = 0;
+  let rosterUrls = 0;
+
+  const playerState = ensurePlayerStateSheet_();
+  if (playerState.getLastRow() >= 2) {
+    const headers = playerState.getRange(1, 1, 1, playerState.getLastColumn()).getDisplayValues()[0];
+    const map = headerMap_(headers);
+    const iCompanion = idx_(map, "CompanionURL", "Companion URL");
+    if (iCompanion >= 0) {
+      const range = playerState.getRange(2, iCompanion + 1, playerState.getLastRow() - 1, 1);
+      const values = range.getValues();
+      let changed = false;
+      values.forEach((row) => {
+        const before = String(row[0] || "").trim();
+        const after = adminR2RebaseStoredUrl_(before, oldBase, newBase);
+        if (after !== before) {
+          row[0] = after;
+          companionUrls++;
+          changed = true;
+        }
+      });
+      if (changed) range.setValues(values);
+    }
+  }
+
+  Object.keys(ADMIN_CLASS_MAX_ROW).forEach((homeroom) => {
+    const sh = adminClassSheet_(homeroom);
+    const info = adminHeaderMapForSheet_(sh);
+    ["PortraitURL", "CompanionURL"].forEach((header) => {
+      const col = idx_(info.map, header, header.replace("URL", " URL"));
+      if (col < 0) return;
+      const rows = Math.max(0, Math.min(ADMIN_CLASS_MAX_ROW[homeroom], sh.getMaxRows()) - 1);
+      if (!rows) return;
+      const range = sh.getRange(2, col + 1, rows, 1);
+      const values = range.getValues();
+      let changed = false;
+      values.forEach((row) => {
+        const before = String(row[0] || "").trim();
+        const after = adminR2RebaseStoredUrl_(before, oldBase, newBase);
+        if (after !== before) {
+          row[0] = after;
+          rosterUrls++;
+          changed = true;
+        }
+      });
+      if (changed) range.setValues(values);
+    });
+  });
+
+  return { companionUrls, rosterUrls, total: companionUrls + rosterUrls };
+}
+
+function adminUpdateMediaPublicUrl_(args) {
+  const verified = verifyTeacher_(args || {});
+  const cfg = adminMediaConfig_();
+  if (!(cfg.accountId && cfg.accessKeyId && cfg.secretAccessKey && cfg.bucket)) {
+    throw new Error("Cloudflare R2 image storage is not connected yet.");
+  }
+
+  const nextBase = adminR2NormalizePublicBaseUrl_(args.publicBaseUrl);
+  const oldBase = cfg.publicBaseUrl;
+  PropertiesService.getScriptProperties().setProperty(
+    ADMIN_MEDIA.R2_PUBLIC_BASE_URL_PROP,
+    nextBase
+  );
+  const repaired = adminRepairStoredR2MediaUrls_(oldBase, nextBase);
+  SpreadsheetApp.flush();
+  cacheRemove_(`studentsMap:${CFG.STUDENTS_SHEET}`);
+
+  return {
+    ok: true,
+    teacherToken: verified.token,
+    ...adminMediaPublicStatus_(),
+    repaired,
     now: new Date().toISOString(),
   };
 }
@@ -6720,6 +6813,9 @@ function doPost(e) {
 
       case "adminconfiguremedia":
         return jsonOut_(adminConfigureMedia_(body));
+
+      case "adminupdatemediapublicurl":
+        return jsonOut_(adminUpdateMediaPublicUrl_(body));
 
       case "adminuploadmedia":
         return jsonOut_(adminUploadMedia_(body));

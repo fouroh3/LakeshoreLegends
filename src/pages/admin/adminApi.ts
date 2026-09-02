@@ -2,7 +2,7 @@
 
 import { HP_API_URL } from "../battle/battleConstants";
 import { getBattleTeacherToken } from "../battle/battleTeacherApi";
-export const ADMIN_API_VERSION = "2026-09-01.7";
+export const ADMIN_API_VERSION = "2026-09-01.8";
 
 import type {
   AdminAttributeValues,
@@ -256,6 +256,14 @@ export type AdminConfigureMediaResult = {
   [key: string]: any;
 };
 
+export type AdminUpdateMediaPublicUrlResult = AdminConfigureMediaResult & {
+  repaired?: {
+    companionUrls?: number;
+    rosterUrls?: number;
+    total?: number;
+  };
+};
+
 export type AdminCompanionUpdateResult = {
   ok?: boolean;
   error?: string;
@@ -284,6 +292,7 @@ type AdminAction =
   | "adminupdateabilities"
   | "adminadjustskill"
   | "adminconfiguremedia"
+  | "adminupdatemediapublicurl"
   | "adminuploadmedia"
   | "adminupdatecompanion"
   | "adminstoresnapshot"
@@ -542,6 +551,13 @@ export async function adminConfigureMedia(args: {
   return postAdminAction<AdminConfigureMediaResult>(
     "adminconfiguremedia",
     args
+  );
+}
+
+export async function adminUpdateMediaPublicUrl(publicBaseUrl: string) {
+  return postAdminAction<AdminUpdateMediaPublicUrlResult>(
+    "adminupdatemediapublicurl",
+    { publicBaseUrl }
   );
 }
 
