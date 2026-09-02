@@ -1,0 +1,31 @@
+name: Run Hero Image Lightbox
+on:
+  push:
+    branches: [fluffy-cloud]
+    paths:
+      - .github/workflows/run-hero-image-lightbox.yml
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fluffy-cloud
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Apply hero lightbox
+        run: python scripts/add_hero_image_lightbox.py
+      - name: Install dependencies
+        run: npm ci
+      - name: Validate production build
+        run: npm run build
+      - name: Commit patch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/components/CharacterProfileModal.tsx
+          git commit -m "Make hero portrait expandable in player profile"
+          git push origin HEAD:fluffy-cloud
