@@ -1,5 +1,6 @@
 // src/pages/admin/adminApi.ts
 
+import { loadStudents } from "../../data";
 import { HP_API_URL } from "../battle/battleConstants";
 import { getBattleTeacherToken } from "../battle/battleTeacherApi";
 export const ADMIN_API_VERSION = "2026-09-01.10";
@@ -43,6 +44,11 @@ export type AdminAssignGuildResult = {
   updated?: number;
   guild?: string;
   studentIds?: string[];
+  reward?: {
+    attribute: string;
+    amount: number;
+    skill: string;
+  } | null;
   [key: string]: any;
 };
 
@@ -273,7 +279,6 @@ export type AdminCompanionUpdateResult = {
   [key: string]: any;
 };
 
-
 export type AdminYearRolloverPreviewResult = {
   ok?: boolean;
   error?: string;
@@ -398,7 +403,10 @@ async function postAdminAction<T>(
 
       return data as T;
     } catch (err: any) {
-      lastError = err instanceof Error ? err : new Error(String(err || "Admin API failed."));
+      lastError =
+        err instanceof Error
+          ? err
+          : new Error(String(err || "Admin API failed."));
       const unknownAction = /^Unknown action:/i.test(lastError.message.trim());
       const canRetryUnknownAction = unknownAction && attempt < 2;
       const canRetryRead = retryableRead && attempt < 1;
@@ -415,6 +423,69 @@ async function postAdminAction<T>(
 }
 
 const ADMIN_IMPORT_BATCH_SIZE = 10;
+
+type AdminGuildReward = {
+  attribute: keyof AdminAttributeValues;
+  skill: string;
+};
+
+const ADMIN_GUILD_REWARDS: Record<string, AdminGuildReward> = {
+  Scouts: { attribute: "wis", skill: "Perception" },
+  Guardians: { attribute: "con", skill: "Endurance" },
+  Blades: { attribute: "str", skill: "Spontaneous" },
+  Shadows: { attribute: "dex", skill: "Stealthy" },
+  Scholars: { attribute: "int", skill: "History" },
+  Diplomats: { attribute: "cha", skill: "Team Player" },
+};
+
+function normalizeAdminStudentId(value: unknown) {
+  return String(value || "").trim().toUpperCase();
+}
+
+function cloneAdminAttributes(
+  source: Partial<AdminAttributeValues> | null | undefined
+): AdminAttributeValues {
+  return {
+    str: Number(source?.str) || 0,
+    dex: Number(source?.dex) || 0,
+    con: Number(source?.con) || 0,
+    int: Number(source?.int) || 0,
+    wis: Number(source?.wis) || 0,
+    cha: Number(source?.cha) || 0,
+  };
+}
+
+function normalizeAdminRosterSkills(values: unknown): string[] {
+  const source = Array.isArray(values)
+    ? values
+    : String(values || "").split(/[;,|\n\r]/g);
+  const out: string[] = [];
+  const seen = new Set<string>();
+
+  source.forEach((value) => {
+    const skill = String(value || "").trim();
+    if (!skill) return;
+    const key = skill.toLowerCase();
+    if (seen.has(key)) return;
+    seen.add(key);
+    out.push(skill);
+  });
+
+  return out;
+}
+
+function removeAdminRosterSkill(skills: string[], skillName: string) {
+  const target = skillName.trim().toLowerCase();
+  return skills.filter((skill) => skill.trim().toLowerCase() !== target);
+}
+
+function addAdminRosterSkill(skills: string[], skillName: string) {
+  const target = skillName.trim().toLowerCase();
+  if (skills.some((skill) => skill.trim().toLowerCase() === target)) {
+    return skills;
+  }
+  return [...skills, skillName];
+}
 
 function compareAdminImportedStudents(
   a: AdminImportedStudent,
@@ -462,7 +533,9 @@ export async function adminImportStudents(students: AdminImportedStudent[]) {
       lastResult = result;
     } catch (err: any) {
       const message =
-        err instanceof Error ? err.message : String(err || "Student import failed.");
+        err instanceof Error
+          ? err.message
+          : String(err || "Student import failed.");
 
       if (importedCount > 0) {
         throw new Error(
@@ -488,10 +561,132 @@ export async function adminAssignGuildBatch(args: {
   studentIds: string[];
   guild: string;
 }) {
-  return postAdminAction<AdminAssignGuildResult>("adminassignguildbatch", {
-    studentIds: args.studentIds,
-    guild: args.guild,
-  });
+  const studentIds = [
+    ...new Set(
+      (Array.isArray(args.studentIds) ? args.studentIds : [])
+        .map(normalizeAdminStudentId)
+        .filter(Boolean)
+    ),
+  ];
+  const guild = String(args.guild || "").trim();
+
+  if (!studentIds.length) {
+    return postAdminAction<AdminAssignGuildResult>("adminassignguildbatch", {
+      studentIds,
+      guild,
+    });
+  }
+
+  const roster = await loadStudents({ force: true });
+  const rosterById = new Map(
+    roster.map((student) => [normalizeAdminStudentId(student.id), student])
+  );
+  const plans: Array<{
+    studentId: string;
+    oldGuild: string;
+    before: AdminAbilitySnapshotResult;
+    afterBonus: AdminAttributeValues;
+    afterSkills: string[];
+  }> = [];
+
+  for (const studentId of studentIds) {
+    const student = rosterById.get(studentId);
+    if (!student) {
+      throw new Error(`Active student not found before guild assignment: ${studentId}`);
+    }
+
+    const oldGuild = String(student.guild || "").trim();
+    if (oldGuild === guild) continue;
+
+    const before = await adminAbilitySnapshot(studentId);
+    const afterBonus = cloneAdminAttributes(before.bonusAttributes);
+    let afterSkills = normalizeAdminRosterSkills(before.rosterSkills);
+    const oldReward = ADMIN_GUILD_REWARDS[oldGuild];
+    const newReward = ADMIN_GUILD_REWARDS[guild];
+
+    if (oldReward) {
+      if (afterBonus[oldReward.attribute] >= 2) {
+        afterBonus[oldReward.attribute] -= 2;
+      }
+      afterSkills = removeAdminRosterSkill(afterSkills, oldReward.skill);
+    }
+
+    if (newReward) {
+      afterBonus[newReward.attribute] += 2;
+      afterSkills = addAdminRosterSkill(afterSkills, newReward.skill);
+    }
+
+    plans.push({
+      studentId,
+      oldGuild,
+      before,
+      afterBonus,
+      afterSkills,
+    });
+  }
+
+  const applied: typeof plans = [];
+
+  try {
+    for (const plan of plans) {
+      await postAdminAction<AdminAbilityUpdateResult>("adminupdateabilities", {
+        studentId: plan.studentId,
+        baseAttributes: plan.before.baseAttributes,
+        bonusAttributes: plan.afterBonus,
+        rosterSkills: plan.afterSkills,
+        reason: `Guild package: ${plan.oldGuild || "Unassigned"} -> ${
+          guild || "Unassigned"
+        }`,
+      });
+      applied.push(plan);
+    }
+
+    const result = await postAdminAction<AdminAssignGuildResult>(
+      "adminassignguildbatch",
+      { studentIds, guild }
+    );
+    const reward = ADMIN_GUILD_REWARDS[guild];
+
+    return {
+      ...result,
+      reward: reward
+        ? {
+            attribute: reward.attribute.toUpperCase(),
+            amount: 2,
+            skill: reward.skill,
+          }
+        : null,
+    };
+  } catch (err: any) {
+    const rollbackFailures: string[] = [];
+
+    for (const plan of [...applied].reverse()) {
+      try {
+        await postAdminAction<AdminAbilityUpdateResult>("adminupdateabilities", {
+          studentId: plan.studentId,
+          baseAttributes: plan.before.baseAttributes,
+          bonusAttributes: plan.before.bonusAttributes,
+          rosterSkills: plan.before.rosterSkills,
+          reason: "Rollback after failed guild assignment",
+        });
+      } catch {
+        rollbackFailures.push(plan.studentId);
+      }
+    }
+
+    const message =
+      err instanceof Error ? err.message : String(err || "Guild assignment failed.");
+
+    if (rollbackFailures.length) {
+      throw new Error(
+        `${message} Ability rollback also failed for ${rollbackFailures.join(
+          ", "
+        )}. Refresh and verify those students before trying again.`
+      );
+    }
+
+    throw err;
+  }
 }
 
 export async function adminCurrencySnapshot() {
@@ -551,7 +746,6 @@ export async function adminMigratePlayerState() {
     {}
   );
 }
-
 
 export async function adminYearRolloverPreview() {
   return postAdminAction<AdminYearRolloverPreviewResult>(
@@ -635,7 +829,10 @@ export async function adminPurchasedSkillsSnapshot() {
 
       return data as AdminPurchasedSkillsSnapshotResult;
     } catch (err: any) {
-      lastError = err instanceof Error ? err : new Error(String(err || "Skill snapshot failed."));
+      lastError =
+        err instanceof Error
+          ? err
+          : new Error(String(err || "Skill snapshot failed."));
       if (attempt === 0) {
         await new Promise((resolve) => window.setTimeout(resolve, 250));
       }
@@ -712,7 +909,6 @@ export async function adminUpdateCompanion(args: {
   );
 }
 
-
 export async function adminStoreSnapshot() {
   return postAdminAction<AdminStoreSnapshotResult>("adminstoresnapshot", {});
 }
@@ -722,7 +918,6 @@ export async function adminUpdateStore(settings: AdminStoreSettings) {
     settings,
   });
 }
-
 
 export async function adminArchivedStudents() {
   return postAdminAction<AdminArchivedStudentsResult>(
