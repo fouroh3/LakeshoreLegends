@@ -458,7 +458,7 @@ export async function adminImportStudents(students: AdminImportedStudent[]) {
 
       const completed = Array.isArray(result.students) ? result.students : [];
       importedStudents.push(...completed);
-      importedCount += result.imported ?? completed.length ?? batch.length;
+      importedCount += result.imported ?? completed.length;
       lastResult = result;
     } catch (err: any) {
       const message =
