@@ -414,10 +414,74 @@ async function postAdminAction<T>(
   throw lastError || new Error("Admin API failed.");
 }
 
-export async function adminImportStudents(students: AdminImportedStudent[]) {
-  return postAdminAction<AdminImportResult>("adminimportstudents", {
-    students,
+const ADMIN_IMPORT_BATCH_SIZE = 10;
+
+function compareAdminImportedStudents(
+  a: AdminImportedStudent,
+  b: AdminImportedStudent
+) {
+  const homeroom = String(a.homeroom || "").localeCompare(
+    String(b.homeroom || ""),
+    "en",
+    { numeric: true }
+  );
+  if (homeroom !== 0) return homeroom;
+
+  const last = String(a.last || "").localeCompare(String(b.last || ""), "en", {
+    sensitivity: "base",
   });
+  if (last !== 0) return last;
+
+  return String(a.first || "").localeCompare(String(b.first || ""), "en", {
+    sensitivity: "base",
+  });
+}
+
+export async function adminImportStudents(students: AdminImportedStudent[]) {
+  const orderedStudents = [...students].sort(compareAdminImportedStudents);
+  const importedStudents: NonNullable<AdminImportResult["students"]> = [];
+  let importedCount = 0;
+  let lastResult: AdminImportResult = { ok: true };
+
+  for (
+    let start = 0;
+    start < orderedStudents.length;
+    start += ADMIN_IMPORT_BATCH_SIZE
+  ) {
+    const batch = orderedStudents.slice(start, start + ADMIN_IMPORT_BATCH_SIZE);
+
+    try {
+      const result = await postAdminAction<AdminImportResult>(
+        "adminimportstudents",
+        { students: batch }
+      );
+
+      const completed = Array.isArray(result.students) ? result.students : [];
+      importedStudents.push(...completed);
+      importedCount += result.imported ?? completed.length ?? batch.length;
+      lastResult = result;
+    } catch (err: any) {
+      const message =
+        err instanceof Error ? err.message : String(err || "Student import failed.");
+
+      if (importedCount > 0) {
+        throw new Error(
+          `Import stopped after ${importedCount} student${
+            importedCount === 1 ? " was" : "s were"
+          } completed successfully. Refresh the roster before retrying. ${message}`
+        );
+      }
+
+      throw err;
+    }
+  }
+
+  return {
+    ...lastResult,
+    ok: true,
+    imported: importedCount,
+    students: importedStudents,
+  };
 }
 
 export async function adminAssignGuildBatch(args: {
