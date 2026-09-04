@@ -246,13 +246,18 @@ export default function BattleTeacherConsole() {
   const [studentHpOverride, setStudentHpOverride] = useState("");
 
   const homeroomOptions = useMemo(() => {
+    const populatedHomerooms = new Set(
+      students
+        .map((student) => String(student?.homeroom || "").trim())
+        .filter(Boolean)
+    );
     const set = new Set<string>();
     battleRows.forEach((row: any) => {
       const homeroom = String(row?.homeroom || "").trim();
-      if (homeroom) set.add(homeroom);
+      if (homeroom && populatedHomerooms.has(homeroom)) set.add(homeroom);
     });
     return Array.from(set).sort((a, b) => a.localeCompare(b, "en", { numeric: true }));
-  }, [battleRows]);
+  }, [battleRows, students]);
 
   useEffect(() => {
     if (!setupHomeroom && homeroomOptions.length) setSetupHomeroom(homeroomOptions[0]);
