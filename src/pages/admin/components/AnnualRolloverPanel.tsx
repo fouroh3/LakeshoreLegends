@@ -20,6 +20,11 @@ import {
 
 const CONFIRMATION = "START NEW SCHOOL YEAR";
 
+type RolloverNotice = {
+  type: "ok" | "err";
+  msg: string;
+} | null;
+
 type Props = {
   onCompleted?: (result: AdminStartNewSchoolYearResult) => void | Promise<void>;
 };
@@ -60,6 +65,7 @@ export default function AnnualRolloverPanel({ onCompleted }: Props) {
   const [loading, setLoading] = useState(true);
   const [running, setRunning] = useState(false);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState<RolloverNotice>(null);
   const [archiveLabel, setArchiveLabel] = useState("");
   const [acknowledged, setAcknowledged] = useState(false);
   const [confirmation, setConfirmation] = useState("");
@@ -69,6 +75,8 @@ export default function AnnualRolloverPanel({ onCompleted }: Props) {
   const loadPreview = async () => {
     setLoading(true);
     setError("");
+    setNotice(null);
+
     try {
       const [next, finalExaminer] = await Promise.all([
         adminYearRolloverPreview(),
@@ -79,12 +87,14 @@ export default function AnnualRolloverPanel({ onCompleted }: Props) {
         Boolean(finalExaminer.active && finalExaminer.phase !== "VICTORY")
       );
     } catch (err: any) {
+      const message =
+        err?.message ||
+        "Could not verify the school-year rollover preview and battle state.";
+
       setPreview(null);
       setFinalExaminerActive(false);
-      setError(
-        err?.message ||
-          "Could not verify the school-year rollover preview and battle state."
-      );
+      setError(message);
+      setNotice({ type: "err", msg: message });
     } finally {
       setLoading(false);
     }
@@ -116,8 +126,10 @@ export default function AnnualRolloverPanel({ onCompleted }: Props) {
 
   const startRollover = async () => {
     if (!canRun) return;
+
     setRunning(true);
     setError("");
+    setNotice(null);
     setResult(null);
 
     try {
@@ -136,7 +148,12 @@ export default function AnnualRolloverPanel({ onCompleted }: Props) {
         confirmation,
         acknowledged,
       });
+
       setResult(next);
+      setNotice({
+        type: "ok",
+        msg: `New school year is ready. ${next.archiveLabel} was archived successfully and the live student layer was reset.`,
+      });
       setFinalExaminerActive(false);
       setPreview((current) =>
         current
@@ -155,7 +172,9 @@ export default function AnnualRolloverPanel({ onCompleted }: Props) {
       setConfirmation("");
       await onCompleted?.(next);
     } catch (err: any) {
-      setError(err?.message || "New school year reset failed.");
+      const message = err?.message || "New school year reset failed.";
+      setError(message);
+      setNotice({ type: "err", msg: message });
     } finally {
       setRunning(false);
     }
@@ -163,6 +182,46 @@ export default function AnnualRolloverPanel({ onCompleted }: Props) {
 
   return (
     <div className="space-y-5">
+      {notice && (
+        <div
+          className="pointer-events-none fixed inset-x-3 top-3 z-[100] flex justify-end sm:left-auto sm:right-5 sm:top-5 sm:w-[420px]"
+          aria-live={notice.type === "err" ? "assertive" : "polite"}
+          role={notice.type === "err" ? "alert" : "status"}
+        >
+          <div
+            className={[
+              "pointer-events-auto flex max-h-[70vh] w-full items-start gap-3 overflow-y-auto rounded-2xl border px-4 py-3.5 text-sm font-medium shadow-[0_18px_55px_rgba(0,0,0,0.45)] backdrop-blur-xl",
+              notice.type === "ok"
+                ? "border-emerald-300/25 bg-emerald-950/90 text-emerald-50"
+                : "border-red-300/25 bg-red-950/90 text-red-50",
+            ].join(" ")}
+          >
+            {notice.type === "ok" ? (
+              <CheckCircle2
+                size={19}
+                className="mt-0.5 shrink-0 text-emerald-200"
+              />
+            ) : (
+              <ShieldAlert
+                size={19}
+                className="mt-0.5 shrink-0 text-red-200"
+              />
+            )}
+
+            <div className="min-w-0 flex-1 leading-6">{notice.msg}</div>
+
+            <button
+              type="button"
+              onClick={() => setNotice(null)}
+              className="shrink-0 rounded-lg px-2 py-0.5 text-lg leading-none text-white/55 transition hover:bg-white/10 hover:text-white"
+              aria-label="Dismiss message"
+            >
+              ×
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="overflow-hidden rounded-[28px] border border-amber-300/16 bg-[linear-gradient(135deg,rgba(120,53,15,0.20),rgba(35,14,8,0.72)_48%,rgba(10,10,12,0.92))] shadow-[0_20px_70px_rgba(0,0,0,0.28)]">
         <div className="relative p-5 sm:p-6">
           <div className="pointer-events-none absolute -right-16 -top-20 h-64 w-64 rounded-full bg-amber-400/[0.07] blur-3xl" />
@@ -193,11 +252,11 @@ export default function AnnualRolloverPanel({ onCompleted }: Props) {
         </div>
       </div>
 
-      {error && (
-        <div className="rounded-[22px] border border-red-300/20 bg-red-400/[0.08] px-4 py-3 text-sm font-semibold leading-6 text-red-100">
+      {error ? (
+        <div className="sr-only" role="alert">
           {error}
         </div>
-      )}
+      ) : null}
 
       {result && (
         <div className="rounded-[26px] border border-emerald-300/20 bg-emerald-400/[0.07] p-5 shadow-[0_0_34px_rgba(52,211,153,0.08)]">
