@@ -12,6 +12,7 @@ export const SHEET_CSV_URL = `${XP_API_URL}?action=roster`;
 // ✅ Short cache so purchases show quickly on the dashboard
 let cache: { at: number; students: Student[] } | null = null;
 const CACHE_MS = 10_000;
+const ROSTER_ATTEMPT_TIMEOUT_MS = 20_000;
 
 /* ---------------- helpers ---------------- */
 
@@ -495,18 +496,62 @@ export async function loadStudents(options?: { force?: boolean }): Promise<Stude
     return cache.students;
   }
 
-  const url = `${SHEET_CSV_URL}${
-    SHEET_CSV_URL.includes("?") ? "&" : "?"
-  }t=${now}`;
+  let res: Response | null = null;
+  let lastError: Error | null = null;
 
-  const res = await fetch(url, {
-    cache: "no-store",
-  });
+  // Apps Script ContentService occasionally returns a transient 404 while its
+  // one-time googleusercontent.com redirect is becoming available. Retry the
+  // same live roster endpoint; do not fall back to the stale published CSV.
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const url = `${SHEET_CSV_URL}${
+      SHEET_CSV_URL.includes("?") ? "&" : "?"
+    }t=${now}-${attempt}`;
 
-  if (!res.ok) {
-    throw new Error(
-      `Failed to fetch roster CSV: HTTP ${res.status}`
-    );
+    const controller = new AbortController();
+    let timeoutId = 0;
+    const timeout = new Promise<Response>((_, reject) => {
+      timeoutId = window.setTimeout(() => {
+        controller.abort();
+        reject(new Error("Roster request timed out."));
+      }, ROSTER_ATTEMPT_TIMEOUT_MS);
+    });
+
+    try {
+      res = await Promise.race([
+        fetch(url, {
+          cache: "no-store",
+          signal: controller.signal,
+        }),
+        timeout,
+      ]);
+
+      if (res.ok) break;
+
+      lastError = new Error(
+        `Failed to fetch roster CSV: HTTP ${res.status}`
+      );
+
+      if (res.status !== 404 || attempt === 2) {
+        throw lastError;
+      }
+    } catch (err: any) {
+      lastError =
+        err?.name === "AbortError"
+          ? new Error("Roster request timed out.")
+          : err instanceof Error
+          ? err
+          : new Error(String(err || "Failed to fetch roster CSV."));
+
+      if (attempt === 2) throw lastError;
+    } finally {
+      window.clearTimeout(timeoutId);
+    }
+
+    await new Promise((resolve) => window.setTimeout(resolve, 500 * (attempt + 1)));
+  }
+
+  if (!res?.ok) {
+    throw lastError || new Error("Failed to fetch roster CSV.");
   }
 
   const text = await res.text();
@@ -514,7 +559,7 @@ export async function loadStudents(options?: { force?: boolean }): Promise<Stude
   const students = rowsToStudents(rows);
 
   cache = {
-    at: now,
+    at: Date.now(),
     students,
   };
 
