@@ -1,6 +1,6 @@
 // src/pages/admin/components/HeroImageManagerPanel.tsx
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   CheckCircle2,
   CloudUpload,
@@ -235,7 +235,7 @@ export default function HeroImageManagerPanel({
     return { matched, review, conflicts, done };
   }, [queue]);
 
-  const rebuildConflicts = (items: QueuedImage[]) => {
+  const rebuildConflicts = useCallback((items: QueuedImage[]) => {
     const counts = new Map<string, number>();
     items.forEach((item) => {
       if (!item.studentId || item.uploadState === "done") return;
@@ -249,7 +249,38 @@ export default function HeroImageManagerPanel({
         item.uploadState !== "done" &&
         (counts.get(item.studentId) ?? 0) > 1,
     }));
-  };
+  }, []);
+
+  useEffect(() => {
+    if (!students.length) return;
+
+    setQueue((prev) => {
+      let changed = false;
+      const rematched = prev.map((item) => {
+        if (
+          item.studentId ||
+          item.uploadState === "uploading" ||
+          item.uploadState === "done"
+        ) {
+          return item;
+        }
+
+        const match = autoMatch(item.file, students);
+        if (!match.matched) return item;
+
+        changed = true;
+        return {
+          ...item,
+          studentId: match.studentId,
+          autoMatched: true,
+          uploadState: "ready" as const,
+          error: undefined,
+        };
+      });
+
+      return changed ? rebuildConflicts(rematched) : prev;
+    });
+  }, [rebuildConflicts, students]);
 
   const addFiles = (files: FileList | File[]) => {
     const accepted = Array.from(files).filter(

@@ -7243,6 +7243,35 @@ function adminUpdateStore_(args) {
 // =========================================================
 // Web App Routing + Endpoints
 // =========================================================
+function rosterCsv_() {
+  try {
+    const exportUrl =
+      "https://docs.google.com/spreadsheets/d/1678Zk1sz_GelksvkFzf8l5fYxW7smmfqBDhAF0513Qo/export?format=csv&gid=1383364809";
+    const exportResponse = UrlFetchApp.fetch(exportUrl, {
+      headers: {
+        Authorization: "Bearer " + ScriptApp.getOAuthToken(),
+      },
+      muteHttpExceptions: true,
+    });
+
+    if (exportResponse.getResponseCode() === 200) {
+      return exportResponse.getContentText();
+    }
+  } catch (_) {}
+
+  // Keep a direct sheet-read fallback in case Google's export service is
+  // temporarily unavailable.
+  const sh = getSheet_(CFG.STUDENTS_SHEET);
+  const values = sh.getDataRange().getDisplayValues();
+  return values
+    .map((row) =>
+      row
+        .map((value) => `"${String(value ?? "").replace(/"/g, '""')}"`)
+        .join(",")
+    )
+    .join("\n");
+}
+
 function doGet(e) {
   try {
     const p = (e && e.parameter) || {};
@@ -7260,6 +7289,9 @@ function doGet(e) {
       });
 
     switch (action) {
+      case "roster":
+        return textOut_(rosterCsv_());
+
       case "versions":
         return jsonOut_({
           ok: true,

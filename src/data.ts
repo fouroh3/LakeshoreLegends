@@ -2,12 +2,14 @@
 
 import type { Student } from "./types";
 
-// ✅ Lakeshore Legends Apps Script Web App (XP/HP + live roster API)
+// ✅ Lakeshore Legends Apps Script Web App (XP/HP + admin API)
 export const XP_API_URL =
   "https://script.google.com/macros/s/AKfycbw6gMIFYPvaljF3Ls-waojzprU6bygZZonOIJeKLopN2NSKgkDT-EsRKznxQiGpth_6/exec";
 
-// ✅ Live Master roster from Apps Script (avoids stale Google "Publish to web" CSV)
-export const SHEET_CSV_URL = `${XP_API_URL}?action=roster`;
+// ✅ Direct live export of the Master tab. This is not the stale Google
+// "Publish to web" feed; it returns the current sheet and supports CORS.
+export const SHEET_CSV_URL =
+  "https://docs.google.com/spreadsheets/d/1678Zk1sz_GelksvkFzf8l5fYxW7smmfqBDhAF0513Qo/export?format=csv&gid=1383364809";
 
 // ✅ Short cache so purchases show quickly on the dashboard
 let cache: { at: number; students: Student[] } | null = null;
@@ -499,9 +501,8 @@ export async function loadStudents(options?: { force?: boolean }): Promise<Stude
   let res: Response | null = null;
   let lastError: Error | null = null;
 
-  // Apps Script ContentService occasionally returns a transient 404 while its
-  // one-time googleusercontent.com redirect is becoming available. Retry the
-  // same live roster endpoint; do not fall back to the stale published CSV.
+  // Google CSV exports use a one-time googleusercontent.com redirect. Retry
+  // transient failures from that live export; never use the stale published CSV.
   for (let attempt = 0; attempt < 3; attempt++) {
     const url = `${SHEET_CSV_URL}${
       SHEET_CSV_URL.includes("?") ? "&" : "?"
