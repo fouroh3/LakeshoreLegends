@@ -2,13 +2,12 @@
 
 import type { Student } from "./types";
 
-// ✅ Lakeshore Legends Apps Script Web App (XP/HP API)
+// ✅ Lakeshore Legends Apps Script Web App (XP/HP + live roster API)
 export const XP_API_URL =
   "https://script.google.com/macros/s/AKfycbw6gMIFYPvaljF3Ls-waojzprU6bygZZonOIJeKLopN2NSKgkDT-EsRKznxQiGpth_6/exec";
 
-// ✅ Published Master CSV (roster + attributes + bonus columns)
-export const SHEET_CSV_URL =
-  "https://docs.google.com/spreadsheets/d/e/2PACX-1vSsHQNK1vvVY-V6nI4kOEilMlAdcnPCdM50QC3-mO4OQsoBDN0l_ROeTUoob3OhJpKD7zIZPXP1VrJw/pub?gid=1383364809&single=true&output=csv";
+// ✅ Live Master roster from Apps Script (avoids stale Google "Publish to web" CSV)
+export const SHEET_CSV_URL = `${XP_API_URL}?action=roster`;
 
 // ✅ Short cache so purchases show quickly on the dashboard
 let cache: { at: number; students: Student[] } | null = null;
@@ -261,19 +260,18 @@ function rowsToStudents(rows: string[][]): Student[] {
     "companion_status"
   );
 
-
   const iSkills = pickStrict(idx, "skills", "skill");
   const iInventory = pickStrict(
     idx,
     "inventory",
-  "inventory ids",
-  "inventoryids",
-  "cards",
-  "card inventory",
-  "items",
-  "item inventory",
-  "collected cards"
-);
+    "inventory ids",
+    "inventoryids",
+    "cards",
+    "card inventory",
+    "items",
+    "item inventory",
+    "collected cards"
+  );
 
   const iStr = pickFlexible(idx, "str", "strength");
   const iDex = pickFlexible(idx, "dex", "dexterity");
@@ -440,7 +438,6 @@ function rowsToStudents(rows: string[][]): Student[] {
 
     const inventory = splitInventory(inventoryRaw);
 
-
     const student: Student = {
       id,
       first,
@@ -515,7 +512,6 @@ export async function loadStudents(options?: { force?: boolean }): Promise<Stude
   const text = await res.text();
   const rows = parseCSV(text);
   const students = rowsToStudents(rows);
-
 
   cache = {
     at: now,
