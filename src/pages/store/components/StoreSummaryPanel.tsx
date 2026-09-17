@@ -1,6 +1,5 @@
 // src/pages/store/components/StoreSummaryPanel.tsx
 
-import type { AttrKey } from "../../../xpApi";
 import { innerCard, label } from "../storeTheme";
 
 type Props = {
@@ -16,7 +15,7 @@ type Props = {
   confirmOk: boolean;
   storeLocked: boolean;
   hasEnoughPoints: boolean;
-  pendingTarget: AttrKey | null;
+  pendingCount: number;
   guildTheme: {
     border: string;
     softPanel: string;
@@ -38,7 +37,7 @@ export default function StoreSummaryPanel({
   confirmOk,
   storeLocked,
   hasEnoughPoints,
-  pendingTarget,
+  pendingCount,
   guildTheme,
 }: Props) {
   return (
@@ -164,9 +163,9 @@ export default function StoreSummaryPanel({
           {hasEnoughPoints ? "Enough XP" : "Not Enough XP"}
         </span>
 
-        {pendingTarget && (
+        {pendingCount > 0 && (
           <span className="rounded-full bg-cyan-400/10 px-3 py-1 text-cyan-100">
-            Ready to Purchase
+            {pendingCount} upgrade{pendingCount === 1 ? "" : "s"} ready
           </span>
         )}
       </div>

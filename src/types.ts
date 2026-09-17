@@ -35,6 +35,7 @@ export type Student = {
   // Admin/editor source values from Master. Core stats above remain totals.
   baseAttributes?: AttributeValues;
   bonusAttributes?: AttributeValues;
+  guildAttributes?: AttributeValues;
 
   // gameplay data
   skills: string[] | string;

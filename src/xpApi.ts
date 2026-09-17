@@ -44,8 +44,9 @@ export type XpSummary = {
 
 export type SpendXpArgs = {
   studentId: string;
-  target: AttrKey;
-  points: number;
+  target?: AttrKey;
+  points?: number;
+  purchases?: Array<{ target: AttrKey; points: number }>;
   pin: string;
   openNonce?: string;
   requestId?: string;
@@ -57,7 +58,19 @@ function toNum(v: any, fallback = 0) {
 }
 
 async function fetchJsonStrict(url: string, init?: RequestInit) {
-  const res = await fetch(url, init);
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), 18_000);
+  let res: Response;
+  try {
+    res = await fetch(url, { ...init, signal: controller.signal });
+  } catch (error) {
+    if ((error as Error)?.name === "AbortError") {
+      throw new Error("XP API request timed out.");
+    }
+    throw error;
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
   const text = await res.text();
 
   let json: any;
@@ -80,9 +93,32 @@ async function fetchJsonStrict(url: string, init?: RequestInit) {
   return json;
 }
 
+function isTransientApiError(error: unknown) {
+  const message = String(error ?? "").toLowerCase();
+  return ["failed to fetch", "network", "timed out", "processing", "retry shortly", "http 404", "http 408", "http 429", "http 500", "http 502", "http 503", "http 504"].some((value) =>
+    message.includes(value)
+  );
+}
+
+async function fetchJsonResilient(url: string, init?: RequestInit, maxAttempts = 5) {
+  let lastError: unknown;
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    try {
+      return await fetchJsonStrict(url, init);
+    } catch (error) {
+      lastError = error;
+      if (!isTransientApiError(error) || attempt === maxAttempts - 1) throw error;
+      const exponential = Math.min(4_000, 350 * 2 ** attempt);
+      const jitter = Math.floor(Math.random() * 700);
+      await new Promise((resolve) => window.setTimeout(resolve, exponential + jitter));
+    }
+  }
+  throw lastError;
+}
+
 export async function getApiVersions(): Promise<ApiVersions> {
   const url = `${XP_API_URL}?action=versions&_=${Date.now()}`;
-  const data = await fetchJsonStrict(url, { method: "GET" });
+  const data = await fetchJsonResilient(url, { method: "GET" });
 
   if (!data?.ok) {
     throw new Error(data?.error || data?.message || "Failed to load versions");
@@ -97,7 +133,7 @@ export async function getApiVersions(): Promise<ApiVersions> {
 
 export async function getStoreState(): Promise<StoreState> {
   const url = `${XP_API_URL}?action=xpstate&_=${Date.now()}`;
-  const data = await fetchJsonStrict(url, { method: "GET" });
+  const data = await fetchJsonResilient(url, { method: "GET" });
 
   if (!data?.ok) {
     throw new Error(
@@ -130,7 +166,7 @@ export async function getXpSummary(studentId: string): Promise<XpSummary> {
     `&studentId=${encodeURIComponent(cleanId)}` +
     `&_=${Date.now()}`;
 
-  const data = await fetchJsonStrict(url, { method: "GET" });
+  const data = await fetchJsonResilient(url, { method: "GET" });
 
   if (!data?.ok) {
     throw new Error(
@@ -152,15 +188,23 @@ export async function getXpSummary(studentId: string): Promise<XpSummary> {
 
 export async function spendXp(args: SpendXpArgs) {
   const studentId = String(args.studentId ?? "").trim();
-  const target = String(args.target ?? "")
-    .trim()
-    .toUpperCase() as AttrKey;
-  const points = Math.max(1, Math.round(toNum(args.points, 1)));
+  const purchases = (Array.isArray(args.purchases) && args.purchases.length
+    ? args.purchases
+    : [{ target: args.target, points: args.points ?? 1 }]
+  ).map((purchase) => ({
+    target: String(purchase.target ?? "").trim().toUpperCase() as AttrKey,
+    points: Math.max(1, Math.round(toNum(purchase.points, 1))),
+  }));
   const pin = String(args.pin ?? "").trim();
   const openNonce = String(args.openNonce ?? "").trim();
 
   if (!studentId) throw new Error("Missing studentId.");
-  if (!["STR", "DEX", "CON", "INT", "WIS", "CHA"].includes(target)) {
+  if (
+    !purchases.length ||
+    purchases.some(
+      ({ target }) => !["STR", "DEX", "CON", "INT", "WIS", "CHA"].includes(target)
+    )
+  ) {
     throw new Error("Invalid target.");
   }
   if (!pin) throw new Error("Missing PIN.");
@@ -170,20 +214,21 @@ export async function spendXp(args: SpendXpArgs) {
   const body = JSON.stringify({
     action: "spendxp",
     studentId,
-    target,
-    points,
+    target: purchases[0].target,
+    points: purchases[0].points,
+    purchases,
     pin,
     openNonce,
     requestId: args.requestId ?? "",
   });
 
-  const data = await fetchJsonStrict(url, {
+  const data = await fetchJsonResilient(url, {
     method: "POST",
     headers: {
       "Content-Type": "text/plain;charset=utf-8",
     },
     body,
-  });
+  }, 6);
 
   if (!data?.ok) {
     throw new Error(data?.error || data?.message || "XP purchase failed.");

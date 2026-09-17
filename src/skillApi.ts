@@ -53,7 +53,19 @@ function toSkillList(value: unknown) {
 }
 
 async function fetchJsonStrict(url: string, init?: RequestInit) {
-  const res = await fetch(url, init);
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), 18_000);
+  let res: Response;
+  try {
+    res = await fetch(url, { ...init, signal: controller.signal });
+  } catch (error) {
+    if ((error as Error)?.name === "AbortError") {
+      throw new Error("Skill API request timed out.");
+    }
+    throw error;
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
   const text = await res.text();
 
   let json: any;
@@ -80,6 +92,29 @@ async function fetchJsonStrict(url: string, init?: RequestInit) {
   return json;
 }
 
+function isTransientApiError(error: unknown) {
+  const message = String(error ?? "").toLowerCase();
+  return ["failed to fetch", "network", "timed out", "processing", "retry shortly", "http 404", "http 408", "http 429", "http 500", "http 502", "http 503", "http 504"].some((value) =>
+    message.includes(value)
+  );
+}
+
+async function fetchJsonResilient(url: string, init?: RequestInit, maxAttempts = 5) {
+  let lastError: unknown;
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    try {
+      return await fetchJsonStrict(url, init);
+    } catch (error) {
+      lastError = error;
+      if (!isTransientApiError(error) || attempt === maxAttempts - 1) throw error;
+      const exponential = Math.min(4_000, 350 * 2 ** attempt);
+      const jitter = Math.floor(Math.random() * 700);
+      await new Promise((resolve) => window.setTimeout(resolve, exponential + jitter));
+    }
+  }
+  throw lastError;
+}
+
 export async function getSkillSummary(studentId: string): Promise<SkillSummary> {
   const cleanId = String(studentId ?? "").trim();
   if (!cleanId) throw new Error("Missing studentId.");
@@ -89,7 +124,7 @@ export async function getSkillSummary(studentId: string): Promise<SkillSummary> 
     `&studentId=${encodeURIComponent(cleanId)}` +
     `&_=${Date.now()}`;
 
-  const data = await fetchJsonStrict(url, { method: "GET" });
+  const data = await fetchJsonResilient(url, { method: "GET" });
 
   return {
     studentId: String(data.studentId ?? cleanId),
@@ -105,7 +140,7 @@ export async function getSkillSummary(studentId: string): Promise<SkillSummary> 
 
 export async function getPurchasedSkillSnapshot(): Promise<Map<string, string[]>> {
   const url = `${XP_API_URL}?action=skillsnapshot&_=${Date.now()}`;
-  const data = await fetchJsonStrict(url, { method: "GET" });
+  const data = await fetchJsonResilient(url, { method: "GET" });
 
   const rows = Array.isArray(data.purchasedSkills) ? data.purchasedSkills : [];
   const byStudent = new Map<string, string[]>();
@@ -144,7 +179,7 @@ export async function purchaseSkill(args: PurchaseSkillArgs) {
 
   const url = `${XP_API_URL}?action=purchaseskill&_=${Date.now()}`;
 
-  const data = await fetchJsonStrict(url, {
+  const data = await fetchJsonResilient(url, {
     method: "POST",
     headers: {
       "Content-Type": "text/plain;charset=utf-8",
@@ -157,7 +192,7 @@ export async function purchaseSkill(args: PurchaseSkillArgs) {
       pin,
       requestId: args.requestId ?? "",
     }),
-  });
+  }, 6);
 
   return data;
 }

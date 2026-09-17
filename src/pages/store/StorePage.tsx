@@ -1,13 +1,11 @@
 // src/pages/store/StorePage.tsx
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import AppTopBar from "../../components/AppTopBar";
 import type { Student } from "../../types";
-import { loadStudents } from "../../data";
-import { fetchHpMap } from "../../hpApi";
+import { loadCachedStudents, loadStudents } from "../../data";
 import { normalizeSkillName } from "../../data/skillLibrary";
 import {
-  getApiVersions,
   getStoreState,
   getXpSummary,
   spendXp,
@@ -27,19 +25,12 @@ import { getGuildTheme, shellCardBase } from "./storeTheme";
 import {
   cleanText,
   fullName,
-  isTransientPurchaseError,
   normIdForConfirm,
   rosterBaseAttr,
-  sleep,
 } from "./storeUtils";
 
 type Props = {
   onBack?: () => void;
-};
-
-type HpEntry = {
-  baseHP: number;
-  currentHP: number;
 };
 
 function skillsToOwnedIdSet(raw: unknown) {
@@ -51,36 +42,11 @@ function skillsToOwnedIdSet(raw: unknown) {
   );
 }
 
-async function spendXpWithRetry(
-  args: Parameters<typeof spendXp>[0],
-  opts?: { retries?: number; baseDelayMs?: number }
-) {
-  const retries = opts?.retries ?? 3;
-  const baseDelayMs = opts?.baseDelayMs ?? 250;
-  let lastErr: unknown = null;
-
-  for (let attempt = 0; attempt <= retries; attempt++) {
-    try {
-      return await spendXp(args);
-    } catch (e) {
-      lastErr = e;
-      if (!isTransientPurchaseError(e) || attempt === retries) throw e;
-      const jitter = Math.floor(Math.random() * baseDelayMs);
-      const delay = baseDelayMs * (attempt + 1) + jitter;
-      await sleep(delay);
-    }
-  }
-
-  throw lastErr ?? new Error("Purchase failed");
-}
-
 export default function StorePage({ onBack }: Props) {
-  const [students, setStudents] = useState<Student[]>([]);
-  const [loading, setLoading] = useState(true);
+  const initialStudents = useMemo(() => loadCachedStudents() ?? [], []);
+  const [students, setStudents] = useState<Student[]>(initialStudents);
+  const [loading, setLoading] = useState(initialStudents.length === 0);
   const [err, setErr] = useState<string | null>(null);
-
-  const [hpMap, setHpMap] = useState<Map<string, HpEntry>>(new Map());
-  const [hpErr, setHpErr] = useState<string | null>(null);
 
   const [store, setStore] = useState<StoreState | null>(null);
   const [storeErr, setStoreErr] = useState<string | null>(null);
@@ -95,15 +61,13 @@ export default function StorePage({ onBack }: Props) {
 
   const [pin, setPin] = useState("");
   const [confirmId, setConfirmId] = useState("");
-  const [pendingTarget, setPendingTarget] = useState<AttrKey | null>(null);
+  const [pendingPoints, setPendingPoints] = useState<Partial<Record<AttrKey, number>>>({});
   const [pendingSkillId, setPendingSkillId] = useState<string | null>(null);
 
   const [spending, setSpending] = useState(false);
-  const [lastPurchased, setLastPurchased] = useState<AttrKey | null>(null);
+  const [lastPurchaseCount, setLastPurchaseCount] = useState(0);
   const [, setSpendErr] = useState<string | null>(null);
   const [, setToast] = useState<string | null>(null);
-  const lastHpVersionRef = useRef<string | null>(null);
-  const lastXpVersionRef = useRef<string | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -112,7 +76,7 @@ export default function StorePage({ onBack }: Props) {
       try {
         setLoading(true);
         setErr(null);
-        const data = await loadStudents();
+        const data = await loadStudents({ force: true });
         if (!alive) return;
         setStudents(Array.isArray(data) ? data : []);
       } catch (e) {
@@ -133,77 +97,24 @@ export default function StorePage({ onBack }: Props) {
   useEffect(() => {
     let alive = true;
 
-    const tick = async (force = false) => {
+    const refreshStoreState = async () => {
       try {
-        const versions = await getApiVersions();
-
-        const hpChanged =
-          force ||
-          lastHpVersionRef.current === null ||
-          versions.hpLastWriteIso !== lastHpVersionRef.current;
-
-        const xpChanged =
-          force ||
-          lastXpVersionRef.current === null ||
-          versions.xpLastWriteIso !== lastXpVersionRef.current;
-
-        if (hpChanged) {
-          try {
-            setHpErr(null);
-            const nextHp = await fetchHpMap();
-            if (!alive) return;
-            setHpMap(nextHp);
-            lastHpVersionRef.current = versions.hpLastWriteIso;
-          } catch (e) {
-            if (!alive) return;
-            setHpErr(e instanceof Error ? e.message : "Failed to load HP state");
-          }
-        }
-
-        if (xpChanged) {
-          try {
-            setStoreErr(null);
-            const nextStore = await getStoreState();
-            if (!alive) return;
-            setStore(nextStore);
-            lastXpVersionRef.current = versions.xpLastWriteIso;
-
-            if (selectedId) {
-              const nextSummary = await getXpSummary(selectedId);
-              if (!alive) return;
-              setSummary(nextSummary);
-              setServerAttrs(nextSummary.attrs ?? null);
-            }
-          } catch (e) {
-            if (!alive) return;
-            setStoreErr(
-              e instanceof Error ? e.message : "Failed to load store state"
-            );
-            setStore(
-              (prev) =>
-                prev ?? {
-                  storeLocked: true,
-                  xpPerPoint: 5,
-                  maxPointsPerOpen: 999,
-                }
-            );
-          }
-        }
+        setStoreErr(null);
+        const nextStore = await getStoreState();
+        if (!alive) return;
+        setStore(nextStore);
       } catch (e) {
         if (!alive) return;
-        setStoreErr(e instanceof Error ? e.message : "Failed to load API state");
+        setStoreErr(e instanceof Error ? e.message : "Failed to load store state");
+        setStore((prev) => prev ?? { storeLocked: true, xpPerPoint: 5, maxPointsPerOpen: 999 });
       }
     };
 
-    void tick(true);
-
-    const id = window.setInterval(() => {
-      void tick(false);
-    }, 5000);
+    void refreshStoreState();
 
     const onVis = () => {
       if (document.visibilityState === "visible") {
-        void tick(true);
+        void refreshStoreState();
       }
     };
 
@@ -211,10 +122,9 @@ export default function StorePage({ onBack }: Props) {
 
     return () => {
       alive = false;
-      window.clearInterval(id);
       document.removeEventListener("visibilitychange", onVis);
     };
-  }, [selectedId]);
+  }, []);
 
   const xpPerPoint = store?.xpPerPoint ?? 5;
   const storeLocked = store?.storeLocked ?? true;
@@ -289,15 +199,10 @@ export default function StorePage({ onBack }: Props) {
     return skillsToOwnedIdSet((selected as Record<string, unknown> | null)?.skills);
   }, [selected]);
 
-  const liveHpState = useMemo(() => {
-    if (!selectedStudentId) return null;
-    return hpMap.get(normIdForConfirm(selectedStudentId)) ?? null;
-  }, [hpMap, selectedStudentId]);
-
   useEffect(() => {
     setPin("");
     setConfirmId("");
-    setPendingTarget(null);
+    setPendingPoints({});
     setPendingSkillId(null);
     setSpendErr(null);
     setToast(null);
@@ -305,9 +210,9 @@ export default function StorePage({ onBack }: Props) {
   }, [selectedId]);
 
   useEffect(() => {
-    setPendingTarget(null);
+    setPendingPoints({});
     setPendingSkillId(null);
-    setLastPurchased(null);
+    setLastPurchaseCount(0);
   }, [storeMode]);
 
   useEffect(() => {
@@ -347,7 +252,12 @@ export default function StorePage({ onBack }: Props) {
 
   const pointsAvailable = summary?.spendablePoints ?? 0;
   const hasEnoughPoints = pointsAvailable >= 1;
-  const withinWindow = 1 <= maxPoints;
+  const totalPendingPoints = Object.values(pendingPoints).reduce(
+    (sum, value) => sum + Number(value || 0),
+    0
+  );
+  const pendingCost = totalPendingPoints * xpPerPoint;
+  const withinWindow = totalPendingPoints < maxPoints;
 
   const canSelectAttribute =
     !!selected &&
@@ -358,7 +268,32 @@ export default function StorePage({ onBack }: Props) {
     hasEnoughPoints &&
     withinWindow;
 
-  const canConfirmPurchase = canSelectAttribute && !!pendingTarget;
+  const canConfirmPurchase =
+    !!selected &&
+    !storeLocked &&
+    !spending &&
+    !!pin.trim() &&
+    confirmOk &&
+    totalPendingPoints > 0 &&
+    totalPendingPoints <= maxPoints &&
+    pendingCost <= (summary?.balance ?? 0);
+
+  function changePendingPoint(target: AttrKey, delta: number) {
+    setPendingPoints((current) => {
+      const currentTotal = Object.values(current).reduce(
+        (sum, value) => sum + Number(value || 0),
+        0
+      );
+      const currentValue = Number(current[target] || 0);
+      const nextValue = Math.max(0, currentValue + delta);
+      if (delta > 0 && currentTotal >= Math.min(pointsAvailable, maxPoints)) {
+        return current;
+      }
+      const next = { ...current, [target]: nextValue };
+      if (!nextValue) delete next[target];
+      return next;
+    });
+  }
 
   function displayAttr(t: AttrKey) {
     if (serverAttrs?.final?.[t] != null) {
@@ -373,7 +308,7 @@ export default function StorePage({ onBack }: Props) {
   }
 
   async function confirmSpend() {
-    if (!selected || !pendingTarget) return;
+    if (!selected || totalPendingPoints < 1) return;
     if (storeLocked) return;
 
     setSpending(true);
@@ -386,52 +321,36 @@ export default function StorePage({ onBack }: Props) {
       if (!pin.trim()) throw new Error("Enter the Store PIN.");
       if (!confirmOk) throw new Error("Confirm your StudentID to purchase.");
 
-      const requestId = `xp:${selectedStudentId}:${pendingTarget}:${Date.now()}:${Math.random()
+      const purchases = (Object.entries(pendingPoints) as Array<[AttrKey, number]>)
+        .filter(([, points]) => points > 0)
+        .map(([target, points]) => ({ target, points }));
+      const requestId = `xp:${selectedStudentId}:cart:${Date.now()}:${Math.random()
         .toString(16)
         .slice(2)}`;
 
-      const res = await spendXpWithRetry(
-        {
+      const res = await spendXp({
           studentId: selectedStudentId,
           pin: pin.trim(),
-          target: pendingTarget,
-          points: 1,
+          purchases,
           openNonce: store?.openNonce ?? "",
           requestId,
-        },
-        { retries: 3, baseDelayMs: 250 }
-      );
-
-      const purchasedTarget = pendingTarget;
-      const beforeAttr = Number(
-        res?.beforeAttr ?? displayAttr(purchasedTarget)
-      );
-      const afterAttr = Number(res?.afterAttr ?? beforeAttr + 1);
-
-      setServerAttrs((prev) => ({
-        ...(prev ?? {}),
-        final: {
-          ...(prev?.final ?? {}),
-          [purchasedTarget]: afterAttr,
-        },
-      }));
+      });
 
       if (res?.summary) {
         setSummary(res.summary as XpSummary);
+        setServerAttrs((res.summary as XpSummary).attrs ?? null);
       } else {
         const nextSummary = await getXpSummary(selectedStudentId);
         setSummary(nextSummary);
+        setServerAttrs(nextSummary.attrs ?? null);
       }
 
-      setToast(
-        `✅ Purchased +1 ${purchasedTarget}: ${beforeAttr} → ${afterAttr}. XP updated.`
-      );
-
-      setPendingTarget(purchasedTarget);
-      setLastPurchased(purchasedTarget);
+      setToast(`✅ Purchased ${totalPendingPoints} attribute upgrade${totalPendingPoints === 1 ? "" : "s"}. XP and attributes updated.`);
+      setPendingPoints({});
+      setLastPurchaseCount(totalPendingPoints);
 
       window.setTimeout(() => {
-        setLastPurchased(null);
+        setLastPurchaseCount(0);
         setToast(null);
       }, 2200);
     } catch (e) {
@@ -442,7 +361,7 @@ export default function StorePage({ onBack }: Props) {
   }
 
   const noHomerooms = !loading && homerooms.length === 0;
-  const combinedErr = err ?? hpErr;
+  const combinedErr = err;
 
   return (
     <div className="min-h-screen w-full overflow-x-hidden bg-[#05070d] text-zinc-100">
@@ -500,8 +419,8 @@ export default function StorePage({ onBack }: Props) {
               storeLocked={storeLocked}
               loading={loading}
               err={combinedErr}
-              liveHp={liveHpState?.currentHP ?? null}
-              liveMaxHp={liveHpState?.baseHP ?? null}
+              liveHp={null}
+              liveMaxHp={null}
               guildTheme={guildTheme}
             />
 
@@ -548,7 +467,7 @@ export default function StorePage({ onBack }: Props) {
                     confirmOk={confirmOk}
                     storeLocked={storeLocked}
                     hasEnoughPoints={hasEnoughPoints}
-                    pendingTarget={storeMode === "attributes" ? pendingTarget : null}
+                    pendingCount={storeMode === "attributes" ? totalPendingPoints : 0}
                     guildTheme={guildTheme}
                   />
 
@@ -562,20 +481,21 @@ export default function StorePage({ onBack }: Props) {
                         hasEnoughPoints={hasEnoughPoints}
                         canSelectAttribute={canSelectAttribute}
                         withinWindow={withinWindow}
-                        pendingTarget={pendingTarget}
-                        setPendingTarget={setPendingTarget}
+                        pendingPoints={pendingPoints}
+                        onAdd={(target) => changePendingPoint(target, 1)}
+                        onRemove={(target) => changePendingPoint(target, -1)}
                         displayAttr={displayAttr}
                         guildTheme={guildTheme}
                       />
 
                       <PurchaseReviewPanel
-                        pendingTarget={pendingTarget}
+                        pendingPoints={pendingPoints}
                         displayAttr={displayAttr}
                         xpPerPoint={xpPerPoint}
                         summaryBalance={summary?.balance ?? null}
                         canConfirm={canConfirmPurchase}
                         spending={spending}
-                        lastPurchased={lastPurchased}
+                        lastPurchaseCount={lastPurchaseCount}
                         onConfirm={() => {
                           void confirmSpend();
                         }}

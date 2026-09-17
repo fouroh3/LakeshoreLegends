@@ -31,7 +31,7 @@
  *   overwritten by the Teacher Admin importer.
  * ========================================================= */
 
-const ADMIN_API_VERSION = "2026-09-17.1";
+const ADMIN_API_VERSION = "2026-09-17.2";
 
 const CFG = {
   // Master
@@ -304,6 +304,45 @@ function idemMark_(action, requestId) {
       IDEMP_TTL_SECONDS
     );
   } catch (_) {}
+}
+
+function acquireStudentMutationLease_(scope, studentId, requestId) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(5000);
+  try {
+    const cache = CacheService.getScriptCache();
+    const key = `studentMutation:v1:${scope}:${studentId}`;
+    if (cache.get(key)) {
+      throw new Error("A purchase for this student is already processing. Retry shortly.");
+    }
+    const token = requestId || Utilities.getUuid();
+    cache.put(key, token, 45);
+    return { key, token };
+  } finally {
+    try { lock.releaseLock(); } catch (_) {}
+  }
+}
+
+function releaseStudentMutationLease_(lease) {
+  if (!lease || !lease.key) return;
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(5000)) return;
+  try {
+    const cache = CacheService.getScriptCache();
+    if (cache.get(lease.key) === lease.token) cache.remove(lease.key);
+  } finally {
+    try { lock.releaseLock(); } catch (_) {}
+  }
+}
+
+function withShortScriptLock_(callback) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    return callback();
+  } finally {
+    try { lock.releaseLock(); } catch (_) {}
+  }
 }
 
 // =========================================================
@@ -1721,6 +1760,7 @@ function xpSummary_(studentIdRaw) {
     balance,
     spendablePoints: Math.floor(Math.max(0, balance) / xpPerPoint),
     recent,
+    attrs: studentAttributeSnapshot_(studentId),
   };
 }
 
@@ -1763,35 +1803,49 @@ function spendXpWrite_(args) {
       ok: true,
       deduped: true,
       requestId,
+      summary: xpSummary_(args.studentId),
       xpLastWriteIso: getProp_(CFG.PROP_LAST_XP_WRITE_ISO) || "",
       now: new Date().toISOString(),
     };
   }
 
   const studentId = normId_(args.studentId);
-  const target = String(args.target || "").toUpperCase();
-  const points = Math.max(1, Math.round(asNum_(args.points, 1)));
+  const rawPurchases = Array.isArray(args.purchases) && args.purchases.length
+    ? args.purchases
+    : [{ target: args.target, points: args.points }];
+  const purchaseMap = new Map();
+
+  rawPurchases.forEach((purchase) => {
+    const target = String((purchase && purchase.target) || "").toUpperCase();
+    const points = Math.max(1, Math.round(asNum_(purchase && purchase.points, 1)));
+    if (!["STR", "DEX", "CON", "INT", "WIS", "CHA"].includes(target)) {
+      throw new Error("Invalid target.");
+    }
+    purchaseMap.set(target, (purchaseMap.get(target) || 0) + points);
+  });
+
+  const purchases = Array.from(purchaseMap.entries()).map(([target, points]) => ({
+    target,
+    points,
+  }));
+  const totalPoints = purchases.reduce((sum, purchase) => sum + purchase.points, 0);
 
   if (!studentId) throw new Error("Missing studentId.");
-  if (!["STR", "DEX", "CON", "INT", "WIS", "CHA"].includes(target)) {
-    throw new Error("Invalid target.");
-  }
-  if (!Number.isFinite(points) || points < 1) {
+  if (!purchases.length || !Number.isFinite(totalPoints) || totalPoints < 1) {
     throw new Error("Invalid points.");
   }
-  if (points > ctl.maxPointsPerOpen) {
+  if (totalPoints > ctl.maxPointsPerOpen) {
     throw new Error("Too many points for this store window.");
   }
 
-  const lock = LockService.getScriptLock();
-  lock.waitLock(CFG.LOCK_WAIT_MS);
+  const lease = acquireStudentMutationLease_("xp", studentId, requestId);
 
   try {
     const { sh: xpSh, index } = loadXpIndex_();
     const row = index.get(studentId);
     if (!row) throw new Error("Student not found in XP_State.");
 
-    const costXp = ctl.xpPerPoint * points;
+    const costXp = ctl.xpPerPoint * totalPoints;
     const beforeBal = Math.round(asNum_(row.balance, 0));
     if (beforeBal < costXp) throw new Error("Not enough XP.");
     const afterBal = beforeBal - costXp;
@@ -1799,7 +1853,7 @@ function spendXpWrite_(args) {
     let attrWrite = null;
 
     try {
-      attrWrite = writeAttributeBonusSafely_(studentId, target, points);
+      attrWrite = writeAttributeBonusesBatch_(studentId, purchases);
       xpSh.getRange(row.sheetRow, 4).setValue(afterBal);
       SpreadsheetApp.flush();
 
@@ -1819,33 +1873,41 @@ function spendXpWrite_(args) {
 
       if (attrWrite) {
         try {
-          writeAttributeBonusSafely_(studentId, target, -points);
+          restoreAttributeBonuses_(studentId, attrWrite.beforeBonus);
         } catch (_) {}
       }
 
       throw writeErr;
     }
 
-    const beforeAttr = attrWrite.beforeAttr;
-    const afterAttr = attrWrite.afterAttr;
+    const attrs = studentAttributeSnapshot_(studentId);
+    const firstTarget = purchases[0].target;
+    const firstPoints = purchases[0].points;
+    const afterAttr = attrs.final[firstTarget];
+    const beforeAttr = afterAttr - firstPoints;
     const tx = ensureXpTxnSheet_();
 
-    appendRowFast_(tx, [
-      new Date(),
-      studentId,
-      row.name || "",
-      row.homeroom || "",
-      "SPEND",
-      costXp,
-      target,
-      points,
-      beforeBal,
-      afterBal,
-      "",
-      ctl.windowLabel || "",
-      ctl.openNonce || "",
-      requestId || "",
-    ]);
+    withShortScriptLock_(() =>
+      appendRowsFast_(
+        tx,
+        purchases.map((purchase) => [
+        new Date(),
+        studentId,
+        row.name || "",
+        row.homeroom || "",
+        "SPEND",
+        ctl.xpPerPoint * purchase.points,
+        purchase.target,
+        purchase.points,
+        beforeBal,
+        afterBal,
+        purchases.length > 1 ? "Multi-attribute checkout" : "",
+        ctl.windowLabel || "",
+        ctl.openNonce || "",
+        requestId || "",
+        ])
+      )
+    );
 
     stampXpControlUpdatedAt_();
     const iso = new Date().toISOString();
@@ -1855,20 +1917,29 @@ function spendXpWrite_(args) {
     return {
       ok: true,
       studentId,
-      target,
-      points,
+      target: firstTarget,
+      points: totalPoints,
+      purchases,
       costXp,
       balanceBefore: beforeBal,
       balanceAfter: afterBal,
       beforeAttr,
       afterAttr,
+      attributeTotals: attrs.final,
       xpLastWriteIso: iso,
-      summary: xpSummary_(studentId),
+      summary: {
+        studentId,
+        earned: 0,
+        spent: 0,
+        balance: afterBal,
+        spendablePoints: Math.floor(Math.max(0, afterBal) / ctl.xpPerPoint),
+        recent: [],
+        attrs,
+        now: iso,
+      },
     };
   } finally {
-    try {
-      lock.releaseLock();
-    } catch (_) {}
+    releaseStudentMutationLease_(lease);
   }
 }
 
@@ -2248,8 +2319,7 @@ function purchaseSkill_(args) {
     };
   }
 
-  const lock = LockService.getScriptLock();
-  lock.waitLock(CFG.LOCK_WAIT_MS);
+  const lease = acquireStudentMutationLease_("skill", studentId, requestId);
 
   try {
     const { sh: stateSh, index } = loadSkillStateIndex_();
@@ -2270,6 +2340,10 @@ function purchaseSkill_(args) {
     const rosterSkillIds = new Set(
       adminRosterSkillsForStudent_(studentId).map((name) => normalizeSkillId_(name))
     );
+    const guildBenefit = guildBenefitForStudent_(studentId);
+    if (guildBenefit && normalizeSkillId_(guildBenefit.skill) === skillId) {
+      throw new Error("Skill already granted by the student's guild.");
+    }
     if (rosterSkillIds.has(skillId)) {
       throw new Error("Skill already owned.");
     }
@@ -2293,31 +2367,33 @@ function purchaseSkill_(args) {
       .getRange(state.sheetRow, state.col.SkillTokens, 1, 2)
       .setValues([[afterTokens, nowIso]]);
 
-    appendRowFast_(ensurePurchasedSkillsSheet_(), [
-      new Date(),
-      studentId,
-      studentName,
-      skillId,
-      skillName,
-      cost,
-      "STORE",
-      requestId,
-    ]);
+    withShortScriptLock_(() => {
+      appendRowFast_(ensurePurchasedSkillsSheet_(), [
+        new Date(),
+        studentId,
+        studentName,
+        skillId,
+        skillName,
+        cost,
+        "STORE",
+        requestId,
+      ]);
 
-    appendRowFast_(ensureSkillTxnSheet_(), [
-      new Date(),
-      studentId,
-      studentName,
-      "SPEND",
-      skillId,
-      skillName,
-      -cost,
-      beforeTokens,
-      afterTokens,
-      "STORE",
-      requestId,
-      "Skill purchase",
-    ]);
+      appendRowFast_(ensureSkillTxnSheet_(), [
+        new Date(),
+        studentId,
+        studentName,
+        "SPEND",
+        skillId,
+        skillName,
+        -cost,
+        beforeTokens,
+        afterTokens,
+        "STORE",
+        requestId,
+        "Skill purchase",
+      ]);
+    });
 
     if (requestId) {
       idemMark_("purchaseSkill", requestId);
@@ -2334,13 +2410,20 @@ function purchaseSkill_(args) {
       cost,
       beforeTokens,
       afterTokens,
-      summary: skillSummary_(studentId),
+      summary: {
+        ok: true,
+        studentId,
+        studentName,
+        skillTokens: afterTokens,
+        skillCost: cost,
+        purchasedSkills: purchased.names.concat([skillName]),
+        recent: [],
+        now: nowIso,
+      },
       now: nowIso,
     };
   } finally {
-    try {
-      lock.releaseLock();
-    } catch (_) {}
+    releaseStudentMutationLease_(lease);
   }
 }
 
@@ -3305,6 +3388,29 @@ const ADMIN_GUILDS = [
   "Scholars",
   "Diplomats",
 ];
+
+// Guild benefits are derived from the Guild value. They are deliberately not
+// written into Player_State bonuses or class-sheet skills, so changing a guild
+// never duplicates a bonus or removes an upgrade the student purchased.
+const GUILD_BENEFITS = {
+  Blades: { attribute: "STR", amount: 2, skill: "Spontaneous" },
+  Shadows: { attribute: "DEX", amount: 2, skill: "Stealthy" },
+  Guardians: { attribute: "CON", amount: 2, skill: "Endurance" },
+  Scholars: { attribute: "INT", amount: 2, skill: "History" },
+  Scouts: { attribute: "WIS", amount: 2, skill: "Perception" },
+  Diplomats: { attribute: "CHA", amount: 2, skill: "Team Player" },
+};
+
+function guildBenefit_(guildRaw) {
+  const guild = norm_(guildRaw || "");
+  return GUILD_BENEFITS[guild] || null;
+}
+
+function guildBenefitForStudent_(studentIdRaw) {
+  const studentId = normId_(studentIdRaw);
+  const student = loadStudentsMap_().get(studentId);
+  return student ? guildBenefit_(student.guild) : null;
+}
 
 // These match the ranges currently rolled into Master!A2.
 const ADMIN_CLASS_MAX_ROW = {
@@ -4655,6 +4761,100 @@ function writeAttributeBonusSafely_(studentId, target, points) {
   return masterPlayerStateLookupWired_()
     ? writePlayerStateBonus_(studentId, target, points)
     : legacyMasterBonusWrite_(studentId, target, points);
+}
+
+function writeAttributeBonusesBatch_(studentIdRaw, purchases) {
+  const studentId = normId_(studentIdRaw);
+  const keys = ["STR", "DEX", "CON", "INT", "WIS", "CHA"];
+  const additions = new Map();
+  (purchases || []).forEach((purchase) => {
+    additions.set(
+      purchase.target,
+      (additions.get(purchase.target) || 0) + Math.round(asNum_(purchase.points, 0))
+    );
+  });
+
+  if (!masterPlayerStateLookupWired_()) {
+    const beforeBonus = {};
+    const afterBonus = {};
+    keys.forEach((key) => {
+      const result = writeAttributeBonusSafely_(studentId, key, additions.get(key) || 0);
+      beforeBonus[key] = result.beforeAttr;
+      afterBonus[key] = result.afterAttr;
+    });
+    return { beforeBonus, afterBonus };
+  }
+
+  const state = ensurePlayerStateStudent_(studentId);
+  const range = state.sh.getRange(
+    state.row.sheetRow,
+    state.row.col.STR_Bonus,
+    1,
+    6
+  );
+  const beforeValues = range
+    .getValues()[0]
+    .map((value) => Math.round(asNum_(value, 0)));
+  const afterValues = beforeValues.map(
+    (value, index) => value + (additions.get(keys[index]) || 0)
+  );
+  range.setValues([afterValues]);
+  state.sh
+    .getRange(state.row.sheetRow, state.row.col.UpdatedAt)
+    .setValue(new Date().toISOString());
+
+  const beforeBonus = {};
+  const afterBonus = {};
+  keys.forEach((key, index) => {
+    beforeBonus[key] = beforeValues[index];
+    afterBonus[key] = afterValues[index];
+  });
+  return { beforeBonus, afterBonus };
+}
+
+function restoreAttributeBonuses_(studentIdRaw, beforeBonus) {
+  const studentId = normId_(studentIdRaw);
+  const keys = ["STR", "DEX", "CON", "INT", "WIS", "CHA"];
+  const state = ensurePlayerStateStudent_(studentId);
+  state.sh
+    .getRange(state.row.sheetRow, state.row.col.STR_Bonus, 1, 6)
+    .setValues([keys.map((key) => Math.round(asNum_(beforeBonus && beforeBonus[key], 0)))]);
+  state.sh
+    .getRange(state.row.sheetRow, state.row.col.UpdatedAt)
+    .setValue(new Date().toISOString());
+}
+
+function studentAttributeSnapshot_(studentIdRaw) {
+  const studentId = normId_(studentIdRaw);
+  const resolved = adminAbilityResolved_(studentId);
+  const state = ensurePlayerStateStudent_(studentId);
+  const student = loadStudentsMap_().get(studentId);
+  const guildBenefit = guildBenefit_(student && student.guild);
+
+  const baseValues = resolved.sh
+    .getRange(resolved.rowNumber, resolved.columns.str + 1, 1, 6)
+    .getValues()[0]
+    .map((value) => Math.round(asNum_(value, 0)));
+  const bonusValues = state.sh
+    .getRange(state.row.sheetRow, state.row.col.STR_Bonus, 1, 6)
+    .getValues()[0]
+    .map((value) => Math.round(asNum_(value, 0)));
+  const keys = ["STR", "DEX", "CON", "INT", "WIS", "CHA"];
+  const base = {};
+  const bonus = {};
+  const guild = {};
+  const final = {};
+
+  keys.forEach((key, index) => {
+    const guildValue =
+      guildBenefit && guildBenefit.attribute === key ? guildBenefit.amount : 0;
+    base[key] = baseValues[index];
+    bonus[key] = bonusValues[index];
+    guild[key] = guildValue;
+    final[key] = baseValues[index] + bonusValues[index] + guildValue;
+  });
+
+  return { base, bonus, guild, final };
 }
 
 // =========================================================

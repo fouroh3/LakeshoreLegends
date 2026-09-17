@@ -1,6 +1,10 @@
 // src/data.ts
 
 import type { Student } from "./types";
+import {
+  addGuildSkill,
+  getGuildAttributeValues,
+} from "./data/guildBenefits";
 
 // ✅ Lakeshore Legends Apps Script Web App (XP/HP + admin API)
 export const XP_API_URL =
@@ -412,12 +416,14 @@ function rowsToStudents(rows: string[][]): Student[] {
     const bonusCha =
       iChaB >= 0 ? toNum(row[iChaB], 0) : 0;
 
-    const str = baseStr + bonusStr;
-    const dex = baseDex + bonusDex;
-    const con = baseCon + bonusCon;
-    const int = baseInt + bonusInt;
-    const wis = baseWis + bonusWis;
-    const cha = baseCha + bonusCha;
+    const guildAttributes = getGuildAttributeValues(guild);
+
+    const str = baseStr + bonusStr + guildAttributes.str;
+    const dex = baseDex + bonusDex + guildAttributes.dex;
+    const con = baseCon + bonusCon + guildAttributes.con;
+    const int = baseInt + bonusInt + guildAttributes.int;
+    const wis = baseWis + bonusWis + guildAttributes.wis;
+    const cha = baseCha + bonusCha + guildAttributes.cha;
 
     const portraitUrl =
       iPortrait >= 0
@@ -437,7 +443,7 @@ function rowsToStudents(rows: string[][]): Student[] {
     const skillsRaw =
       iSkills >= 0 ? row[iSkills] : "";
 
-    const skills = splitSkills(skillsRaw);
+    const skills = addGuildSkill(splitSkills(skillsRaw), guild);
 
     const inventoryRaw =
       iInventory >= 0 ? row[iInventory] : "";
@@ -471,6 +477,7 @@ function rowsToStudents(rows: string[][]): Student[] {
         wis: bonusWis,
         cha: bonusCha,
       },
+      guildAttributes,
 
       skills: skills.length
         ? skills

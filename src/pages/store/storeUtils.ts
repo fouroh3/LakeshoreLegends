@@ -67,24 +67,3 @@ export function rosterBaseAttr(s: Student, t: AttrKey) {
   };
   return Number(row[map[t]] ?? 0);
 }
-
-export function isTransientPurchaseError(err: unknown) {
-  const msg = String(err ?? "").toLowerCase();
-  return (
-    msg.includes("failed to fetch") ||
-    msg.includes("network") ||
-    msg.includes("timeout") ||
-    msg.includes("timed out") ||
-    msg.includes("rate") ||
-    msg.includes("tempor") ||
-    msg.includes("try again") ||
-    msg.includes("service unavailable") ||
-    msg.includes("503") ||
-    msg.includes("502") ||
-    msg.includes("504")
-  );
-}
-
-export function sleep(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
