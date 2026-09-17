@@ -122,6 +122,20 @@ function fileToBase64(file: File) {
   });
 }
 
+export async function processUploadGroups<T>(
+  items: T[],
+  upload: (item: T, index: number) => Promise<void>,
+  wait: (milliseconds: number) => Promise<void> = (milliseconds) =>
+    new Promise((resolve) => window.setTimeout(resolve, milliseconds))
+) {
+  for (let index = 0; index < items.length; index++) {
+    if (index > 0 && index % 5 === 0) {
+      await wait(1_000);
+    }
+    await upload(items[index], index);
+  }
+}
+
 function StatusPill({ item }: { item: QueuedImage }) {
   if (item.uploadState === "done") {
     return (
@@ -191,6 +205,7 @@ export default function HeroImageManagerPanel({
   const [connecting, setConnecting] = useState(false);
   const [connectionError, setConnectionError] = useState("");
   const [savingPublicUrl, setSavingPublicUrl] = useState(false);
+  const [uploadingBatch, setUploadingBatch] = useState(false);
 
   useEffect(() => {
     if (mediaPublicBaseUrl) setPublicBaseUrl(mediaPublicBaseUrl);
@@ -376,7 +391,7 @@ export default function HeroImageManagerPanel({
   };
 
   const uploadMatched = async () => {
-    if (busy || !mediaConfigured) return;
+    if (busy || uploadingBatch || !mediaConfigured) return;
 
     const eligible = queue.filter(
       (item) =>
@@ -386,45 +401,51 @@ export default function HeroImageManagerPanel({
         item.uploadState !== "uploading"
     );
 
-    for (const item of eligible) {
-      setQueue((prev) =>
-        prev.map((row) =>
-          row.key === item.key
-            ? { ...row, uploadState: "uploading", error: undefined }
-            : row
-        )
-      );
+    setUploadingBatch(true);
 
-      try {
-        const base64 = await fileToBase64(item.file);
-        await onUpload({
-          studentId: item.studentId,
-          fileName: item.file.name,
-          mimeType: item.file.type,
-          base64,
-        });
-        setQueue((prev) =>
-          rebuildConflicts(
-            prev.map((row) =>
-              row.key === item.key
-                ? { ...row, uploadState: "done", conflict: false }
-                : row
-            )
-          )
-        );
-      } catch (err: any) {
+    try {
+      await processUploadGroups(eligible, async (item) => {
         setQueue((prev) =>
           prev.map((row) =>
             row.key === item.key
-              ? {
-                  ...row,
-                  uploadState: "error",
-                  error: err?.message || "Upload failed.",
-                }
+              ? { ...row, uploadState: "uploading", error: undefined }
               : row
           )
         );
-      }
+
+        try {
+          const base64 = await fileToBase64(item.file);
+          await onUpload({
+            studentId: item.studentId,
+            fileName: item.file.name,
+            mimeType: item.file.type,
+            base64,
+          });
+          setQueue((prev) =>
+            rebuildConflicts(
+              prev.map((row) =>
+                row.key === item.key
+                  ? { ...row, uploadState: "done", conflict: false }
+                  : row
+              )
+            )
+          );
+        } catch (err: any) {
+          setQueue((prev) =>
+            prev.map((row) =>
+              row.key === item.key
+                ? {
+                    ...row,
+                    uploadState: "error",
+                    error: err?.message || "Upload failed.",
+                  }
+                : row
+            )
+          );
+        }
+      });
+    } finally {
+      setUploadingBatch(false);
     }
   };
 
@@ -693,10 +714,12 @@ export default function HeroImageManagerPanel({
               <button
                 type="button"
                 onClick={uploadMatched}
-                disabled={busy || !mediaConfigured || summary.matched < 1 || summary.conflicts > 0}
+                disabled={busy || uploadingBatch || !mediaConfigured || summary.matched < 1 || summary.conflicts > 0}
                 className="rounded-2xl bg-cyan-300 px-5 py-2.5 text-sm font-black text-zinc-950 disabled:cursor-not-allowed disabled:opacity-40"
               >
-                Upload {summary.matched} Matched Image{summary.matched === 1 ? "" : "s"}
+                {uploadingBatch
+                  ? `Uploading… ${summary.done} finished`
+                  : `Upload ${summary.matched} Matched Image${summary.matched === 1 ? "" : "s"}`}
               </button>
             </div>
           </div>

@@ -31,7 +31,7 @@
  *   overwritten by the Teacher Admin importer.
  * ========================================================= */
 
-const ADMIN_API_VERSION = "2026-09-01.10";
+const ADMIN_API_VERSION = "2026-09-17.1";
 
 const CFG = {
   // Master
@@ -4089,6 +4089,7 @@ const ADMIN_PLAYER_STATE = {
 function ensurePlayerStateSheet_() {
   const ss = SpreadsheetApp.getActive();
   let sh = ss.getSheetByName(ADMIN_PLAYER_STATE.SHEET);
+  const created = !sh;
   if (!sh) sh = ss.insertSheet(ADMIN_PLAYER_STATE.SHEET);
 
   sh = ensureHeaders_(sh, [
@@ -4110,8 +4111,10 @@ function ensurePlayerStateSheet_() {
 
   // CRITICAL: IDs such as 8-1-001 look like dates to Google Sheets.
   // Force the entire StudentID data column to plain text before every write.
-  const dataRows = Math.max(1, sh.getMaxRows() - 1);
-  sh.getRange(2, 1, dataRows, 1).setNumberFormat("@");
+  if (created) {
+    const dataRows = Math.max(1, sh.getMaxRows() - 1);
+    sh.getRange(2, 1, dataRows, 1).setNumberFormat("@");
+  }
 
   return sh;
 }
@@ -4224,11 +4227,13 @@ function loadPlayerStateIndex_() {
   if (iId < 0) throw new Error("Player_State missing StudentID header.");
 
   const index = new Map();
+  const studentIds = [];
 
   for (let r = 1; r < values.length; r++) {
     const row = values[r];
     const studentId = normId_(row[iId]);
     if (!studentId) continue;
+    studentIds.push(studentId);
 
     index.set(studentId, {
       sheetRow: r + 1,
@@ -4265,7 +4270,7 @@ function loadPlayerStateIndex_() {
     });
   }
 
-  return { sh, index };
+  return { sh, index, studentIds };
 }
 
 function playerStateReservedIds_() {
@@ -4320,7 +4325,7 @@ function backupMasterBeforePlayerStateMigration_() {
   return name;
 }
 
-function playerStateIdIntegrity_() {
+function playerStateIdIntegrity_(loadedStateIds) {
   const master = getSheet_(CFG.STUDENTS_SHEET);
   const masterHeaders = master
     .getRange(1, 1, 1, Math.max(master.getLastColumn(), 3))
@@ -4338,15 +4343,18 @@ function playerStateIdIntegrity_() {
         .filter(Boolean)
     : [];
 
-  const state = ensurePlayerStateSheet_();
-  const stateRowCount = Math.max(0, state.getLastRow() - 1);
-  const stateIds = stateRowCount
-    ? state
-        .getRange(2, 1, stateRowCount, 1)
-        .getDisplayValues()
-        .map((row) => normId_(row[0]))
-        .filter(Boolean)
-    : [];
+  let stateIds = Array.isArray(loadedStateIds) ? loadedStateIds.slice() : null;
+  if (!stateIds) {
+    const state = ensurePlayerStateSheet_();
+    const stateRowCount = Math.max(0, state.getLastRow() - 1);
+    stateIds = stateRowCount
+      ? state
+          .getRange(2, 1, stateRowCount, 1)
+          .getDisplayValues()
+          .map((row) => normId_(row[0]))
+          .filter(Boolean)
+      : [];
+  }
 
   const validPattern = /^8-(?:10|[1-9])-\d{3}$/;
   const invalidPlayerStateIds = Array.from(
@@ -4376,9 +4384,9 @@ function playerStateIdIntegrity_() {
 }
 
 function playerStateStatusPayload_(teacherToken) {
-  const { index } = loadPlayerStateIndex_();
+  const { index, studentIds } = loadPlayerStateIndex_();
   const masterLookupWired = masterPlayerStateLookupWired_();
-  const integrity = playerStateIdIntegrity_();
+  const integrity = playerStateIdIntegrity_(studentIds);
   const playerStateReady = masterLookupWired && integrity.ok;
   const mediaStatus = adminMediaPublicStatus_();
 
@@ -4403,8 +4411,19 @@ function playerStateStatusPayload_(teacherToken) {
 
 function adminSystemStatus_(args) {
   const verified = verifyTeacher_(args || {});
+  const cacheKey = "adminSystemStatus:v2";
+  const cached = cacheGetJson_(cacheKey);
+  if (cached && cached.ok) {
+    return {
+      ...cached,
+      teacherToken: verified.token,
+      now: new Date().toISOString(),
+    };
+  }
+
   const payload = playerStateStatusPayload_(verified.token);
   payload.adminApiVersion = ADMIN_API_VERSION;
+  cachePutJson_(cacheKey, { ...payload, teacherToken: "" }, 60);
   return payload;
 }
 
@@ -6325,9 +6344,6 @@ function adminUploadMedia_(args) {
     fileName,
   ]);
 
-  SpreadsheetApp.flush();
-  cacheRemove_(`studentsMap:${CFG.STUDENTS_SHEET}`);
-
   return {
     ok: true,
     teacherToken: verified.token,
@@ -6854,8 +6870,13 @@ function adminYearRolloverCreateArchive_(archiveLabel, preview) {
   SpreadsheetApp.flush();
 
   const tz = Session.getScriptTimeZone() || "GMT";
-  const stamp = Utilities.formatDate(new Date(), tz, "yyyy-MM-dd HHmmss");
-  const archiveName = `${ADMIN_YEAR_ROLLOVER.ARCHIVE_PREFIX} — ${archiveLabel} — ${stamp}`;
+  const stamp = Utilities.formatDate(
+    new Date(),
+    tz,
+    "yyyy-MM-dd HHmmss"
+  );
+  const archiveName =
+    `${ADMIN_YEAR_ROLLOVER.ARCHIVE_PREFIX} — ${archiveLabel} — ${stamp}`;
   const archive = SpreadsheetApp.create(archiveName);
   const info = archive.getSheets()[0];
   info.setName("_Year_Archive_Info");
@@ -6871,7 +6892,10 @@ function adminYearRolloverCreateArchive_(archiveLabel, preview) {
     ["Moved/deleted reservations", preview.movedDeletedReservations],
     ["Managed media objects found", preview.mediaObjects],
     ["Source sheets copied", source.getSheets().length],
-    ["Note", "This workbook is a frozen year-end snapshot. Formulas were converted to their displayed data values so this archive will not change with the live game database."],
+    [
+      "Note",
+      "This workbook is a frozen year-end snapshot. Formulas were converted to their displayed data values so this archive will not change with the live game database.",
+    ],
   ];
   info.getRange(1, 1, infoRows.length, 2).setValues(infoRows);
   info.getRange(1, 1, 1, 2).setFontWeight("bold");
@@ -6887,17 +6911,24 @@ function adminYearRolloverCreateArchive_(archiveLabel, preview) {
     const rows = sourceRange.getNumRows();
     const cols = sourceRange.getNumColumns();
     if (rows > 0 && cols > 0) {
-      // CopyTo preserves formatting, validation, widths, and merged cells. To
-      // freeze formulas safely, temporarily break merges in the copied data
-      // range, write the source's evaluated values, then restore the merges.
-      // This avoids setValues failures on presentation-style sheets.
-      const mergedRanges = sourceRange
+      // Use the copied sheet's entire grid so every merged range is fully
+      // selected before any merges are broken apart.
+      const fullCopiedRange = copied.getRange(
+        1,
+        1,
+        copied.getMaxRows(),
+        copied.getMaxColumns()
+      );
+      const mergedA1Ranges = fullCopiedRange
         .getMergedRanges()
         .map((range) => range.getA1Notation());
-      const copiedRange = copied.getRange(1, 1, rows, cols);
-      copiedRange.breakApart();
-      copiedRange.setValues(sourceRange.getValues());
-      mergedRanges.forEach((a1) => copied.getRange(a1).merge());
+
+      fullCopiedRange.breakApart();
+
+      const copiedDataRange = copied.getRange(1, 1, rows, cols);
+      copiedDataRange.clearDataValidations();
+      copiedDataRange.setValues(sourceRange.getValues());
+      mergedA1Ranges.forEach((a1) => copied.getRange(a1).merge());
     }
   });
 

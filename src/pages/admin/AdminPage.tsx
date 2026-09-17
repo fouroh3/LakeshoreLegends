@@ -354,6 +354,7 @@ export default function AdminPage() {
   const [statusLoading, setStatusLoading] = useState(false);
   const [systemStatusError, setSystemStatusError] = useState(false);
   const suppressRosterReloadUntilRef = useRef(0);
+  const lastAutomaticRefreshAtRef = useRef(0);
   const [notice, setNotice] = useState<{
     type: "ok" | "err";
     msg: string;
@@ -457,6 +458,7 @@ export default function AdminPage() {
 
   useEffect(() => {
     if (unlocked) {
+      lastAutomaticRefreshAtRef.current = Date.now();
       reloadStudents();
       reloadSystemStatus();
     }
@@ -466,13 +468,24 @@ export default function AdminPage() {
     if (!unlocked) return;
 
     const refreshOnFocus = () => {
+      const now = Date.now();
+      if (
+        busy ||
+        loading ||
+        statusLoading ||
+        now - lastAutomaticRefreshAtRef.current < 120_000
+      ) {
+        return;
+      }
+
+      lastAutomaticRefreshAtRef.current = now;
       void reloadStudents();
       void reloadSystemStatus();
     };
 
     window.addEventListener("focus", refreshOnFocus);
     return () => window.removeEventListener("focus", refreshOnFocus);
-  }, [unlocked]);
+  }, [unlocked, busy, loading, statusLoading]);
 
   const homeroomCount = useMemo(() => {
     const homerooms = new Set(

@@ -2,7 +2,7 @@
 
 import { HP_API_URL } from "../battle/battleConstants";
 import { getBattleTeacherToken } from "../battle/battleTeacherApi";
-export const ADMIN_API_VERSION = "2026-09-01.10";
+export const ADMIN_API_VERSION = "2026-09-17.1";
 
 import type {
   AdminAttributeValues,
@@ -343,7 +343,7 @@ type AdminAction =
   | "adminstoresnapshot"
   | "adminupdatestore";
 
-const RETRYABLE_ADMIN_READS = new Set<AdminAction>([
+const RETRYABLE_ADMIN_ACTIONS = new Set<AdminAction>([
   "admincurrencysnapshot",
   "admininventorysnapshot",
   "adminsystemstatus",
@@ -352,13 +352,16 @@ const RETRYABLE_ADMIN_READS = new Set<AdminAction>([
   "adminabilitysnapshot",
   "adminupdateabilities",
   "adminstoresnapshot",
+  // Uploading the same student/kind overwrites the same R2 object and sheet
+  // cell, so one retry is safe when Apps Script drops a response in transit.
+  "adminuploadmedia",
 ]);
 
 async function postAdminAction<T>(
   action: AdminAction,
   body: Record<string, any>
 ): Promise<T> {
-  const retryableRead = RETRYABLE_ADMIN_READS.has(action);
+  const retryableAction = RETRYABLE_ADMIN_ACTIONS.has(action);
   const maxAttempts = 3;
   let lastError: Error | null = null;
 
@@ -401,12 +404,15 @@ async function postAdminAction<T>(
       lastError = err instanceof Error ? err : new Error(String(err || "Admin API failed."));
       const unknownAction = /^Unknown action:/i.test(lastError.message.trim());
       const canRetryUnknownAction = unknownAction && attempt < 2;
-      const canRetryRead = retryableRead && attempt < 1;
+      const canRetryAction = retryableAction && attempt < 1;
 
-      if (!canRetryUnknownAction && !canRetryRead) break;
+      if (!canRetryUnknownAction && !canRetryAction) break;
 
       await new Promise((resolve) =>
-        window.setTimeout(resolve, canRetryUnknownAction ? 650 : 300)
+        window.setTimeout(
+          resolve,
+          canRetryUnknownAction ? 650 : action === "adminuploadmedia" ? 1_000 : 300
+        )
       );
     }
   }
