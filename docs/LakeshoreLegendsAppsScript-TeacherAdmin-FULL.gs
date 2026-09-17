@@ -31,7 +31,7 @@
  *   overwritten by the Teacher Admin importer.
  * ========================================================= */
 
-const ADMIN_API_VERSION = "2026-09-17.2";
+const ADMIN_API_VERSION = "2026-09-17.3";
 
 const CFG = {
   // Master
@@ -1580,6 +1580,10 @@ function getXpControlSheet_() {
 }
 
 function readXpControl_() {
+  const cacheKey = "xpControl:v1";
+  const cached = cacheGetJson_(cacheKey);
+  if (cached) return cached;
+
   const sh = getXpControlSheet_();
   const values = sh.getDataRange().getValues();
   const out = {};
@@ -1598,7 +1602,7 @@ function readXpControl_() {
   );
   const skillTokenCost = Math.max(1, Math.round(asNum_(out.SkillTokenCost, 1)));
   const openNonce = norm_(out.OpenNonce ?? "");
-  return {
+  const result = {
     storeLocked,
     storePin,
     xpPerPoint,
@@ -1607,6 +1611,8 @@ function readXpControl_() {
     skillTokenCost,
     openNonce,
   };
+  cachePutJson_(cacheKey, result, 60);
+  return result;
 }
 
 function stampXpControlUpdatedAt_() {
@@ -2094,8 +2100,8 @@ function loadSkillStateIndex_() {
 
     if (!studentId) continue;
 
-    const fallbackName = skillStudentName_(studentId);
-    const studentName = norm_(iName >= 0 ? row[iName] : "") || fallbackName;
+    const storedName = norm_(iName >= 0 ? row[iName] : "");
+    const studentName = storedName || skillStudentName_(studentId);
 
     index.set(studentId, {
       sheetRow: r + 1,
@@ -7395,10 +7401,12 @@ function adminSetStoreControlValue_(keyRaw, value) {
   for (let r = 1; r < values.length; r++) {
     if (norm_(values[r][0]) !== key) continue;
     sh.getRange(r + 1, 2).setValue(value);
+    cacheRemove_("xpControl:v1");
     return r + 1;
   }
   const row = Math.max(2, sh.getLastRow() + 1);
   sh.getRange(row, 1, 1, 2).setValues([[key, value]]);
+  cacheRemove_("xpControl:v1");
   return row;
 }
 
@@ -7526,6 +7534,7 @@ function doGet(e) {
       case "versions":
         return jsonOut_({
           ok: true,
+          adminApiVersion: ADMIN_API_VERSION,
           hpLastWriteIso: getProp_(CFG.PROP_LAST_WRITE_ISO) || "",
           xpLastWriteIso: getProp_(CFG.PROP_LAST_XP_WRITE_ISO) || "",
           now: new Date().toISOString(),

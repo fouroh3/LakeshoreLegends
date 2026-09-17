@@ -52,6 +52,9 @@ export type SpendXpArgs = {
   requestId?: string;
 };
 
+let storeStateInFlight: Promise<StoreState> | null = null;
+const xpSummaryInFlight = new Map<string, Promise<XpSummary>>();
+
 function toNum(v: any, fallback = 0) {
   const n = typeof v === "number" ? v : Number.parseFloat(String(v ?? ""));
   return Number.isFinite(n) ? n : fallback;
@@ -59,7 +62,7 @@ function toNum(v: any, fallback = 0) {
 
 async function fetchJsonStrict(url: string, init?: RequestInit) {
   const controller = new AbortController();
-  const timeoutId = window.setTimeout(() => controller.abort(), 18_000);
+  const timeoutId = window.setTimeout(() => controller.abort(), 30_000);
   let res: Response;
   try {
     res = await fetch(url, { ...init, signal: controller.signal });
@@ -100,7 +103,7 @@ function isTransientApiError(error: unknown) {
   );
 }
 
-async function fetchJsonResilient(url: string, init?: RequestInit, maxAttempts = 5) {
+async function fetchJsonResilient(url: string, init?: RequestInit, maxAttempts = 3) {
   let lastError: unknown;
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     try {
@@ -132,58 +135,81 @@ export async function getApiVersions(): Promise<ApiVersions> {
 }
 
 export async function getStoreState(): Promise<StoreState> {
-  const url = `${XP_API_URL}?action=xpstate&_=${Date.now()}`;
-  const data = await fetchJsonResilient(url, { method: "GET" });
+  if (storeStateInFlight) return storeStateInFlight;
+  const request = (async () => {
+    const url = `${XP_API_URL}?action=xpstate&_=${Date.now()}`;
+    const data = await fetchJsonResilient(url, { method: "GET" });
 
-  if (!data?.ok) {
-    throw new Error(
-      data?.error || data?.message || "Failed to load store state"
-    );
+    if (!data?.ok) {
+      throw new Error(
+        data?.error || data?.message || "Failed to load store state"
+      );
+    }
+
+    return {
+      storeLocked: Boolean(data.storeLocked),
+      xpPerPoint: Math.max(1, Math.round(toNum(data.xpPerPoint, 5))),
+      maxPointsPerOpen: Math.max(
+        1,
+        Math.round(toNum(data.maxPointsPerOpen, 999))
+      ),
+      windowLabel: data.windowLabel ? String(data.windowLabel) : "",
+      openNonce: data.openNonce ? String(data.openNonce) : "",
+      now: data.now ? String(data.now) : "",
+      xpLastWriteIso: data.xpLastWriteIso
+        ? String(data.xpLastWriteIso)
+        : undefined,
+    };
+  })();
+
+  storeStateInFlight = request;
+  try {
+    return await request;
+  } finally {
+    if (storeStateInFlight === request) storeStateInFlight = null;
   }
-
-  return {
-    storeLocked: Boolean(data.storeLocked),
-    xpPerPoint: Math.max(1, Math.round(toNum(data.xpPerPoint, 5))),
-    maxPointsPerOpen: Math.max(
-      1,
-      Math.round(toNum(data.maxPointsPerOpen, 999))
-    ),
-    windowLabel: data.windowLabel ? String(data.windowLabel) : "",
-    openNonce: data.openNonce ? String(data.openNonce) : "",
-    now: data.now ? String(data.now) : "",
-    xpLastWriteIso: data.xpLastWriteIso
-      ? String(data.xpLastWriteIso)
-      : undefined,
-  };
 }
 
 export async function getXpSummary(studentId: string): Promise<XpSummary> {
   const cleanId = String(studentId ?? "").trim();
   if (!cleanId) throw new Error("Missing studentId.");
+  const existing = xpSummaryInFlight.get(cleanId);
+  if (existing) return existing;
 
-  const url =
-    `${XP_API_URL}?action=xpsummary` +
-    `&studentId=${encodeURIComponent(cleanId)}` +
-    `&_=${Date.now()}`;
+  const request = (async () => {
+    const url =
+      `${XP_API_URL}?action=xpsummary` +
+      `&studentId=${encodeURIComponent(cleanId)}` +
+      `&_=${Date.now()}`;
 
-  const data = await fetchJsonResilient(url, { method: "GET" });
+    const data = await fetchJsonResilient(url, { method: "GET" });
 
-  if (!data?.ok) {
-    throw new Error(
-      data?.error || data?.message || "Failed to load XP summary"
-    );
+    if (!data?.ok) {
+      throw new Error(
+        data?.error || data?.message || "Failed to load XP summary"
+      );
+    }
+
+    return {
+      studentId: String(data.studentId ?? cleanId),
+      earned: Math.round(toNum(data.earned, 0)),
+      spent: Math.round(toNum(data.spent, 0)),
+      balance: Math.round(toNum(data.balance, 0)),
+      spendablePoints: Math.max(0, Math.round(toNum(data.spendablePoints, 0))),
+      recent: Array.isArray(data.recent) ? data.recent : [],
+      attrs: data.attrs ?? undefined,
+      now: data.now ? String(data.now) : "",
+    };
+  })();
+
+  xpSummaryInFlight.set(cleanId, request);
+  try {
+    return await request;
+  } finally {
+    if (xpSummaryInFlight.get(cleanId) === request) {
+      xpSummaryInFlight.delete(cleanId);
+    }
   }
-
-  return {
-    studentId: String(data.studentId ?? cleanId),
-    earned: Math.round(toNum(data.earned, 0)),
-    spent: Math.round(toNum(data.spent, 0)),
-    balance: Math.round(toNum(data.balance, 0)),
-    spendablePoints: Math.max(0, Math.round(toNum(data.spendablePoints, 0))),
-    recent: Array.isArray(data.recent) ? data.recent : [],
-    attrs: data.attrs ?? undefined,
-    now: data.now ? String(data.now) : "",
-  };
 }
 
 export async function spendXp(args: SpendXpArgs) {
@@ -228,7 +254,7 @@ export async function spendXp(args: SpendXpArgs) {
       "Content-Type": "text/plain;charset=utf-8",
     },
     body,
-  }, 6);
+  }, 5);
 
   if (!data?.ok) {
     throw new Error(data?.error || data?.message || "XP purchase failed.");

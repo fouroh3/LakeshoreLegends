@@ -17,6 +17,7 @@ type Props = {
   storeLocked: boolean;
   pin: string;
   confirmOk: boolean;
+  onSummaryChange?: (summary: SkillSummary | null) => void;
   guildTheme: {
     border: string;
     softPanel: string;
@@ -34,6 +35,7 @@ export default function SkillTrainingPanel({
   storeLocked,
   pin,
   confirmOk,
+  onSummaryChange,
   guildTheme,
 }: Props) {
   const [summary, setSummary] = useState<SkillSummary | null>(null);
@@ -50,6 +52,7 @@ export default function SkillTrainingPanel({
     (async () => {
       if (!studentId) {
         setSummary(null);
+        onSummaryChange?.(null);
         return;
       }
 
@@ -59,9 +62,11 @@ export default function SkillTrainingPanel({
         const next = await getSkillSummary(studentId);
         if (!alive) return;
         setSummary(next);
+        onSummaryChange?.(next);
       } catch (e) {
         if (!alive) return;
         setSummary(null);
+        onSummaryChange?.(null);
         setErr(
           e instanceof Error
             ? e.message
@@ -76,7 +81,7 @@ export default function SkillTrainingPanel({
     return () => {
       alive = false;
     };
-  }, [studentId]);
+  }, [studentId, onSummaryChange]);
 
   const purchasedSkillIds = useMemo(() => {
     return new Set(
@@ -129,10 +134,13 @@ export default function SkillTrainingPanel({
       });
 
       if (res?.summary) {
-        setSummary(res.summary as SkillSummary);
+        const next = res.summary as SkillSummary;
+        setSummary(next);
+        onSummaryChange?.(next);
       } else {
         const next = await getSkillSummary(studentId);
         setSummary(next);
+        onSummaryChange?.(next);
       }
 
       setLastPurchasedSkillId(selectedSkill.id);

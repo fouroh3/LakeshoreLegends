@@ -24,6 +24,8 @@ export type PurchaseSkillArgs = {
   requestId?: string;
 };
 
+const skillSummaryInFlight = new Map<string, Promise<SkillSummary>>();
+
 function normStudentId(id: unknown) {
   return String(id ?? "")
     .replace(/\u00A0/g, " ")
@@ -54,7 +56,7 @@ function toSkillList(value: unknown) {
 
 async function fetchJsonStrict(url: string, init?: RequestInit) {
   const controller = new AbortController();
-  const timeoutId = window.setTimeout(() => controller.abort(), 18_000);
+  const timeoutId = window.setTimeout(() => controller.abort(), 30_000);
   let res: Response;
   try {
     res = await fetch(url, { ...init, signal: controller.signal });
@@ -99,7 +101,7 @@ function isTransientApiError(error: unknown) {
   );
 }
 
-async function fetchJsonResilient(url: string, init?: RequestInit, maxAttempts = 5) {
+async function fetchJsonResilient(url: string, init?: RequestInit, maxAttempts = 3) {
   let lastError: unknown;
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     try {
@@ -118,24 +120,37 @@ async function fetchJsonResilient(url: string, init?: RequestInit, maxAttempts =
 export async function getSkillSummary(studentId: string): Promise<SkillSummary> {
   const cleanId = String(studentId ?? "").trim();
   if (!cleanId) throw new Error("Missing studentId.");
+  const existing = skillSummaryInFlight.get(cleanId);
+  if (existing) return existing;
 
-  const url =
-    `${XP_API_URL}?action=skillsummary` +
-    `&studentId=${encodeURIComponent(cleanId)}` +
-    `&_=${Date.now()}`;
+  const request = (async () => {
+    const url =
+      `${XP_API_URL}?action=skillsummary` +
+      `&studentId=${encodeURIComponent(cleanId)}` +
+      `&_=${Date.now()}`;
 
-  const data = await fetchJsonResilient(url, { method: "GET" });
+    const data = await fetchJsonResilient(url, { method: "GET" });
 
-  return {
-    studentId: String(data.studentId ?? cleanId),
-    skillTokens: Math.max(0, Math.round(toNum(data.skillTokens, 0))),
-    skillCost: Math.max(1, Math.round(toNum(data.skillCost, 1))),
-    purchasedSkills: Array.isArray(data.purchasedSkills)
-      ? data.purchasedSkills.map((x: unknown) => String(x ?? "").trim()).filter(Boolean)
-      : [],
-    recent: Array.isArray(data.recent) ? data.recent : [],
-    now: data.now ? String(data.now) : "",
-  };
+    return {
+      studentId: String(data.studentId ?? cleanId),
+      skillTokens: Math.max(0, Math.round(toNum(data.skillTokens, 0))),
+      skillCost: Math.max(1, Math.round(toNum(data.skillCost, 1))),
+      purchasedSkills: Array.isArray(data.purchasedSkills)
+        ? data.purchasedSkills.map((x: unknown) => String(x ?? "").trim()).filter(Boolean)
+        : [],
+      recent: Array.isArray(data.recent) ? data.recent : [],
+      now: data.now ? String(data.now) : "",
+    };
+  })();
+
+  skillSummaryInFlight.set(cleanId, request);
+  try {
+    return await request;
+  } finally {
+    if (skillSummaryInFlight.get(cleanId) === request) {
+      skillSummaryInFlight.delete(cleanId);
+    }
+  }
 }
 
 export async function getPurchasedSkillSnapshot(): Promise<Map<string, string[]>> {
@@ -192,7 +207,7 @@ export async function purchaseSkill(args: PurchaseSkillArgs) {
       pin,
       requestId: args.requestId ?? "",
     }),
-  }, 6);
+  }, 5);
 
   return data;
 }

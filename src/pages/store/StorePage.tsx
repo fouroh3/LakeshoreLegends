@@ -14,6 +14,7 @@ import {
   type StoreState,
   type XpSummary,
 } from "../../xpApi";
+import type { SkillSummary } from "../../skillApi";
 import StoreHero from "./components/StoreHero";
 import LegendSelectionPanel from "./components/LegendSelectionPanel";
 import StoreSummaryPanel from "./components/StoreSummaryPanel";
@@ -63,6 +64,7 @@ export default function StorePage({ onBack }: Props) {
   const [confirmId, setConfirmId] = useState("");
   const [pendingPoints, setPendingPoints] = useState<Partial<Record<AttrKey, number>>>({});
   const [pendingSkillId, setPendingSkillId] = useState<string | null>(null);
+  const [skillSummary, setSkillSummary] = useState<SkillSummary | null>(null);
 
   const [spending, setSpending] = useState(false);
   const [lastPurchaseCount, setLastPurchaseCount] = useState(0);
@@ -204,6 +206,7 @@ export default function StorePage({ onBack }: Props) {
     setConfirmId("");
     setPendingPoints({});
     setPendingSkillId(null);
+    setSkillSummary(null);
     setSpendErr(null);
     setToast(null);
     setServerAttrs(null);
@@ -451,7 +454,7 @@ export default function StorePage({ onBack }: Props) {
                     setMode={setStoreMode}
                     xpBalance={summary?.balance ?? null}
                     spendablePoints={summary?.spendablePoints ?? null}
-                    skillTokens={null}
+                    skillTokens={skillSummary?.skillTokens ?? null}
                   />
 
                   <StoreSummaryPanel
@@ -513,6 +516,7 @@ export default function StorePage({ onBack }: Props) {
                       storeLocked={storeLocked}
                       pin={pin}
                       confirmOk={confirmOk}
+                      onSummaryChange={setSkillSummary}
                       guildTheme={guildTheme}
                     />
                   )}
