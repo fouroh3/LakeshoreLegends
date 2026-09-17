@@ -1,5 +1,6 @@
 // src/xpApi.ts
 import { XP_API_URL } from "./data";
+import { queueAppsScriptRead } from "./appsScriptRequestQueue";
 
 export type AttrKey = "STR" | "DEX" | "CON" | "INT" | "WIS" | "CHA";
 
@@ -120,8 +121,10 @@ async function fetchJsonResilient(url: string, init?: RequestInit, maxAttempts =
 }
 
 export async function getApiVersions(): Promise<ApiVersions> {
-  const url = `${XP_API_URL}?action=versions&_=${Date.now()}`;
-  const data = await fetchJsonResilient(url, { method: "GET" });
+  const data = await queueAppsScriptRead(() => {
+    const url = `${XP_API_URL}?action=versions&_=${Date.now()}`;
+    return fetchJsonResilient(url, { method: "GET" });
+  });
 
   if (!data?.ok) {
     throw new Error(data?.error || data?.message || "Failed to load versions");
@@ -136,7 +139,7 @@ export async function getApiVersions(): Promise<ApiVersions> {
 
 export async function getStoreState(): Promise<StoreState> {
   if (storeStateInFlight) return storeStateInFlight;
-  const request = (async () => {
+  const request = queueAppsScriptRead(async () => {
     const url = `${XP_API_URL}?action=xpstate&_=${Date.now()}`;
     const data = await fetchJsonResilient(url, { method: "GET" });
 
@@ -160,7 +163,7 @@ export async function getStoreState(): Promise<StoreState> {
         ? String(data.xpLastWriteIso)
         : undefined,
     };
-  })();
+  });
 
   storeStateInFlight = request;
   try {
@@ -176,7 +179,7 @@ export async function getXpSummary(studentId: string): Promise<XpSummary> {
   const existing = xpSummaryInFlight.get(cleanId);
   if (existing) return existing;
 
-  const request = (async () => {
+  const request = queueAppsScriptRead(async () => {
     const url =
       `${XP_API_URL}?action=xpsummary` +
       `&studentId=${encodeURIComponent(cleanId)}` +
@@ -200,7 +203,7 @@ export async function getXpSummary(studentId: string): Promise<XpSummary> {
       attrs: data.attrs ?? undefined,
       now: data.now ? String(data.now) : "",
     };
-  })();
+  });
 
   xpSummaryInFlight.set(cleanId, request);
   try {

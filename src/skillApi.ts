@@ -1,6 +1,7 @@
 // src/skillApi.ts
 import { XP_API_URL } from "./data";
 import { normalizeSkillName } from "./data/skillLibrary";
+import { queueAppsScriptRead } from "./appsScriptRequestQueue";
 
 export type SkillSummary = {
   studentId: string;
@@ -123,7 +124,7 @@ export async function getSkillSummary(studentId: string): Promise<SkillSummary> 
   const existing = skillSummaryInFlight.get(cleanId);
   if (existing) return existing;
 
-  const request = (async () => {
+  const request = queueAppsScriptRead(async () => {
     const url =
       `${XP_API_URL}?action=skillsummary` +
       `&studentId=${encodeURIComponent(cleanId)}` +
@@ -141,7 +142,7 @@ export async function getSkillSummary(studentId: string): Promise<SkillSummary> 
       recent: Array.isArray(data.recent) ? data.recent : [],
       now: data.now ? String(data.now) : "",
     };
-  })();
+  });
 
   skillSummaryInFlight.set(cleanId, request);
   try {
@@ -154,8 +155,10 @@ export async function getSkillSummary(studentId: string): Promise<SkillSummary> 
 }
 
 export async function getPurchasedSkillSnapshot(): Promise<Map<string, string[]>> {
-  const url = `${XP_API_URL}?action=skillsnapshot&_=${Date.now()}`;
-  const data = await fetchJsonResilient(url, { method: "GET" });
+  const data = await queueAppsScriptRead(() => {
+    const url = `${XP_API_URL}?action=skillsnapshot&_=${Date.now()}`;
+    return fetchJsonResilient(url, { method: "GET" });
+  });
 
   const rows = Array.isArray(data.purchasedSkills) ? data.purchasedSkills : [];
   const byStudent = new Map<string, string[]>();
