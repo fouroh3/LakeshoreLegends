@@ -31,7 +31,7 @@
  *   overwritten by the Teacher Admin importer.
  * ========================================================= */
 
-const ADMIN_API_VERSION = "2026-09-17.3";
+const ADMIN_API_VERSION = "2026-09-17.4";
 
 const CFG = {
   // Master
@@ -1602,6 +1602,11 @@ function readXpControl_() {
   );
   const skillTokenCost = Math.max(1, Math.round(asNum_(out.SkillTokenCost, 1)));
   const openNonce = norm_(out.OpenNonce ?? "");
+  const updatedRaw = out.UpdatedAt;
+  const updatedAt =
+    updatedRaw instanceof Date
+      ? updatedRaw.toISOString()
+      : norm_(updatedRaw || "");
   const result = {
     storeLocked,
     storePin,
@@ -1610,6 +1615,7 @@ function readXpControl_() {
     maxPointsPerOpen,
     skillTokenCost,
     openNonce,
+    updatedAt,
   };
   cachePutJson_(cacheKey, result, 60);
   return result;
@@ -7412,7 +7418,6 @@ function adminSetStoreControlValue_(keyRaw, value) {
 
 function adminStoreSettingsPayload_() {
   const ctl = readXpControl_();
-  const updatedRaw = adminStoreControlValue_("UpdatedAt");
   return {
     storeLocked: !!ctl.storeLocked,
     storePin: normPin_(ctl.storePin || ""),
@@ -7420,10 +7425,7 @@ function adminStoreSettingsPayload_() {
     skillTokenCost: Math.max(1, Math.round(asNum_(ctl.skillTokenCost, 1))),
     maxPointsPerOpen: Math.max(1, Math.round(asNum_(ctl.maxPointsPerOpen, 8))),
     windowLabel: norm_(ctl.windowLabel || ""),
-    updatedAt:
-      updatedRaw instanceof Date
-        ? updatedRaw.toISOString()
-        : norm_(updatedRaw || ""),
+    updatedAt: norm_(ctl.updatedAt || ""),
   };
 }
 

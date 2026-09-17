@@ -2,7 +2,7 @@
 
 import { HP_API_URL } from "../battle/battleConstants";
 import { getBattleTeacherToken } from "../battle/battleTeacherApi";
-export const ADMIN_API_VERSION = "2026-09-17.3";
+export const ADMIN_API_VERSION = "2026-09-17.4";
 
 import type {
   AdminAttributeValues,
@@ -357,30 +357,60 @@ const RETRYABLE_ADMIN_ACTIONS = new Set<AdminAction>([
   "adminuploadmedia",
 ]);
 
+function isTransientAdminError(error: unknown) {
+  const message = String(error ?? "").toLowerCase();
+  return [
+    "failed to fetch",
+    "network",
+    "timed out",
+    "timeout",
+    "non-json (404)",
+    "non-json (408)",
+    "non-json (429)",
+    "non-json (500)",
+    "non-json (502)",
+    "non-json (503)",
+    "non-json (504)",
+  ].some((value) => message.includes(value));
+}
+
 async function postAdminAction<T>(
   action: AdminAction,
   body: Record<string, any>
 ): Promise<T> {
   const retryableAction = RETRYABLE_ADMIN_ACTIONS.has(action);
-  const maxAttempts = 3;
+  const maxAttempts = retryableAction ? 5 : 3;
   let lastError: Error | null = null;
 
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     try {
-      const res = await fetch(
-        `${HP_API_URL}?action=${encodeURIComponent(action)}&_=${Date.now()}-${attempt}`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "text/plain;charset=utf-8",
-          },
-          body: JSON.stringify({
-            action,
-            teacherToken: getBattleTeacherToken(),
-            ...body,
-          }),
+      const controller = new AbortController();
+      const timeoutId = window.setTimeout(() => controller.abort(), 30_000);
+      let res: Response;
+      try {
+        res = await fetch(
+          `${HP_API_URL}?action=${encodeURIComponent(action)}&_=${Date.now()}-${attempt}`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "text/plain;charset=utf-8",
+            },
+            body: JSON.stringify({
+              action,
+              teacherToken: getBattleTeacherToken(),
+              ...body,
+            }),
+            signal: controller.signal,
+          }
+        );
+      } catch (error) {
+        if ((error as Error)?.name === "AbortError") {
+          throw new Error("Admin API request timed out.");
         }
-      );
+        throw error;
+      } finally {
+        window.clearTimeout(timeoutId);
+      }
 
       const text = await res.text();
       let data: any = null;
@@ -404,14 +434,19 @@ async function postAdminAction<T>(
       lastError = err instanceof Error ? err : new Error(String(err || "Admin API failed."));
       const unknownAction = /^Unknown action:/i.test(lastError.message.trim());
       const canRetryUnknownAction = unknownAction && attempt < 2;
-      const canRetryAction = retryableAction && attempt < 1;
+      const canRetryAction =
+        retryableAction &&
+        isTransientAdminError(lastError) &&
+        attempt < maxAttempts - 1;
 
       if (!canRetryUnknownAction && !canRetryAction) break;
 
       await new Promise((resolve) =>
         window.setTimeout(
           resolve,
-          canRetryUnknownAction ? 650 : action === "adminuploadmedia" ? 1_000 : 300
+          canRetryUnknownAction
+            ? 650
+            : Math.min(4_000, 500 * 2 ** attempt) + Math.floor(Math.random() * 600)
         )
       );
     }
@@ -483,8 +518,22 @@ export async function adminAdjustInventory(args: {
   );
 }
 
+let adminSystemStatusInFlight: Promise<AdminSystemStatusResult> | null = null;
+
 export async function adminSystemStatus() {
-  return postAdminAction<AdminSystemStatusResult>("adminsystemstatus", {});
+  if (adminSystemStatusInFlight) return adminSystemStatusInFlight;
+  const request = postAdminAction<AdminSystemStatusResult>(
+    "adminsystemstatus",
+    {}
+  );
+  adminSystemStatusInFlight = request;
+  try {
+    return await request;
+  } finally {
+    if (adminSystemStatusInFlight === request) {
+      adminSystemStatusInFlight = null;
+    }
+  }
 }
 
 export async function adminMigratePlayerState() {
@@ -655,8 +704,22 @@ export async function adminUpdateCompanion(args: {
 }
 
 
+let adminStoreSnapshotInFlight: Promise<AdminStoreSnapshotResult> | null = null;
+
 export async function adminStoreSnapshot() {
-  return postAdminAction<AdminStoreSnapshotResult>("adminstoresnapshot", {});
+  if (adminStoreSnapshotInFlight) return adminStoreSnapshotInFlight;
+  const request = postAdminAction<AdminStoreSnapshotResult>(
+    "adminstoresnapshot",
+    {}
+  );
+  adminStoreSnapshotInFlight = request;
+  try {
+    return await request;
+  } finally {
+    if (adminStoreSnapshotInFlight === request) {
+      adminStoreSnapshotInFlight = null;
+    }
+  }
 }
 
 export async function adminUpdateStore(settings: AdminStoreSettings) {
