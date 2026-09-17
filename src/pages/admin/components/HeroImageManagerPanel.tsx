@@ -37,6 +37,7 @@ type QueuedImage = {
 type Props = {
   students: Student[];
   busy: boolean;
+  mediaStatusResolved: boolean;
   mediaConfigured: boolean;
   mediaBucket?: string;
   mediaPublicBaseUrl?: string;
@@ -187,6 +188,7 @@ function StatusPill({ item }: { item: QueuedImage }) {
 export default function HeroImageManagerPanel({
   students,
   busy,
+  mediaStatusResolved,
   mediaConfigured,
   mediaBucket,
   mediaPublicBaseUrl,
@@ -451,7 +453,14 @@ export default function HeroImageManagerPanel({
 
   return (
     <div className="space-y-5">
-      {!mediaConfigured && (
+      {!mediaStatusResolved && (
+        <div className="flex items-center gap-3 rounded-[22px] border border-white/10 bg-black/20 p-4 text-sm text-zinc-400">
+          <RefreshCw size={16} className="animate-spin text-cyan-200/70" />
+          Checking image storage…
+        </div>
+      )}
+
+      {mediaStatusResolved && !mediaConfigured && (
         <div className="rounded-[26px] border border-amber-300/20 bg-amber-950/15 p-4 sm:p-5">
           <div className="flex items-start gap-3">
             <div className="rounded-2xl bg-amber-300/10 p-2.5 text-amber-100">
@@ -521,7 +530,7 @@ export default function HeroImageManagerPanel({
         </div>
       )}
 
-      {mediaConfigured && (
+      {mediaStatusResolved && mediaConfigured && (
         <div className="rounded-[22px] border border-white/10 bg-black/20 p-4">
           <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-500">
             <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/15 bg-emerald-400/5 px-3 py-1.5 font-semibold text-emerald-100/80">

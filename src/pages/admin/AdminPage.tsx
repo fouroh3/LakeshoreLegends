@@ -1590,6 +1590,7 @@ export default function AdminPage() {
                 <HeroImageManagerPanel
                   students={students}
                   busy={busy}
+                  mediaStatusResolved={systemStatusResolved}
                   mediaConfigured={Boolean(systemStatus?.mediaConfigured)}
                   mediaBucket={systemStatus?.mediaBucket || systemStatus?.mediaRepo}
                   mediaPublicBaseUrl={systemStatus?.mediaPublicBaseUrl || systemStatus?.mediaBranch}
