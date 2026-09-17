@@ -13,7 +13,10 @@ export const SHEET_CSV_URL =
 
 // ✅ Short cache so purchases show quickly on the dashboard
 let cache: { at: number; students: Student[] } | null = null;
+let inFlight: Promise<Student[]> | null = null;
 const CACHE_MS = 10_000;
+const PERSISTENT_CACHE_MS = 12 * 60 * 60 * 1000;
+const PERSISTENT_CACHE_KEY = "ll:roster:v2";
 const ROSTER_ATTEMPT_TIMEOUT_MS = 20_000;
 
 /* ---------------- helpers ---------------- */
@@ -491,12 +494,55 @@ function rowsToStudents(rows: string[][]): Student[] {
 
 /* ---------------- public API ---------------- */
 
+export function loadCachedStudents(): Student[] | null {
+  if (cache?.students.length) return cache.students;
+  if (typeof window === "undefined") return null;
+
+  try {
+    const raw = window.localStorage.getItem(PERSISTENT_CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (
+      !parsed ||
+      !Array.isArray(parsed.students) ||
+      !parsed.students.length ||
+      Date.now() - Number(parsed.at || 0) > PERSISTENT_CACHE_MS
+    ) {
+      return null;
+    }
+
+    cache = { at: Number(parsed.at), students: parsed.students as Student[] };
+    return cache.students;
+  } catch {
+    return null;
+  }
+}
+
 export async function loadStudents(options?: { force?: boolean }): Promise<Student[]> {
   const now = Date.now();
 
   if (!options?.force && cache && now - cache.at < CACHE_MS) {
     return cache.students;
   }
+
+  if (!options?.force) {
+    const persisted = loadCachedStudents();
+    if (persisted) return persisted;
+  }
+
+  // React StrictMode mounts effects twice in local development. Share the
+  // same live request so that never creates two simultaneous Google exports.
+  if (inFlight) return inFlight;
+
+  inFlight = fetchStudentsFromLiveRoster(now);
+  try {
+    return await inFlight;
+  } finally {
+    inFlight = null;
+  }
+}
+
+async function fetchStudentsFromLiveRoster(now: number): Promise<Student[]> {
 
   let res: Response | null = null;
   let lastError: Error | null = null;
@@ -563,6 +609,12 @@ export async function loadStudents(options?: { force?: boolean }): Promise<Stude
     at: Date.now(),
     students,
   };
+
+  try {
+    window.localStorage.setItem(PERSISTENT_CACHE_KEY, JSON.stringify(cache));
+  } catch {
+    // Storage can be disabled or full; the in-memory cache still works.
+  }
 
   return students;
 }

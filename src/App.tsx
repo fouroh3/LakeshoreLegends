@@ -8,7 +8,7 @@ import BattlePage from "./pages/BattlePage";
 import CardLibraryPage from "./pages/CardLibraryPage";
 import StorePage from "./pages/store/StorePage";
 import AdminPage from "./pages/admin/AdminPage";
-import { loadStudents } from "./data";
+import { loadCachedStudents, loadStudents } from "./data";
 import { normalizeSkillName } from "./data/skillLibrary";
 import type { Student } from "./types";
 import "./index.css";
@@ -144,8 +144,9 @@ export default function App() {
     window.location.href = routes[nextView];
   };
 
-  const [students, setStudents] = useState<Student[]>([]);
-  const [loading, setLoading] = useState(true);
+  const initialStudents = useMemo(() => loadCachedStudents() ?? [], []);
+  const [students, setStudents] = useState<Student[]>(initialStudents);
+  const [loading, setLoading] = useState(initialStudents.length === 0);
   const [err, setErr] = useState<string | null>(null);
 
   const [query, setQuery] = useState("");
@@ -162,23 +163,13 @@ export default function App() {
 
     (async () => {
       try {
-        const [data, hpMap, purchasedByStudent] = await Promise.all([
-          loadStudents(),
-          fetchHpMap(),
-          getPurchasedSkillSnapshot().catch(() => new Map<string, string[]>()),
-        ]);
-
-        const merged = data.map((s) => {
-          const hp = hpMap.get(normId(String(s.id ?? "")));
-          const withHp = hp
-            ? { ...s, baseHP: hp.baseHP, currentHP: hp.currentHP }
-            : { ...s };
-
-          return applyPurchasedSkills(withHp, purchasedByStudent);
-        });
+        const data = await loadStudents({ force: true });
 
         if (!alive) return;
-        setStudents(merged);
+        // Render the live roster immediately. HP and purchased skills are
+        // enrichment data and are applied by the background sync below, so a
+        // slow Apps Script response never holds the whole dashboard hostage.
+        setStudents(data);
       } catch (e: any) {
         if (!alive) return;
         setErr(e?.message || "Failed to load students.");
