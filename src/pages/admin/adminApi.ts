@@ -426,14 +426,25 @@ async function postAdminAction<T>(
         lastError = err instanceof Error ? err : new Error(String(err || "Admin API failed."));
         const unknownAction = /^Unknown action:/i.test(lastError.message.trim());
         const canRetryUnknownAction = unknownAction && attempt < 2;
+        const transientReadFailure =
+          readOnlyAction &&
+          attempt < maxAttempts - 1 &&
+          (/Admin API returned non-JSON \((?:404|408|429|5\d\d)\)/i.test(
+            lastError.message
+          ) ||
+            /(?:failed to fetch|network error|load failed)/i.test(
+              lastError.message
+            ));
 
         // A timed-out Apps Script execution keeps running on Google's side.
         // Retrying it automatically piles up more work and can duplicate a
-        // mutation. Only retry the short deployment-propagation case where a
-        // newly deployed action briefly reports as unknown.
-        if (!canRetryUnknownAction) break;
+        // mutation. Read-only snapshots are safe to retry when Google returns
+        // a transient gateway/redirect response instead of Apps Script JSON.
+        if (!canRetryUnknownAction && !transientReadFailure) break;
 
-        await new Promise((resolve) => window.setTimeout(resolve, 650));
+        await new Promise((resolve) =>
+          window.setTimeout(resolve, transientReadFailure ? 900 * (attempt + 1) : 650)
+        );
       }
     }
 
