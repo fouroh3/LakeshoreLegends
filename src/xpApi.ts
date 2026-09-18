@@ -55,15 +55,21 @@ export type SpendXpArgs = {
 
 let storeStateInFlight: Promise<StoreState> | null = null;
 const xpSummaryInFlight = new Map<string, Promise<XpSummary>>();
+const XP_READ_TIMEOUT_MS = 90_000;
+const XP_WRITE_TIMEOUT_MS = 120_000;
 
 function toNum(v: any, fallback = 0) {
   const n = typeof v === "number" ? v : Number.parseFloat(String(v ?? ""));
   return Number.isFinite(n) ? n : fallback;
 }
 
-async function fetchJsonStrict(url: string, init?: RequestInit) {
+async function fetchJsonStrict(
+  url: string,
+  init?: RequestInit,
+  timeoutMs = XP_READ_TIMEOUT_MS
+) {
   const controller = new AbortController();
-  const timeoutId = window.setTimeout(() => controller.abort(), 30_000);
+  const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
   let res: Response;
   try {
     res = await fetch(url, { ...init, signal: controller.signal });
@@ -104,11 +110,16 @@ function isTransientApiError(error: unknown) {
   );
 }
 
-async function fetchJsonResilient(url: string, init?: RequestInit, maxAttempts = 3) {
+async function fetchJsonResilient(
+  url: string,
+  init?: RequestInit,
+  maxAttempts = 2,
+  timeoutMs = XP_READ_TIMEOUT_MS
+) {
   let lastError: unknown;
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     try {
-      return await fetchJsonStrict(url, init);
+      return await fetchJsonStrict(url, init, timeoutMs);
     } catch (error) {
       lastError = error;
       if (!isTransientApiError(error) || attempt === maxAttempts - 1) throw error;
@@ -251,13 +262,18 @@ export async function spendXp(args: SpendXpArgs) {
     requestId: args.requestId ?? "",
   });
 
-  const data = await fetchJsonResilient(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "text/plain;charset=utf-8",
+  const data = await fetchJsonResilient(
+    url,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "text/plain;charset=utf-8",
+      },
+      body,
     },
-    body,
-  }, 5);
+    3,
+    XP_WRITE_TIMEOUT_MS
+  );
 
   if (!data?.ok) {
     throw new Error(data?.error || data?.message || "XP purchase failed.");

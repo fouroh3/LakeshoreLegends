@@ -86,8 +86,8 @@ export default function AttributeGrid({
             }`}
           >
             {canSelectAttribute
-              ? "Add one or more points, then confirm once."
-              : "Add upgrades to preview one combined purchase."}
+              ? "Use + and − to set each upgrade amount, then confirm once."
+              : "The number between − and + shows how many upgrades are in your cart."}
           </div>
         </div>
 
@@ -177,24 +177,28 @@ export default function AttributeGrid({
                 </div>
               </div>
 
-              <div className="mt-3 flex h-10 items-center gap-2 xl:mt-4 xl:h-11">
+              <div className="mt-3 grid h-10 grid-cols-[2.25rem_minmax(2rem,1fr)_2.25rem] items-center gap-1.5 xl:mt-4 xl:h-11">
                 <button
                   type="button"
                   disabled={!isSelected}
                   onClick={() => onRemove(key)}
-                  className="h-full w-10 rounded-xl border border-white/10 bg-white/[0.04] text-lg font-black text-white disabled:cursor-not-allowed disabled:opacity-25"
+                  className="h-full rounded-xl border border-white/10 bg-white/[0.04] text-lg font-black text-white disabled:cursor-not-allowed disabled:opacity-25"
                   aria-label={`Remove one ${title} upgrade`}
                 >
                   −
                 </button>
-                <div className="flex h-full flex-1 items-center justify-center rounded-xl border border-cyan-300/15 bg-cyan-400/[0.08] text-sm font-black text-cyan-100">
-                  {quantity ? `+${quantity}` : "None"}
+                <div
+                  className="flex h-full min-w-0 items-center justify-center rounded-xl border border-cyan-300/15 bg-cyan-400/[0.08] text-base font-black tabular-nums text-cyan-100"
+                  aria-live="polite"
+                  aria-label={`${quantity} ${title} upgrade${quantity === 1 ? "" : "s"} in cart`}
+                >
+                  {quantity ? `+${quantity}` : "0"}
                 </div>
                 <button
                   type="button"
                   disabled={!canSelectAttribute}
                   onClick={() => onAdd(key)}
-                  className="h-full w-10 rounded-xl bg-cyan-300 text-lg font-black text-slate-950 disabled:cursor-not-allowed disabled:opacity-30"
+                  className="h-full rounded-xl bg-cyan-300 text-lg font-black text-slate-950 disabled:cursor-not-allowed disabled:opacity-30"
                   aria-label={`Add one ${title} upgrade`}
                 >
                   +

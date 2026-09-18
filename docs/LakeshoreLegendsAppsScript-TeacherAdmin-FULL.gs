@@ -31,7 +31,9 @@
  *   overwritten by the Teacher Admin importer.
  * ========================================================= */
 
-const ADMIN_API_VERSION = "2026-09-17.4";
+const ADMIN_API_VERSION = "2026-09-17.5";
+const ADMIN_SYSTEM_STATUS_CACHE_KEY = "adminSystemStatus:v3";
+const ADMIN_SYSTEM_STATUS_CACHE_SECONDS = 60 * 60;
 
 const CFG = {
   // Master
@@ -4527,10 +4529,13 @@ function playerStateStatusPayload_(teacherToken) {
   };
 }
 
+function invalidateAdminSystemStatus_() {
+  cacheRemove_(ADMIN_SYSTEM_STATUS_CACHE_KEY);
+}
+
 function adminSystemStatus_(args) {
   const verified = verifyTeacher_(args || {});
-  const cacheKey = "adminSystemStatus:v2";
-  const cached = cacheGetJson_(cacheKey);
+  const cached = cacheGetJson_(ADMIN_SYSTEM_STATUS_CACHE_KEY);
   if (cached && cached.ok) {
     return {
       ...cached,
@@ -4541,7 +4546,11 @@ function adminSystemStatus_(args) {
 
   const payload = playerStateStatusPayload_(verified.token);
   payload.adminApiVersion = ADMIN_API_VERSION;
-  cachePutJson_(cacheKey, { ...payload, teacherToken: "" }, 60);
+  cachePutJson_(
+    ADMIN_SYSTEM_STATUS_CACHE_KEY,
+    { ...payload, teacherToken: "" },
+    ADMIN_SYSTEM_STATUS_CACHE_SECONDS
+  );
   return payload;
 }
 
@@ -4648,6 +4657,7 @@ function migratePlayerStateFromMaster_(args) {
 
     installMasterPlayerStateLookups_();
     cacheRemove_(`studentsMap:${CFG.STUDENTS_SHEET}`);
+    invalidateAdminSystemStatus_();
 
     return {
       ...playerStateStatusPayload_(verified.token),
@@ -6390,6 +6400,7 @@ function adminConfigureMedia_(args) {
   props.setProperty(ADMIN_MEDIA.R2_SECRET_KEY_PROP, cfg.secretAccessKey);
   props.setProperty(ADMIN_MEDIA.R2_BUCKET_PROP, cfg.bucket);
   props.setProperty(ADMIN_MEDIA.R2_PUBLIC_BASE_URL_PROP, cfg.publicBaseUrl);
+  invalidateAdminSystemStatus_();
 
   return {
     ok: true,
@@ -6488,6 +6499,7 @@ function adminUpdateMediaPublicUrl_(args) {
   const repaired = adminRepairStoredR2MediaUrls_(oldBase, nextBase);
   SpreadsheetApp.flush();
   cacheRemove_(`studentsMap:${CFG.STUDENTS_SHEET}`);
+  invalidateAdminSystemStatus_();
 
   return {
     ok: true,
@@ -7347,6 +7359,7 @@ function adminStartNewSchoolYear_(args) {
 
       cacheRemove_(`studentsMap:${CFG.STUDENTS_SHEET}`);
       cacheRemove_("hpAll:v1");
+      invalidateAdminSystemStatus_();
       setProp_(CFG.PROP_LAST_WRITE_ISO, nowIso);
       setProp_(CFG.PROP_LAST_XP_WRITE_ISO, nowIso);
       setProp_(ADMIN_YEAR_ROLLOVER.LAST_ARCHIVE_LABEL_PROP, archiveLabel);

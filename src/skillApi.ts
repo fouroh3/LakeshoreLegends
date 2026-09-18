@@ -26,6 +26,8 @@ export type PurchaseSkillArgs = {
 };
 
 const skillSummaryInFlight = new Map<string, Promise<SkillSummary>>();
+const SKILL_READ_TIMEOUT_MS = 90_000;
+const SKILL_WRITE_TIMEOUT_MS = 120_000;
 
 function normStudentId(id: unknown) {
   return String(id ?? "")
@@ -55,9 +57,13 @@ function toSkillList(value: unknown) {
     .filter(Boolean);
 }
 
-async function fetchJsonStrict(url: string, init?: RequestInit) {
+async function fetchJsonStrict(
+  url: string,
+  init?: RequestInit,
+  timeoutMs = SKILL_READ_TIMEOUT_MS
+) {
   const controller = new AbortController();
-  const timeoutId = window.setTimeout(() => controller.abort(), 30_000);
+  const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
   let res: Response;
   try {
     res = await fetch(url, { ...init, signal: controller.signal });
@@ -102,11 +108,16 @@ function isTransientApiError(error: unknown) {
   );
 }
 
-async function fetchJsonResilient(url: string, init?: RequestInit, maxAttempts = 3) {
+async function fetchJsonResilient(
+  url: string,
+  init?: RequestInit,
+  maxAttempts = 2,
+  timeoutMs = SKILL_READ_TIMEOUT_MS
+) {
   let lastError: unknown;
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     try {
-      return await fetchJsonStrict(url, init);
+      return await fetchJsonStrict(url, init, timeoutMs);
     } catch (error) {
       lastError = error;
       if (!isTransientApiError(error) || attempt === maxAttempts - 1) throw error;
@@ -197,20 +208,25 @@ export async function purchaseSkill(args: PurchaseSkillArgs) {
 
   const url = `${XP_API_URL}?action=purchaseskill&_=${Date.now()}`;
 
-  const data = await fetchJsonResilient(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "text/plain;charset=utf-8",
+  const data = await fetchJsonResilient(
+    url,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "text/plain;charset=utf-8",
+      },
+      body: JSON.stringify({
+        action: "purchaseskill",
+        studentId,
+        skillId,
+        skillName,
+        pin,
+        requestId: args.requestId ?? "",
+      }),
     },
-    body: JSON.stringify({
-      action: "purchaseskill",
-      studentId,
-      skillId,
-      skillName,
-      pin,
-      requestId: args.requestId ?? "",
-    }),
-  }, 5);
+    3,
+    SKILL_WRITE_TIMEOUT_MS
+  );
 
   return data;
 }

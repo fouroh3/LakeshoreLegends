@@ -1,8 +1,9 @@
 // src/pages/admin/adminApi.ts
 
+import { queueAppsScriptRead } from "../../appsScriptRequestQueue";
 import { HP_API_URL } from "../battle/battleConstants";
 import { getBattleTeacherToken } from "../battle/battleTeacherApi";
-export const ADMIN_API_VERSION = "2026-09-17.4";
+export const ADMIN_API_VERSION = "2026-09-17.5";
 
 import type {
   AdminAttributeValues,
@@ -343,116 +344,103 @@ type AdminAction =
   | "adminstoresnapshot"
   | "adminupdatestore";
 
-const RETRYABLE_ADMIN_ACTIONS = new Set<AdminAction>([
+const READ_ONLY_ADMIN_ACTIONS = new Set<AdminAction>([
   "admincurrencysnapshot",
   "admininventorysnapshot",
   "adminsystemstatus",
   "adminyearrolloverpreview",
   "adminarchivedstudents",
   "adminabilitysnapshot",
-  "adminupdateabilities",
   "adminstoresnapshot",
-  // Uploading the same student/kind overwrites the same R2 object and sheet
-  // cell, so one retry is safe when Apps Script drops a response in transit.
-  "adminuploadmedia",
 ]);
 
-function isTransientAdminError(error: unknown) {
-  const message = String(error ?? "").toLowerCase();
-  return [
-    "failed to fetch",
-    "network",
-    "timed out",
-    "timeout",
-    "non-json (404)",
-    "non-json (408)",
-    "non-json (429)",
-    "non-json (500)",
-    "non-json (502)",
-    "non-json (503)",
-    "non-json (504)",
-  ].some((value) => message.includes(value));
-}
+const ADMIN_READ_TIMEOUT_MS = 90_000;
+const ADMIN_WRITE_TIMEOUT_MS = 120_000;
 
 async function postAdminAction<T>(
   action: AdminAction,
   body: Record<string, any>
 ): Promise<T> {
-  const retryableAction = RETRYABLE_ADMIN_ACTIONS.has(action);
-  const maxAttempts = retryableAction ? 5 : 3;
-  let lastError: Error | null = null;
+  const readOnlyAction = READ_ONLY_ADMIN_ACTIONS.has(action);
 
-  for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    try {
-      const controller = new AbortController();
-      const timeoutId = window.setTimeout(() => controller.abort(), 30_000);
-      let res: Response;
+  const run = async () => {
+    const maxAttempts = 3;
+    let lastError: Error | null = null;
+
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
       try {
-        res = await fetch(
-          `${HP_API_URL}?action=${encodeURIComponent(action)}&_=${Date.now()}-${attempt}`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "text/plain;charset=utf-8",
-            },
-            body: JSON.stringify({
-              action,
-              teacherToken: getBattleTeacherToken(),
-              ...body,
-            }),
-            signal: controller.signal,
+        const controller = new AbortController();
+        const timeoutId = window.setTimeout(
+          () => controller.abort(),
+          readOnlyAction ? ADMIN_READ_TIMEOUT_MS : ADMIN_WRITE_TIMEOUT_MS
+        );
+        let res: Response;
+        try {
+          res = await fetch(
+            `${HP_API_URL}?action=${encodeURIComponent(action)}&_=${Date.now()}-${attempt}`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "text/plain;charset=utf-8",
+              },
+              body: JSON.stringify({
+                action,
+                teacherToken: getBattleTeacherToken(),
+                ...body,
+              }),
+              signal: controller.signal,
+            }
+          );
+        } catch (error) {
+          if ((error as Error)?.name === "AbortError") {
+            throw new Error(
+              readOnlyAction
+                ? "Admin data request timed out. Please retry."
+                : "The admin update is still taking too long to confirm. Check the live balance or record before trying again."
+            );
           }
-        );
-      } catch (error) {
-        if ((error as Error)?.name === "AbortError") {
-          throw new Error("Admin API request timed out.");
+          throw error;
+        } finally {
+          window.clearTimeout(timeoutId);
         }
-        throw error;
-      } finally {
-        window.clearTimeout(timeoutId);
+
+        const text = await res.text();
+        let data: any = null;
+
+        try {
+          data = text ? JSON.parse(text) : null;
+        } catch {
+          throw new Error(
+            `Admin API returned non-JSON (${res.status}). ${text
+              .slice(0, 160)
+              .replace(/\s+/g, " ")}`
+          );
+        }
+
+        if (!res.ok || !data?.ok) {
+          throw new Error(data?.error || `Admin API failed: ${res.status}`);
+        }
+
+        return data as T;
+      } catch (err: any) {
+        lastError = err instanceof Error ? err : new Error(String(err || "Admin API failed."));
+        const unknownAction = /^Unknown action:/i.test(lastError.message.trim());
+        const canRetryUnknownAction = unknownAction && attempt < 2;
+
+        // A timed-out Apps Script execution keeps running on Google's side.
+        // Retrying it automatically piles up more work and can duplicate a
+        // mutation. Only retry the short deployment-propagation case where a
+        // newly deployed action briefly reports as unknown.
+        if (!canRetryUnknownAction) break;
+
+        await new Promise((resolve) => window.setTimeout(resolve, 650));
       }
-
-      const text = await res.text();
-      let data: any = null;
-
-      try {
-        data = text ? JSON.parse(text) : null;
-      } catch {
-        throw new Error(
-          `Admin API returned non-JSON (${res.status}). ${text
-            .slice(0, 160)
-            .replace(/\s+/g, " ")}`
-        );
-      }
-
-      if (!res.ok || !data?.ok) {
-        throw new Error(data?.error || `Admin API failed: ${res.status}`);
-      }
-
-      return data as T;
-    } catch (err: any) {
-      lastError = err instanceof Error ? err : new Error(String(err || "Admin API failed."));
-      const unknownAction = /^Unknown action:/i.test(lastError.message.trim());
-      const canRetryUnknownAction = unknownAction && attempt < 2;
-      const canRetryAction =
-        retryableAction &&
-        isTransientAdminError(lastError) &&
-        attempt < maxAttempts - 1;
-
-      if (!canRetryUnknownAction && !canRetryAction) break;
-
-      await new Promise((resolve) =>
-        window.setTimeout(
-          resolve,
-          canRetryUnknownAction
-            ? 650
-            : Math.min(4_000, 500 * 2 ** attempt) + Math.floor(Math.random() * 600)
-        )
-      );
     }
-  }
 
-  throw lastError || new Error("Admin API failed.");
+    throw lastError || new Error("Admin API failed.");
+  };
+
+  return readOnlyAction ? queueAppsScriptRead(run) : run();
 }
 
 export async function adminImportStudents(students: AdminImportedStudent[]) {
