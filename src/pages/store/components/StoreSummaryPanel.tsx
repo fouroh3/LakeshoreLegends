@@ -65,7 +65,7 @@ export default function StoreSummaryPanel({
           </div>
         </div>
 
-        <div className="hidden rounded-full border border-white/[0.05] bg-white/[0.035] px-3 py-1 text-xs text-white/60 sm:block">
+        <div className="hidden items-center justify-center rounded-full border border-white/[0.05] bg-white/[0.035] px-3 py-1 text-center text-xs text-white/60 sm:inline-flex">
           {xpPerPoint} XP per upgrade
         </div>
       </div>
@@ -116,7 +116,7 @@ export default function StoreSummaryPanel({
               type="button"
               onClick={() => setConfirmId(selectedStudentId)}
               disabled={storeLocked}
-              className="rounded-full border border-cyan-300/12 bg-cyan-400/[0.08] px-2 py-0.5 text-[10px] font-medium text-cyan-100 transition hover:bg-cyan-400/[0.14] disabled:cursor-not-allowed disabled:opacity-40"
+              className="inline-flex items-center justify-center rounded-full border border-cyan-300/12 bg-cyan-400/[0.08] px-2 py-0.5 text-center text-[10px] font-medium text-cyan-100 transition hover:bg-cyan-400/[0.14] disabled:cursor-not-allowed disabled:opacity-40"
             >
                Tap to Copy
             </button>
@@ -134,7 +134,7 @@ export default function StoreSummaryPanel({
 
       <div className="mt-3 flex w-full flex-wrap items-center justify-center gap-2 text-xs">
         <span
-          className={`rounded-full px-3 py-1 ${
+          className={`inline-flex items-center justify-center rounded-full px-3 py-1 text-center ${
             storeLocked
               ? "bg-red-500/10 text-red-200"
               : "bg-emerald-500/10 text-emerald-200"
@@ -144,7 +144,7 @@ export default function StoreSummaryPanel({
         </span>
 
         <span
-          className={`rounded-full px-3 py-1 ${
+          className={`inline-flex items-center justify-center rounded-full px-3 py-1 text-center ${
             confirmOk
               ? "bg-emerald-500/10 text-emerald-200"
               : "bg-white/[0.05] text-white/46"
@@ -154,7 +154,7 @@ export default function StoreSummaryPanel({
         </span>
 
         <span
-          className={`rounded-full px-3 py-1 ${
+          className={`inline-flex items-center justify-center rounded-full px-3 py-1 text-center ${
             hasEnoughPoints
               ? "bg-emerald-500/10 text-emerald-200"
               : "bg-amber-500/10 text-amber-200"
@@ -164,7 +164,7 @@ export default function StoreSummaryPanel({
         </span>
 
         {pendingCount > 0 && (
-          <span className="rounded-full bg-cyan-400/10 px-3 py-1 text-cyan-100">
+          <span className="inline-flex items-center justify-center rounded-full bg-cyan-400/10 px-3 py-1 text-center text-cyan-100">
             {pendingCount} upgrade{pendingCount === 1 ? "" : "s"} ready
           </span>
         )}

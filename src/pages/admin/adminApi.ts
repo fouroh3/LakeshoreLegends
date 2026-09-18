@@ -3,7 +3,7 @@
 import { queueAppsScriptRead } from "../../appsScriptRequestQueue";
 import { HP_API_URL } from "../battle/battleConstants";
 import { getBattleTeacherToken } from "../battle/battleTeacherApi";
-export const ADMIN_API_VERSION = "2026-09-17.5";
+export const ADMIN_API_VERSION = "2026-09-18.2";
 
 import type {
   AdminAttributeValues,

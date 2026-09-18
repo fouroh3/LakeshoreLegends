@@ -177,10 +177,10 @@ export default function SkillTrainingPanel({
           </div>
 
           <div className="flex flex-wrap gap-2">
-            <div className="self-start rounded-full border border-violet-300/15 bg-violet-400/[0.08] px-3 py-1 text-[11px] text-violet-100">
+            <div className="inline-flex items-center justify-center self-start rounded-full border border-violet-300/15 bg-violet-400/[0.08] px-3 py-1 text-center text-[11px] text-violet-100">
               Cost: {skillCost} Skill Token{skillCost === 1 ? "" : "s"}
             </div>
-            <div className="self-start rounded-full border border-cyan-300/15 bg-cyan-400/[0.08] px-3 py-1 text-[11px] text-cyan-100">
+            <div className="inline-flex items-center justify-center self-start rounded-full border border-cyan-300/15 bg-cyan-400/[0.08] px-3 py-1 text-center text-[11px] text-cyan-100">
               Tokens: {loading ? "…" : err ? "—" : skillTokens}
             </div>
           </div>
@@ -274,7 +274,7 @@ export default function SkillTrainingPanel({
 
                   <span
                     className={[
-                      "shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-semibold",
+                      "inline-flex shrink-0 items-center justify-center rounded-full border px-2.5 py-1 text-center text-[10px] font-semibold",
                       owned
                         ? "border-emerald-300/22 bg-emerald-400/[0.10] text-emerald-100/88"
                         : isSelected
@@ -329,7 +329,7 @@ export default function SkillTrainingPanel({
 
               <span
                 className={[
-                  "rounded-full border px-3 py-1 text-xs font-semibold",
+                  "inline-flex items-center justify-center rounded-full border px-3 py-1 text-center text-xs font-semibold",
                   selectedOwned
                     ? "border-emerald-300/20 bg-emerald-400/[0.12] text-emerald-100"
                     : "border-violet-300/20 bg-violet-400/[0.12] text-violet-100",

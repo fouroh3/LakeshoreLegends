@@ -1,6 +1,6 @@
 // src/App.tsx
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import AbilitiesDashboard from "./components/AbilitiesDashboard";
 import AppTopBar from "./components/AppTopBar";
 import CharacterProfileModal from "./components/CharacterProfileModal";
@@ -157,6 +157,8 @@ export default function App() {
   const [attrFilterMin, setAttrFilterMin] = useState(0);
 
   const [selectedPerson, setSelectedPerson] = useState<Student | null>(null);
+  const enrichmentSyncInFlight = useRef(false);
+  const lastEnrichmentSyncAt = useRef(0);
 
   useEffect(() => {
     let alive = true;
@@ -202,6 +204,10 @@ export default function App() {
     };
 
     const tick = async () => {
+      if (enrichmentSyncInFlight.current) return;
+      enrichmentSyncInFlight.current = true;
+      lastEnrichmentSyncAt.current = Date.now();
+
       try {
         const [hpMap, purchasedByStudent] = await Promise.all([
           fetchHpMap(),
@@ -222,20 +228,26 @@ export default function App() {
         );
       } catch {
         // keep dashboard usable
+      } finally {
+        enrichmentSyncInFlight.current = false;
       }
     };
 
-    const wrappedTick = async () => {
+    const wrappedTick = async (force = false) => {
       if (!shouldPoll()) return;
+      if (!force && Date.now() - lastEnrichmentSyncAt.current < 120_000) {
+        return;
+      }
       await tick();
     };
 
-    wrappedTick();
-
-    const t = window.setInterval(wrappedTick, 25_000);
+    // Load enrichment once. After that, refresh only when the user returns to
+    // the dashboard after a meaningful pause. Continuous polling multiplied
+    // Apps Script traffic across a classroom and could saturate the web app.
+    void wrappedTick(true);
 
     const onReturn = () => {
-      if (shouldPoll()) tick();
+      void wrappedTick();
     };
 
     document.addEventListener("visibilitychange", onReturn);
@@ -243,7 +255,6 @@ export default function App() {
 
     return () => {
       alive = false;
-      window.clearInterval(t);
       document.removeEventListener("visibilitychange", onReturn);
       window.removeEventListener("focus", onReturn);
     };

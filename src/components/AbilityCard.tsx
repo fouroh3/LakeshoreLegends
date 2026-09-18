@@ -228,7 +228,12 @@ export default function AbilityCard({
       >
         <div className="flex min-w-0 flex-1 items-start gap-3">
           <div className="relative mr-1 shrink-0">
-            <Avatar name={fullName} src={portraitUrl} size={cfg.avatarSize} />
+            <Avatar
+              name={fullName}
+              src={portraitUrl}
+              size={cfg.avatarSize}
+              imageClassName="object-contain object-center p-1"
+            />
 
             <div className="absolute right-0 top-0 z-[1] flex h-5 w-5 translate-x-[2px] -translate-y-[2px] items-center justify-center rounded-full border border-white/10 bg-[radial-gradient(circle,rgba(30,30,40,0.95),rgba(10,10,14,0.95))] shadow-[0_2px_6px_rgba(0,0,0,0.18)]">
               <span className="text-[9px] leading-none">{badgeIcon}</span>

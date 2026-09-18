@@ -1,15 +1,36 @@
-let readQueue: Promise<void> = Promise.resolve();
+const MAX_CONCURRENT_APPS_SCRIPT_READS = 2;
+let activeReads = 0;
+const pendingReads: Array<() => void> = [];
+
+function runNextAppsScriptReads() {
+  while (
+    activeReads < MAX_CONCURRENT_APPS_SCRIPT_READS &&
+    pendingReads.length > 0
+  ) {
+    pendingReads.shift()?.();
+  }
+}
 
 /**
- * Apps Script is much less stable when one browser starts several spreadsheet
- * reads at once. Keep reads from this tab in a short queue; purchases still run
- * immediately and retain their own idempotent retry handling.
+ * Keep the browser from flooding Apps Script, while allowing two independent
+ * reads to progress together. A single slow snapshot must not block unrelated
+ * controls for 30-90 seconds. Purchases still run immediately and retain their
+ * own idempotent handling.
  */
 export function queueAppsScriptRead<T>(task: () => Promise<T>): Promise<T> {
-  const request = readQueue.catch(() => undefined).then(task);
-  readQueue = request.then(
-    () => undefined,
-    () => undefined
-  );
-  return request;
+  return new Promise<T>((resolve, reject) => {
+    const start = () => {
+      activeReads += 1;
+      Promise.resolve()
+        .then(task)
+        .then(resolve, reject)
+        .finally(() => {
+          activeReads -= 1;
+          runNextAppsScriptReads();
+        });
+    };
+
+    pendingReads.push(start);
+    runNextAppsScriptReads();
+  });
 }

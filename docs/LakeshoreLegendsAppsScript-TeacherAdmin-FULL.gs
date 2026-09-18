@@ -31,8 +31,8 @@
  *   overwritten by the Teacher Admin importer.
  * ========================================================= */
 
-const ADMIN_API_VERSION = "2026-09-17.5";
-const ADMIN_SYSTEM_STATUS_CACHE_KEY = "adminSystemStatus:v3";
+const ADMIN_API_VERSION = "2026-09-18.2";
+const ADMIN_SYSTEM_STATUS_CACHE_KEY = `adminSystemStatus:v4:${ADMIN_API_VERSION}`;
 const ADMIN_SYSTEM_STATUS_CACHE_SECONDS = 60 * 60;
 
 const CFG = {
@@ -1665,7 +1665,9 @@ function ensureXpTxnSheet_() {
 }
 
 function loadXpIndex_() {
-  const sh = ensureXpStateSheet_();
+  // Read paths must not run schema-ensure work on every request. The deploy
+  // setup and mutation paths create/validate this sheet.
+  const sh = getSheet_(CFG.XP_STATE_SHEET);
   const values = sh.getDataRange().getValues();
   const headers = values[0] || [];
   const m = headerMap_(headers);
@@ -1725,7 +1727,7 @@ function seedXpStateFromMaster_() {
   return { ok: true, seeded: out.length - 1 };
 }
 
-function xpSummary_(studentIdRaw) {
+function xpSummary_(studentIdRaw, includeHistory, includeAttributes) {
   const studentId = normId_(studentIdRaw);
   if (!studentId) throw new Error("Missing studentId");
   const ctl = readXpControl_();
@@ -1733,39 +1735,44 @@ function xpSummary_(studentIdRaw) {
   const { index } = loadXpIndex_();
   const row = index.get(studentId);
   const balance = row ? Math.round(asNum_(row.balance, 0)) : 0;
-  const tx = ensureXpTxnSheet_();
-  const tvals = tx.getDataRange().getValues();
   let earned = 0;
   let spent = 0;
   const recent = [];
-  for (let r = tvals.length - 1; r >= 1 && recent.length < 12; r--) {
-    const rid = normId_(tvals[r][1]);
-    if (rid !== studentId) continue;
-    const type =
-      String(tvals[r][4] || "").toUpperCase() === "SPEND"
-        ? "SPEND"
-        : "EARN";
-    const xp = Math.round(asNum_(tvals[r][5], 0));
-    const target = String(tvals[r][6] || "").toUpperCase() || "";
-    const ts =
-      tvals[r][0] instanceof Date
-        ? tvals[r][0].toISOString()
-        : String(tvals[r][0] || "");
-    recent.push({
-      timestamp: ts,
-      type,
-      xp,
-      target: target ? target : undefined,
-      note: tvals[r][10] ? String(tvals[r][10]) : undefined,
-    });
-  }
-  for (let r = 1; r < tvals.length; r++) {
-    const rid = normId_(tvals[r][1]);
-    if (rid !== studentId) continue;
-    const type = String(tvals[r][4] || "").toUpperCase();
-    const xp = Math.round(asNum_(tvals[r][5], 0));
-    if (type === "SPEND") spent += xp;
-    else earned += xp;
+  // The Store only needs the live balance and attributes. Reading the entire
+  // transaction ledger made every student lookup progressively slower as the
+  // log grew. History remains available explicitly for screens that show it.
+  if (includeHistory) {
+    const tx = ensureXpTxnSheet_();
+    const tvals = tx.getDataRange().getValues();
+    for (let r = tvals.length - 1; r >= 1 && recent.length < 12; r--) {
+      const rid = normId_(tvals[r][1]);
+      if (rid !== studentId) continue;
+      const type =
+        String(tvals[r][4] || "").toUpperCase() === "SPEND"
+          ? "SPEND"
+          : "EARN";
+      const xp = Math.round(asNum_(tvals[r][5], 0));
+      const target = String(tvals[r][6] || "").toUpperCase() || "";
+      const ts =
+        tvals[r][0] instanceof Date
+          ? tvals[r][0].toISOString()
+          : String(tvals[r][0] || "");
+      recent.push({
+        timestamp: ts,
+        type,
+        xp,
+        target: target ? target : undefined,
+        note: tvals[r][10] ? String(tvals[r][10]) : undefined,
+      });
+    }
+    for (let r = 1; r < tvals.length; r++) {
+      const rid = normId_(tvals[r][1]);
+      if (rid !== studentId) continue;
+      const type = String(tvals[r][4] || "").toUpperCase();
+      const xp = Math.round(asNum_(tvals[r][5], 0));
+      if (type === "SPEND") spent += xp;
+      else earned += xp;
+    }
   }
   return {
     studentId,
@@ -1774,7 +1781,7 @@ function xpSummary_(studentIdRaw) {
     balance,
     spendablePoints: Math.floor(Math.max(0, balance) / xpPerPoint),
     recent,
-    attrs: studentAttributeSnapshot_(studentId),
+    attrs: includeAttributes ? studentAttributeSnapshot_(studentId) : undefined,
   };
 }
 
@@ -1817,7 +1824,7 @@ function spendXpWrite_(args) {
       ok: true,
       deduped: true,
       requestId,
-      summary: xpSummary_(args.studentId),
+      summary: xpSummary_(args.studentId, false, true),
       xpLastWriteIso: getProp_(CFG.PROP_LAST_XP_WRITE_ISO) || "",
       now: new Date().toISOString(),
     };
@@ -2082,7 +2089,8 @@ function ensureSkillTxnSheet_() {
 }
 
 function loadSkillStateIndex_() {
-  const sh = ensureSkillStateSheet_();
+  // Avoid a separate header read before every balance snapshot.
+  const sh = getSheet_(CFG.SKILL_STATE_SHEET);
   const values = sh.getDataRange().getValues();
   const headers = values[0] || [];
   const map = headerMap_(headers);
@@ -2130,7 +2138,7 @@ function loadSkillStateIndex_() {
 
 function purchasedSkillIdsForStudent_(studentIdRaw) {
   const studentId = normId_(studentIdRaw);
-  const sh = ensurePurchasedSkillsSheet_();
+  const sh = getSheet_(CFG.PURCHASED_SKILLS_SHEET);
   const values = sh.getDataRange().getValues();
   const headers = values[0] || [];
   const map = headerMap_(headers);
@@ -2166,7 +2174,7 @@ function purchasedSkillIdsForStudent_(studentIdRaw) {
   return { ids, names };
 }
 
-function skillSummary_(studentIdRaw) {
+function skillSummary_(studentIdRaw, includeHistory) {
   const studentId = normId_(studentIdRaw);
 
   if (!studentId) {
@@ -2178,35 +2186,36 @@ function skillSummary_(studentIdRaw) {
   const studentName = state?.studentName || skillStudentName_(studentId);
   const purchased = purchasedSkillIdsForStudent_(studentId);
 
-  const tx = ensureSkillTxnSheet_();
-  const values = tx.getDataRange().getValues();
-  const headers = values[0] || [];
-  const map = headerMap_(headers);
-
-  const iId = idx_(map, "StudentID", "ID");
-  const iSkillName = idx_(map, "SkillName", "Skill Name");
-  const iTokens = idx_(map, "Tokens");
-  const iSource = idx_(map, "Source");
-
   const recent = [];
 
-  if (iId >= 0) {
-    for (let r = values.length - 1; r >= 1 && recent.length < 12; r--) {
-      if (normId_(values[r][iId]) !== studentId) continue;
+  if (includeHistory) {
+    const tx = getSheet_(CFG.SKILL_TXN_SHEET);
+    const values = tx.getDataRange().getValues();
+    const headers = values[0] || [];
+    const map = headerMap_(headers);
+    const iId = idx_(map, "StudentID", "ID");
+    const iSkillName = idx_(map, "SkillName", "Skill Name");
+    const iTokens = idx_(map, "Tokens");
+    const iSource = idx_(map, "Source");
 
-      const ts =
-        values[r][0] instanceof Date
-          ? values[r][0].toISOString()
-          : String(values[r][0] || "");
+    if (iId >= 0) {
+      for (let r = values.length - 1; r >= 1 && recent.length < 12; r--) {
+        if (normId_(values[r][iId]) !== studentId) continue;
 
-      recent.push({
-        timestamp: ts,
-        skillName: String(iSkillName >= 0 ? values[r][iSkillName] : ""),
-        cost: Math.abs(
-          Math.round(asNum_(iTokens >= 0 ? values[r][iTokens] : 0, 0))
-        ),
-        source: String(iSource >= 0 ? values[r][iSource] : ""),
-      });
+        const ts =
+          values[r][0] instanceof Date
+            ? values[r][0].toISOString()
+            : String(values[r][0] || "");
+
+        recent.push({
+          timestamp: ts,
+          skillName: String(iSkillName >= 0 ? values[r][iSkillName] : ""),
+          cost: Math.abs(
+            Math.round(asNum_(iTokens >= 0 ? values[r][iTokens] : 0, 0))
+          ),
+          source: String(iSource >= 0 ? values[r][iSource] : ""),
+        });
+      }
     }
   }
 
@@ -2328,7 +2337,7 @@ function purchaseSkill_(args) {
       ok: true,
       deduped: true,
       requestId,
-      summary: skillSummary_(studentId),
+      summary: skillSummary_(studentId, false),
       now: new Date().toISOString(),
     };
   }
@@ -4102,8 +4111,13 @@ function adminAdjustCurrency_(args) {
       const txn = ensureXpTxnSheet_();
       const txnRows = [];
 
+      const xpRowCount = Math.max(0, state.xp.sh.getLastRow() - 1);
+      const balanceValues = xpRowCount
+        ? state.xp.sh.getRange(2, 4, xpRowCount, 1).getValues()
+        : [];
+
       plans.forEach((plan) => {
-        state.xp.sh.getRange(plan.stateRow.sheetRow, 4).setValue(plan.after);
+        balanceValues[plan.stateRow.sheetRow - 2][0] = plan.after;
 
         txnRows.push([
           now,
@@ -4130,6 +4144,10 @@ function adminAdjustCurrency_(args) {
         });
       });
 
+      if (xpRowCount) {
+        state.xp.sh.getRange(2, 4, xpRowCount, 1).setValues(balanceValues);
+      }
+
       if (txnRows.length) {
         appendRowsFast_(txn, txnRows);
       }
@@ -4138,14 +4156,20 @@ function adminAdjustCurrency_(args) {
       const txnRows = [];
       const signedAmount = mode === "ADD" ? amount : -amount;
 
-      plans.forEach((plan) => {
-        state.skill.sh
-          .getRange(plan.stateRow.sheetRow, plan.stateRow.col.SkillTokens)
-          .setValue(plan.after);
+      const skillRowCount = Math.max(0, state.skill.sh.getLastRow() - 1);
+      const firstSkillRow = plans[0] && plans[0].stateRow;
+      const tokenColumn = firstSkillRow ? firstSkillRow.col.SkillTokens : 3;
+      const updatedColumn = firstSkillRow ? firstSkillRow.col.UpdatedAt : 4;
+      const tokenValues = skillRowCount
+        ? state.skill.sh.getRange(2, tokenColumn, skillRowCount, 1).getValues()
+        : [];
+      const updatedValues = skillRowCount
+        ? state.skill.sh.getRange(2, updatedColumn, skillRowCount, 1).getValues()
+        : [];
 
-        state.skill.sh
-          .getRange(plan.stateRow.sheetRow, plan.stateRow.col.UpdatedAt)
-          .setValue(nowIso);
+      plans.forEach((plan) => {
+        tokenValues[plan.stateRow.sheetRow - 2][0] = plan.after;
+        updatedValues[plan.stateRow.sheetRow - 2][0] = nowIso;
 
         txnRows.push([
           now,
@@ -4169,6 +4193,15 @@ function adminAdjustCurrency_(args) {
           after: plan.after,
         });
       });
+
+      if (skillRowCount) {
+        state.skill.sh
+          .getRange(2, tokenColumn, skillRowCount, 1)
+          .setValues(tokenValues);
+        state.skill.sh
+          .getRange(2, updatedColumn, skillRowCount, 1)
+          .setValues(updatedValues);
+      }
 
       if (txnRows.length) {
         appendRowsFast_(txn, txnRows);
@@ -7429,6 +7462,35 @@ function adminSetStoreControlValue_(keyRaw, value) {
   return row;
 }
 
+function adminSetStoreControlValues_(updates) {
+  const sh = getXpControlSheet_();
+  const existing = sh.getDataRange().getValues();
+  const rows = existing.map((row) => [row[0], row[1]]);
+  const rowByKey = new Map();
+
+  for (let r = 1; r < rows.length; r++) {
+    const key = norm_(rows[r][0]);
+    if (key) rowByKey.set(key, r);
+  }
+
+  Object.keys(updates || {}).forEach((keyRaw) => {
+    const key = norm_(keyRaw);
+    const value = updates[keyRaw];
+    const existingRow = rowByKey.get(key);
+    if (existingRow != null) {
+      rows[existingRow][1] = value;
+      return;
+    }
+    rowByKey.set(key, rows.length);
+    rows.push([key, value]);
+  });
+
+  // One spreadsheet write replaces eight read/write round trips when Store
+  // settings are saved or the Store is opened/closed.
+  sh.getRange(1, 1, rows.length, 2).setValues(rows);
+  cacheRemove_("xpControl:v1");
+}
+
 function adminStoreSettingsPayload_() {
   const ctl = readXpControl_();
   return {
@@ -7471,22 +7533,44 @@ function adminUpdateStore_(args) {
     const nowIso = new Date().toISOString();
     const openNonce = Utilities.getUuid();
 
-    adminSetStoreControlValue_("StoreLocked", storeLocked ? "TRUE" : "FALSE");
-    adminSetStoreControlValue_("StorePIN", storePin);
-    adminSetStoreControlValue_("XPPerPoint", xpPerPoint);
-    adminSetStoreControlValue_("SkillTokenCost", skillTokenCost);
-    adminSetStoreControlValue_("WindowLabel", windowLabel);
-    adminSetStoreControlValue_("MaxPointsPerOpen", maxPointsPerOpen);
-    adminSetStoreControlValue_("OpenNonce", openNonce);
-    adminSetStoreControlValue_("UpdatedAt", nowIso);
+    adminSetStoreControlValues_({
+      StoreLocked: storeLocked ? "TRUE" : "FALSE",
+      StorePIN: storePin,
+      XPPerPoint: xpPerPoint,
+      SkillTokenCost: skillTokenCost,
+      WindowLabel: windowLabel,
+      MaxPointsPerOpen: maxPointsPerOpen,
+      OpenNonce: openNonce,
+      UpdatedAt: nowIso,
+    });
 
     SpreadsheetApp.flush();
     setProp_(CFG.PROP_LAST_XP_WRITE_ISO, nowIso);
 
+    const nextControl = {
+      storeLocked,
+      storePin,
+      xpPerPoint,
+      skillTokenCost,
+      maxPointsPerOpen,
+      windowLabel,
+      openNonce,
+      updatedAt: nowIso,
+    };
+    cachePutJson_("xpControl:v1", nextControl, 60);
+
     return {
       ok: true,
       teacherToken: verified.token,
-      settings: adminStoreSettingsPayload_(),
+      settings: {
+        storeLocked,
+        storePin,
+        xpPerPoint,
+        skillTokenCost,
+        maxPointsPerOpen,
+        windowLabel,
+        updatedAt: nowIso,
+      },
       now: nowIso,
     };
   } finally {
@@ -7576,7 +7660,9 @@ function doGet(e) {
 
       case "xpsummary": {
         const studentId = norm_(p.studentId || "");
-        const sum = xpSummary_(studentId);
+        const includeHistory = toBool_(p.includeHistory, false);
+        const includeAttributes = toBool_(p.includeAttributes, false);
+        const sum = xpSummary_(studentId, includeHistory, includeAttributes);
 
         return jsonOut_({
           ok: true,
@@ -7587,7 +7673,7 @@ function doGet(e) {
 
       case "skillsummary": {
         const studentId = norm_(p.studentId || "");
-        return jsonOut_(skillSummary_(studentId));
+        return jsonOut_(skillSummary_(studentId, toBool_(p.includeHistory, false)));
       }
 
       case "skillsnapshot":

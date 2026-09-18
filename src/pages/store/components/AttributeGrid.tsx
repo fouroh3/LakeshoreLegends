@@ -91,7 +91,7 @@ export default function AttributeGrid({
           </div>
         </div>
 
-        <div className="self-start rounded-full border border-white/[0.05] bg-white/[0.035] px-3 py-1 text-[11px] text-white/60">
+        <div className="inline-flex items-center justify-center self-start rounded-full border border-white/[0.05] bg-white/[0.035] px-3 py-1 text-center text-[11px] text-white/60">
           Cost: {xpPerPoint} XP
         </div>
       </div>

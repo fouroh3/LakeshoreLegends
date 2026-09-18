@@ -2,6 +2,7 @@
 
 import type { Student } from "../../../types";
 import { hpStatus } from "../../../utils/hpStatus";
+import Avatar from "../../../components/Avatar";
 import {
   innerCard,
   label,
@@ -12,7 +13,6 @@ import {
 import {
   cleanText,
   fullName,
-  initialsForStudent,
 } from "../storeUtils";
 
 type Props = {
@@ -185,7 +185,7 @@ export default function LegendSelectionPanel({
           </div>
         </div>
 
-        <div className="rounded-full border border-white/[0.05] bg-white/[0.035] px-2.5 py-1 text-[11px] text-white/56 xl:px-3 xl:text-xs">
+        <div className="inline-flex items-center justify-center rounded-full border border-white/[0.05] bg-white/[0.035] px-2.5 py-1 text-center text-[11px] text-white/56 xl:px-3 xl:text-xs">
           {studentsForPick.length || 0} shown
         </div>
       </div>
@@ -349,11 +349,13 @@ export default function LegendSelectionPanel({
           <div className="relative">
             <div className="flex flex-col items-center text-center">
               <div className={`relative mt-1 ${avatarTone}`}>
-                <div
-                  className={`relative z-[1] flex h-28 w-28 items-center justify-center rounded-[30px] border border-white/[0.05] bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.02))] text-5xl font-bold tracking-tight text-white ${guildTheme.avatarGlow}`}
-                >
-                  {initialsForStudent(selected)}
-                </div>
+                <Avatar
+                  name={selected ? fullName(selected) : "Legend"}
+                  src={selected?.portraitUrl}
+                  size={112}
+                  className={`relative z-[1] ${guildTheme.avatarGlow}`}
+                  imageClassName="object-contain object-center p-2"
+                />
               </div>
 
               <div className="mt-4 max-w-full truncate text-[28px] font-semibold leading-none tracking-tight text-white">
@@ -361,7 +363,7 @@ export default function LegendSelectionPanel({
               </div>
 
               <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
-                <span className="rounded-full border border-white/[0.05] bg-white/[0.035] px-3 py-1 text-xs text-white/72">
+                <span className="inline-flex items-center justify-center rounded-full border border-white/[0.05] bg-white/[0.035] px-3 py-1 text-center text-xs text-white/72">
                   {selected
                     ? cleanText(
                         (selected as Record<string, unknown>).homeroom
@@ -370,7 +372,7 @@ export default function LegendSelectionPanel({
                 </span>
 
                 <span
-                  className={`rounded-full border px-3 py-1 text-xs ${
+                  className={`inline-flex items-center justify-center rounded-full border px-3 py-1 text-center text-xs ${
                     selected
                       ? guildTheme.pill
                       : "border-white/[0.05] bg-white/[0.035] text-white/72"
@@ -383,7 +385,7 @@ export default function LegendSelectionPanel({
                 </span>
 
                 <span
-                  className={`rounded-full border px-3 py-1 text-xs ${healthPillClass}`}
+                  className={`inline-flex items-center justify-center rounded-full border px-3 py-1 text-center text-xs ${healthPillClass}`}
                 >
                   {healthLabel}
                 </span>
@@ -403,10 +405,6 @@ export default function LegendSelectionPanel({
                 <div className="text-sm font-semibold tabular-nums text-white">
                   {selected ? `${hp}/${safeMaxHp}` : "—"}
                 </div>
-              </div>
-
-              <div className="mt-2 text-[11px] uppercase tracking-[0.18em] text-white/36">
-                {selected ? `${Math.round(hpPct)}% integrity` : "Awaiting data"}
               </div>
 
               <div className="mt-3 h-3 rounded-full bg-black/40 p-[2px] ring-1 ring-white/[0.05]">

@@ -141,16 +141,16 @@ export const select =
   "w-full appearance-none rounded-2xl border border-white/[0.05] bg-white/[0.04] px-4 py-2.5 pr-10 text-sm text-white outline-none transition focus:border-cyan-300/18 focus:bg-white/[0.055]";
 
 export const btn =
-  "rounded-full border border-white/[0.06] bg-white/[0.04] px-4 py-2 text-sm text-white/82 transition hover:border-white/[0.08] hover:bg-white/[0.06] hover:text-white active:scale-[0.99] disabled:opacity-50";
+  "inline-flex items-center justify-center rounded-full border border-white/[0.06] bg-white/[0.04] px-4 py-2 text-center text-sm text-white/82 transition hover:border-white/[0.08] hover:bg-white/[0.06] hover:text-white active:scale-[0.99] disabled:opacity-50";
 
 export const btnPrimary =
-  "rounded-full border border-cyan-400/[0.18] bg-cyan-400/[0.10] px-4 py-2 text-sm text-cyan-100 transition hover:border-cyan-300/[0.24] hover:bg-cyan-400/[0.14] active:scale-[0.99] disabled:opacity-50";
+  "inline-flex items-center justify-center rounded-full border border-cyan-400/[0.18] bg-cyan-400/[0.10] px-4 py-2 text-center text-sm text-cyan-100 transition hover:border-cyan-300/[0.24] hover:bg-cyan-400/[0.14] active:scale-[0.99] disabled:opacity-50";
 
 export const pill =
-  "inline-flex items-center gap-2 rounded-full border border-white/[0.06] bg-white/[0.04] px-3 py-1.5 text-xs text-white/78";
+  "inline-flex items-center justify-center gap-2 rounded-full border border-white/[0.06] bg-white/[0.04] px-3 py-1.5 text-center text-xs text-white/78";
 
 export const statusPillBase =
-  "inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em]";
+  "inline-flex items-center justify-center rounded-full border px-3 py-1 text-center text-[11px] font-semibold uppercase tracking-[0.16em]";
 
 export function getStatusPill(storeLocked: boolean) {
   return storeLocked

@@ -129,7 +129,9 @@ export default function PurchaseReviewPanel({
           ? "Processing one secure purchase..."
           : canConfirm
           ? `Buy ${totalPoints} upgrade${totalPoints === 1 ? "" : "s"} (${totalCost} XP)`
-          : "Verification Required"}
+          : selected.length === 0
+          ? "Add upgrades to your cart"
+          : "Complete checkout to purchase"}
       </button>
     </div>
   );
