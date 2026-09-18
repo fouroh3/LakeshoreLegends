@@ -11,8 +11,9 @@ type Props = {
   hasEnoughPoints: boolean;
   canSelectAttribute: boolean;
   withinWindow: boolean;
-  pendingTarget: AttrKey | null;
-  setPendingTarget: (next: AttrKey | null) => void;
+  pendingPoints: Partial<Record<AttrKey, number>>;
+  onAdd: (key: AttrKey) => void;
+  onRemove: (key: AttrKey) => void;
   displayAttr: (key: AttrKey) => number;
   guildTheme: {
     border: string;
@@ -31,8 +32,9 @@ export default function AttributeGrid({
   hasEnoughPoints,
   canSelectAttribute,
   withinWindow,
-  pendingTarget,
-  setPendingTarget,
+  pendingPoints,
+  onAdd,
+  onRemove,
   displayAttr,
   guildTheme,
 }: Props) {
@@ -74,8 +76,8 @@ export default function AttributeGrid({
             }`}
           >
             {canSelectAttribute
-              ? "Store unlocked — pick one stat"
-              : "Pick one stat to upgrade"}
+              ? "Store unlocked — build your upgrade cart"
+              : "Choose attributes to upgrade"}
           </div>
 
           <div
@@ -84,12 +86,12 @@ export default function AttributeGrid({
             }`}
           >
             {canSelectAttribute
-              ? "Choose a stat card below."
-              : "Select a card to preview the upgrade."}
+              ? "Use + and − to set each upgrade amount, then confirm once."
+              : "The number between − and + shows how many upgrades are in your cart."}
           </div>
         </div>
 
-        <div className="self-start rounded-full border border-white/[0.05] bg-white/[0.035] px-3 py-1 text-[11px] text-white/60">
+        <div className="inline-flex items-center justify-center self-start rounded-full border border-white/[0.05] bg-white/[0.035] px-3 py-1 text-center text-[11px] text-white/60">
           Cost: {xpPerPoint} XP
         </div>
       </div>
@@ -97,17 +99,17 @@ export default function AttributeGrid({
       <div className="mt-4 grid grid-cols-2 gap-2 xl:mt-5 xl:gap-3 xl:grid-cols-3">
         {ATTRS.map(({ key, title, icon, tint }) => {
           const current = displayAttr(key);
-          const next = current + 1;
-          const isSelected = pendingTarget === key;
+          const quantity = Number(pendingPoints[key] || 0);
+          const next = current + quantity;
+          const isSelected = quantity > 0;
 
           const cap = Math.max(5, next);
           const currentPct = Math.max(8, (current / cap) * 100);
           const nextPct = Math.max(10, (next / cap) * 100);
 
           return (
-            <button
+            <div
               key={key}
-              type="button"
               className={[
                 "group relative overflow-hidden rounded-[20px] xl:rounded-[24px] border px-3 py-3 xl:px-4 xl:py-4 text-left transition-all duration-300",
                 "shadow-[inset_0_1px_0_rgba(255,255,255,0.025)]",
@@ -118,8 +120,6 @@ export default function AttributeGrid({
 
                 !canSelectAttribute ? "cursor-not-allowed opacity-75" : "",
               ].join(" ")}
-              disabled={!canSelectAttribute}
-              onClick={() => setPendingTarget(isSelected ? null : key)}
             >
               <div
                 className={`pointer-events-none absolute inset-x-0 top-0 h-16 xl:h-20 bg-gradient-to-b ${tint} opacity-80`}
@@ -177,16 +177,34 @@ export default function AttributeGrid({
                 </div>
               </div>
 
-              <div
-                className={`mt-3 xl:mt-4 flex h-10 xl:h-11 w-full items-center justify-center rounded-xl text-xs xl:text-sm font-semibold transition ${
-                  isSelected
-                    ? "bg-cyan-300 text-slate-950 ring-2 ring-cyan-100/30 shadow-[0_0_24px_rgba(34,211,238,0.40)]"
-                    : "border border-white/[0.05] bg-white/[0.04] text-white/70 hover:bg-white/[0.07]"
-                }`}
-              >
-                {isSelected ? "✓ Selected" : "Select"}
+              <div className="mt-3 grid h-10 grid-cols-[2.25rem_minmax(2rem,1fr)_2.25rem] items-center gap-1.5 xl:mt-4 xl:h-11">
+                <button
+                  type="button"
+                  disabled={!isSelected}
+                  onClick={() => onRemove(key)}
+                  className="h-full rounded-xl border border-white/10 bg-white/[0.04] text-lg font-black text-white disabled:cursor-not-allowed disabled:opacity-25"
+                  aria-label={`Remove one ${title} upgrade`}
+                >
+                  −
+                </button>
+                <div
+                  className="flex h-full min-w-0 items-center justify-center rounded-xl border border-cyan-300/15 bg-cyan-400/[0.08] text-base font-black tabular-nums text-cyan-100"
+                  aria-live="polite"
+                  aria-label={`${quantity} ${title} upgrade${quantity === 1 ? "" : "s"} in cart`}
+                >
+                  {quantity ? `+${quantity}` : "0"}
+                </div>
+                <button
+                  type="button"
+                  disabled={!canSelectAttribute}
+                  onClick={() => onAdd(key)}
+                  className="h-full rounded-xl bg-cyan-300 text-lg font-black text-slate-950 disabled:cursor-not-allowed disabled:opacity-30"
+                  aria-label={`Add one ${title} upgrade`}
+                >
+                  +
+                </button>
               </div>
-            </button>
+            </div>
           );
         })}
       </div>
@@ -202,9 +220,9 @@ export default function AttributeGrid({
           ? `Not enough XP. You need ${xpPerPoint} XP for 1 point.`
           : !withinWindow
           ? "Purchases are limited right now."
-          : pendingTarget
-          ? "Great — now review and confirm purchase."
-          : "Select an attribute to preview the purchase."}
+          : Object.keys(pendingPoints).length
+          ? "Review the combined cart and confirm once."
+          : "Add attribute points to your cart."}
       </div>
     </div>
   );

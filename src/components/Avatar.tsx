@@ -24,12 +24,14 @@ export default function Avatar({
   size = 64,
   badge,
   className = "",
+  imageClassName = "object-cover",
 }: {
   name: string;
   src?: string;
   size?: number;
   badge?: AvatarBadge;
   className?: string;
+  imageClassName?: string;
 }) {
   const seed = useMemo(() => hashSeed(name || "Legend"), [name]);
   const a = (seed & 0xff) / 255;
@@ -67,7 +69,7 @@ export default function Avatar({
           <img
             src={src}
             alt={name}
-            className="absolute inset-0 h-full w-full object-cover"
+            className={`absolute inset-0 h-full w-full ${imageClassName}`}
             draggable={false}
           />
         ) : null}

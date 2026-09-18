@@ -1,6 +1,7 @@
 // src/skillApi.ts
 import { XP_API_URL } from "./data";
 import { normalizeSkillName } from "./data/skillLibrary";
+import { queueAppsScriptRead } from "./appsScriptRequestQueue";
 
 export type SkillSummary = {
   studentId: string;
@@ -23,6 +24,10 @@ export type PurchaseSkillArgs = {
   pin: string;
   requestId?: string;
 };
+
+const skillSummaryInFlight = new Map<string, Promise<SkillSummary>>();
+const SKILL_READ_TIMEOUT_MS = 90_000;
+const SKILL_WRITE_TIMEOUT_MS = 120_000;
 
 function normStudentId(id: unknown) {
   return String(id ?? "")
@@ -52,8 +57,24 @@ function toSkillList(value: unknown) {
     .filter(Boolean);
 }
 
-async function fetchJsonStrict(url: string, init?: RequestInit) {
-  const res = await fetch(url, init);
+async function fetchJsonStrict(
+  url: string,
+  init?: RequestInit,
+  timeoutMs = SKILL_READ_TIMEOUT_MS
+) {
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
+  let res: Response;
+  try {
+    res = await fetch(url, { ...init, signal: controller.signal });
+  } catch (error) {
+    if ((error as Error)?.name === "AbortError") {
+      throw new Error("Skill API request timed out.");
+    }
+    throw error;
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
   const text = await res.text();
 
   let json: any;
@@ -80,32 +101,75 @@ async function fetchJsonStrict(url: string, init?: RequestInit) {
   return json;
 }
 
+function isTransientApiError(error: unknown) {
+  const message = String(error ?? "").toLowerCase();
+  return ["failed to fetch", "network", "timed out", "processing", "retry shortly", "http 404", "http 408", "http 429", "http 500", "http 502", "http 503", "http 504"].some((value) =>
+    message.includes(value)
+  );
+}
+
+async function fetchJsonResilient(
+  url: string,
+  init?: RequestInit,
+  maxAttempts = 2,
+  timeoutMs = SKILL_READ_TIMEOUT_MS
+) {
+  let lastError: unknown;
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    try {
+      return await fetchJsonStrict(url, init, timeoutMs);
+    } catch (error) {
+      lastError = error;
+      if (!isTransientApiError(error) || attempt === maxAttempts - 1) throw error;
+      const exponential = Math.min(4_000, 350 * 2 ** attempt);
+      const jitter = Math.floor(Math.random() * 700);
+      await new Promise((resolve) => window.setTimeout(resolve, exponential + jitter));
+    }
+  }
+  throw lastError;
+}
+
 export async function getSkillSummary(studentId: string): Promise<SkillSummary> {
   const cleanId = String(studentId ?? "").trim();
   if (!cleanId) throw new Error("Missing studentId.");
+  const existing = skillSummaryInFlight.get(cleanId);
+  if (existing) return existing;
 
-  const url =
-    `${XP_API_URL}?action=skillsummary` +
-    `&studentId=${encodeURIComponent(cleanId)}` +
-    `&_=${Date.now()}`;
+  const request = queueAppsScriptRead(async () => {
+    const url =
+      `${XP_API_URL}?action=skillsummary` +
+      `&studentId=${encodeURIComponent(cleanId)}` +
+      `&_=${Date.now()}`;
 
-  const data = await fetchJsonStrict(url, { method: "GET" });
+    const data = await fetchJsonResilient(url, { method: "GET" });
 
-  return {
-    studentId: String(data.studentId ?? cleanId),
-    skillTokens: Math.max(0, Math.round(toNum(data.skillTokens, 0))),
-    skillCost: Math.max(1, Math.round(toNum(data.skillCost, 1))),
-    purchasedSkills: Array.isArray(data.purchasedSkills)
-      ? data.purchasedSkills.map((x: unknown) => String(x ?? "").trim()).filter(Boolean)
-      : [],
-    recent: Array.isArray(data.recent) ? data.recent : [],
-    now: data.now ? String(data.now) : "",
-  };
+    return {
+      studentId: String(data.studentId ?? cleanId),
+      skillTokens: Math.max(0, Math.round(toNum(data.skillTokens, 0))),
+      skillCost: Math.max(1, Math.round(toNum(data.skillCost, 1))),
+      purchasedSkills: Array.isArray(data.purchasedSkills)
+        ? data.purchasedSkills.map((x: unknown) => String(x ?? "").trim()).filter(Boolean)
+        : [],
+      recent: Array.isArray(data.recent) ? data.recent : [],
+      now: data.now ? String(data.now) : "",
+    };
+  });
+
+  skillSummaryInFlight.set(cleanId, request);
+  try {
+    return await request;
+  } finally {
+    if (skillSummaryInFlight.get(cleanId) === request) {
+      skillSummaryInFlight.delete(cleanId);
+    }
+  }
 }
 
 export async function getPurchasedSkillSnapshot(): Promise<Map<string, string[]>> {
-  const url = `${XP_API_URL}?action=skillsnapshot&_=${Date.now()}`;
-  const data = await fetchJsonStrict(url, { method: "GET" });
+  const data = await queueAppsScriptRead(() => {
+    const url = `${XP_API_URL}?action=skillsnapshot&_=${Date.now()}`;
+    return fetchJsonResilient(url, { method: "GET" });
+  });
 
   const rows = Array.isArray(data.purchasedSkills) ? data.purchasedSkills : [];
   const byStudent = new Map<string, string[]>();
@@ -144,20 +208,25 @@ export async function purchaseSkill(args: PurchaseSkillArgs) {
 
   const url = `${XP_API_URL}?action=purchaseskill&_=${Date.now()}`;
 
-  const data = await fetchJsonStrict(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "text/plain;charset=utf-8",
+  const data = await fetchJsonResilient(
+    url,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "text/plain;charset=utf-8",
+      },
+      body: JSON.stringify({
+        action: "purchaseskill",
+        studentId,
+        skillId,
+        skillName,
+        pin,
+        requestId: args.requestId ?? "",
+      }),
     },
-    body: JSON.stringify({
-      action: "purchaseskill",
-      studentId,
-      skillId,
-      skillName,
-      pin,
-      requestId: args.requestId ?? "",
-    }),
-  });
+    3,
+    SKILL_WRITE_TIMEOUT_MS
+  );
 
   return data;
 }

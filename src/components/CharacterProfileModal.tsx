@@ -1209,6 +1209,7 @@ function HeroBanner({
                     src={person.portraitUrl}
                     size={176}
                     className="h-full w-full"
+                    imageClassName="object-contain object-center p-2"
                   />
                 </button>
               ) : (
@@ -1217,6 +1218,7 @@ function HeroBanner({
                   src={person.portraitUrl}
                   size={176}
                   className="h-full w-full"
+                  imageClassName="object-contain object-center p-2"
                 />
               )}
             </div>
@@ -1671,6 +1673,11 @@ const skillList = useMemo(() => {
     null
   );
   const [expandedHeroUrl, setExpandedHeroUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    setExpandedCompanionUrl(null);
+    setExpandedHeroUrl(null);
+  }, [open, person?.id]);
 
   console.log("PERSON", person);
   console.log("COMPANION", companion);

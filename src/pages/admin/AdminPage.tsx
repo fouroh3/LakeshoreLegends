@@ -24,6 +24,10 @@ import {
   Users,
 } from "lucide-react";
 import { loadStudents } from "../../data";
+import {
+  addGuildSkill,
+  getGuildAttributeValues,
+} from "../../data/guildBenefits";
 import type { Student } from "../../types";
 import {
   ADMIN_API_VERSION,
@@ -354,6 +358,7 @@ export default function AdminPage() {
   const [statusLoading, setStatusLoading] = useState(false);
   const [systemStatusError, setSystemStatusError] = useState(false);
   const suppressRosterReloadUntilRef = useRef(0);
+  const lastAutomaticRefreshAtRef = useRef(0);
   const [notice, setNotice] = useState<{
     type: "ok" | "err";
     msg: string;
@@ -457,6 +462,7 @@ export default function AdminPage() {
 
   useEffect(() => {
     if (unlocked) {
+      lastAutomaticRefreshAtRef.current = Date.now();
       reloadStudents();
       reloadSystemStatus();
     }
@@ -466,13 +472,24 @@ export default function AdminPage() {
     if (!unlocked) return;
 
     const refreshOnFocus = () => {
+      const now = Date.now();
+      if (
+        busy ||
+        loading ||
+        statusLoading ||
+        now - lastAutomaticRefreshAtRef.current < 120_000
+      ) {
+        return;
+      }
+
+      lastAutomaticRefreshAtRef.current = now;
       void reloadStudents();
       void reloadSystemStatus();
     };
 
     window.addEventListener("focus", refreshOnFocus);
     return () => window.removeEventListener("focus", refreshOnFocus);
-  }, [unlocked]);
+  }, [unlocked, busy, loading, statusLoading]);
 
   const homeroomCount = useMemo(() => {
     const homerooms = new Set(
@@ -960,22 +977,23 @@ export default function AdminPage() {
       const result = await adminUpdateAbilities(args);
       const id = normId(args.studentId);
       setStudents((prev) =>
-        prev.map((student) =>
-          normId(student.id) === id
-            ? {
+        prev.map((student) => {
+          if (normId(student.id) !== id) return student;
+          const guildAttributes = getGuildAttributeValues(student.guild);
+          return {
                 ...student,
-                str: result.baseAttributes.str + result.bonusAttributes.str,
-                dex: result.baseAttributes.dex + result.bonusAttributes.dex,
-                con: result.baseAttributes.con + result.bonusAttributes.con,
-                int: result.baseAttributes.int + result.bonusAttributes.int,
-                wis: result.baseAttributes.wis + result.bonusAttributes.wis,
-                cha: result.baseAttributes.cha + result.bonusAttributes.cha,
+                str: result.baseAttributes.str + result.bonusAttributes.str + guildAttributes.str,
+                dex: result.baseAttributes.dex + result.bonusAttributes.dex + guildAttributes.dex,
+                con: result.baseAttributes.con + result.bonusAttributes.con + guildAttributes.con,
+                int: result.baseAttributes.int + result.bonusAttributes.int + guildAttributes.int,
+                wis: result.baseAttributes.wis + result.bonusAttributes.wis + guildAttributes.wis,
+                cha: result.baseAttributes.cha + result.bonusAttributes.cha + guildAttributes.cha,
                 baseAttributes: result.baseAttributes,
                 bonusAttributes: result.bonusAttributes,
-                skills: result.rosterSkills,
-              }
-            : student
-        )
+                guildAttributes,
+                skills: addGuildSkill(result.rosterSkills, student.guild),
+              };
+        })
       );
       setNotice({
         type: "ok",
@@ -1577,6 +1595,7 @@ export default function AdminPage() {
                 <HeroImageManagerPanel
                   students={students}
                   busy={busy}
+                  mediaStatusResolved={systemStatusResolved}
                   mediaConfigured={Boolean(systemStatus?.mediaConfigured)}
                   mediaBucket={systemStatus?.mediaBucket || systemStatus?.mediaRepo}
                   mediaPublicBaseUrl={systemStatus?.mediaPublicBaseUrl || systemStatus?.mediaBranch}

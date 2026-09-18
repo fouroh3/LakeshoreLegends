@@ -34,7 +34,7 @@ function FieldLabel({ children }: { children: string }) {
 
 function InfoPill({ children }: { children: ReactNode }) {
   return (
-    <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-cyan-100/80">
+    <span className="inline-flex items-center justify-center rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-center text-[11px] font-semibold uppercase tracking-[0.14em] text-cyan-100/80">
       {children}
     </span>
   );

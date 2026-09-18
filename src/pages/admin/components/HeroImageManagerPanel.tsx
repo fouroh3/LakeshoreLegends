@@ -1,6 +1,6 @@
 // src/pages/admin/components/HeroImageManagerPanel.tsx
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   CheckCircle2,
   CloudUpload,
@@ -37,6 +37,7 @@ type QueuedImage = {
 type Props = {
   students: Student[];
   busy: boolean;
+  mediaStatusResolved: boolean;
   mediaConfigured: boolean;
   mediaBucket?: string;
   mediaPublicBaseUrl?: string;
@@ -122,6 +123,20 @@ function fileToBase64(file: File) {
   });
 }
 
+export async function processUploadGroups<T>(
+  items: T[],
+  upload: (item: T, index: number) => Promise<void>,
+  wait: (milliseconds: number) => Promise<void> = (milliseconds) =>
+    new Promise((resolve) => window.setTimeout(resolve, milliseconds))
+) {
+  for (let index = 0; index < items.length; index++) {
+    if (index > 0 && index % 5 === 0) {
+      await wait(1_000);
+    }
+    await upload(items[index], index);
+  }
+}
+
 function StatusPill({ item }: { item: QueuedImage }) {
   if (item.uploadState === "done") {
     return (
@@ -173,6 +188,7 @@ function StatusPill({ item }: { item: QueuedImage }) {
 export default function HeroImageManagerPanel({
   students,
   busy,
+  mediaStatusResolved,
   mediaConfigured,
   mediaBucket,
   mediaPublicBaseUrl,
@@ -191,6 +207,7 @@ export default function HeroImageManagerPanel({
   const [connecting, setConnecting] = useState(false);
   const [connectionError, setConnectionError] = useState("");
   const [savingPublicUrl, setSavingPublicUrl] = useState(false);
+  const [uploadingBatch, setUploadingBatch] = useState(false);
 
   useEffect(() => {
     if (mediaPublicBaseUrl) setPublicBaseUrl(mediaPublicBaseUrl);
@@ -235,7 +252,7 @@ export default function HeroImageManagerPanel({
     return { matched, review, conflicts, done };
   }, [queue]);
 
-  const rebuildConflicts = (items: QueuedImage[]) => {
+  const rebuildConflicts = useCallback((items: QueuedImage[]) => {
     const counts = new Map<string, number>();
     items.forEach((item) => {
       if (!item.studentId || item.uploadState === "done") return;
@@ -249,7 +266,38 @@ export default function HeroImageManagerPanel({
         item.uploadState !== "done" &&
         (counts.get(item.studentId) ?? 0) > 1,
     }));
-  };
+  }, []);
+
+  useEffect(() => {
+    if (!students.length) return;
+
+    setQueue((prev) => {
+      let changed = false;
+      const rematched = prev.map((item) => {
+        if (
+          item.studentId ||
+          item.uploadState === "uploading" ||
+          item.uploadState === "done"
+        ) {
+          return item;
+        }
+
+        const match = autoMatch(item.file, students);
+        if (!match.matched) return item;
+
+        changed = true;
+        return {
+          ...item,
+          studentId: match.studentId,
+          autoMatched: true,
+          uploadState: "ready" as const,
+          error: undefined,
+        };
+      });
+
+      return changed ? rebuildConflicts(rematched) : prev;
+    });
+  }, [rebuildConflicts, students]);
 
   const addFiles = (files: FileList | File[]) => {
     const accepted = Array.from(files).filter(
@@ -345,7 +393,7 @@ export default function HeroImageManagerPanel({
   };
 
   const uploadMatched = async () => {
-    if (busy || !mediaConfigured) return;
+    if (busy || uploadingBatch || !mediaConfigured) return;
 
     const eligible = queue.filter(
       (item) =>
@@ -355,51 +403,64 @@ export default function HeroImageManagerPanel({
         item.uploadState !== "uploading"
     );
 
-    for (const item of eligible) {
-      setQueue((prev) =>
-        prev.map((row) =>
-          row.key === item.key
-            ? { ...row, uploadState: "uploading", error: undefined }
-            : row
-        )
-      );
+    setUploadingBatch(true);
 
-      try {
-        const base64 = await fileToBase64(item.file);
-        await onUpload({
-          studentId: item.studentId,
-          fileName: item.file.name,
-          mimeType: item.file.type,
-          base64,
-        });
-        setQueue((prev) =>
-          rebuildConflicts(
-            prev.map((row) =>
-              row.key === item.key
-                ? { ...row, uploadState: "done", conflict: false }
-                : row
-            )
-          )
-        );
-      } catch (err: any) {
+    try {
+      await processUploadGroups(eligible, async (item) => {
         setQueue((prev) =>
           prev.map((row) =>
             row.key === item.key
-              ? {
-                  ...row,
-                  uploadState: "error",
-                  error: err?.message || "Upload failed.",
-                }
+              ? { ...row, uploadState: "uploading", error: undefined }
               : row
           )
         );
-      }
+
+        try {
+          const base64 = await fileToBase64(item.file);
+          await onUpload({
+            studentId: item.studentId,
+            fileName: item.file.name,
+            mimeType: item.file.type,
+            base64,
+          });
+          setQueue((prev) =>
+            rebuildConflicts(
+              prev.map((row) =>
+                row.key === item.key
+                  ? { ...row, uploadState: "done", conflict: false }
+                  : row
+              )
+            )
+          );
+        } catch (err: any) {
+          setQueue((prev) =>
+            prev.map((row) =>
+              row.key === item.key
+                ? {
+                    ...row,
+                    uploadState: "error",
+                    error: err?.message || "Upload failed.",
+                  }
+                : row
+            )
+          );
+        }
+      });
+    } finally {
+      setUploadingBatch(false);
     }
   };
 
   return (
     <div className="space-y-5">
-      {!mediaConfigured && (
+      {!mediaStatusResolved && (
+        <div className="flex items-center gap-3 rounded-[22px] border border-white/10 bg-black/20 p-4 text-sm text-zinc-400">
+          <RefreshCw size={16} className="animate-spin text-cyan-200/70" />
+          Checking image storage…
+        </div>
+      )}
+
+      {mediaStatusResolved && !mediaConfigured && (
         <div className="rounded-[26px] border border-amber-300/20 bg-amber-950/15 p-4 sm:p-5">
           <div className="flex items-start gap-3">
             <div className="rounded-2xl bg-amber-300/10 p-2.5 text-amber-100">
@@ -469,7 +530,7 @@ export default function HeroImageManagerPanel({
         </div>
       )}
 
-      {mediaConfigured && (
+      {mediaStatusResolved && mediaConfigured && (
         <div className="rounded-[22px] border border-white/10 bg-black/20 p-4">
           <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-500">
             <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/15 bg-emerald-400/5 px-3 py-1.5 font-semibold text-emerald-100/80">
@@ -662,10 +723,12 @@ export default function HeroImageManagerPanel({
               <button
                 type="button"
                 onClick={uploadMatched}
-                disabled={busy || !mediaConfigured || summary.matched < 1 || summary.conflicts > 0}
+                disabled={busy || uploadingBatch || !mediaConfigured || summary.matched < 1 || summary.conflicts > 0}
                 className="rounded-2xl bg-cyan-300 px-5 py-2.5 text-sm font-black text-zinc-950 disabled:cursor-not-allowed disabled:opacity-40"
               >
-                Upload {summary.matched} Matched Image{summary.matched === 1 ? "" : "s"}
+                {uploadingBatch
+                  ? `Uploading… ${summary.done} finished`
+                  : `Upload ${summary.matched} Matched Image${summary.matched === 1 ? "" : "s"}`}
               </button>
             </div>
           </div>

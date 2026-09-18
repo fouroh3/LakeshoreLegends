@@ -47,7 +47,7 @@ export default function StoreModeTabs({
             <div className="mt-1 flex flex-wrap items-center gap-2">
               <div className="text-xl font-semibold text-white">Spend XP</div>
               {mode === "attributes" ? (
-                <span className="inline-flex items-center rounded-full border border-cyan-200/40 bg-cyan-300 px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.16em] text-slate-950 shadow-[0_0_18px_rgba(34,211,238,0.38)]">
+                <span className="inline-flex items-center justify-center rounded-full border border-cyan-200/40 bg-cyan-300 px-2.5 py-1 text-center text-[9px] font-black uppercase tracking-[0.16em] text-slate-950 shadow-[0_0_18px_rgba(34,211,238,0.38)]">
                   ✓ Selected
                 </span>
               ) : null}
@@ -86,7 +86,7 @@ export default function StoreModeTabs({
             <div className="mt-1 flex flex-wrap items-center gap-2">
               <div className="text-xl font-semibold text-white">Spend Skill Tokens</div>
               {mode === "skills" ? (
-                <span className="inline-flex items-center rounded-full border border-violet-200/40 bg-violet-300 px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.16em] text-slate-950 shadow-[0_0_18px_rgba(139,92,246,0.38)]">
+                <span className="inline-flex items-center justify-center rounded-full border border-violet-200/40 bg-violet-300 px-2.5 py-1 text-center text-[9px] font-black uppercase tracking-[0.16em] text-slate-950 shadow-[0_0_18px_rgba(139,92,246,0.38)]">
                   ✓ Selected
                 </span>
               ) : null}

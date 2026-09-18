@@ -1,6 +1,6 @@
 // src/App.tsx
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import AbilitiesDashboard from "./components/AbilitiesDashboard";
 import AppTopBar from "./components/AppTopBar";
 import CharacterProfileModal from "./components/CharacterProfileModal";
@@ -8,7 +8,7 @@ import BattlePage from "./pages/BattlePage";
 import CardLibraryPage from "./pages/CardLibraryPage";
 import StorePage from "./pages/store/StorePage";
 import AdminPage from "./pages/admin/AdminPage";
-import { loadStudents } from "./data";
+import { loadCachedStudents, loadStudents } from "./data";
 import { normalizeSkillName } from "./data/skillLibrary";
 import type { Student } from "./types";
 import "./index.css";
@@ -144,8 +144,9 @@ export default function App() {
     window.location.href = routes[nextView];
   };
 
-  const [students, setStudents] = useState<Student[]>([]);
-  const [loading, setLoading] = useState(true);
+  const initialStudents = useMemo(() => loadCachedStudents() ?? [], []);
+  const [students, setStudents] = useState<Student[]>(initialStudents);
+  const [loading, setLoading] = useState(initialStudents.length === 0);
   const [err, setErr] = useState<string | null>(null);
 
   const [query, setQuery] = useState("");
@@ -156,29 +157,21 @@ export default function App() {
   const [attrFilterMin, setAttrFilterMin] = useState(0);
 
   const [selectedPerson, setSelectedPerson] = useState<Student | null>(null);
+  const enrichmentSyncInFlight = useRef(false);
+  const lastEnrichmentSyncAt = useRef(0);
 
   useEffect(() => {
     let alive = true;
 
     (async () => {
       try {
-        const [data, hpMap, purchasedByStudent] = await Promise.all([
-          loadStudents(),
-          fetchHpMap(),
-          getPurchasedSkillSnapshot().catch(() => new Map<string, string[]>()),
-        ]);
-
-        const merged = data.map((s) => {
-          const hp = hpMap.get(normId(String(s.id ?? "")));
-          const withHp = hp
-            ? { ...s, baseHP: hp.baseHP, currentHP: hp.currentHP }
-            : { ...s };
-
-          return applyPurchasedSkills(withHp, purchasedByStudent);
-        });
+        const data = await loadStudents({ force: true });
 
         if (!alive) return;
-        setStudents(merged);
+        // Render the live roster immediately. HP and purchased skills are
+        // enrichment data and are applied by the background sync below, so a
+        // slow Apps Script response never holds the whole dashboard hostage.
+        setStudents(data);
       } catch (e: any) {
         if (!alive) return;
         setErr(e?.message || "Failed to load students.");
@@ -211,6 +204,10 @@ export default function App() {
     };
 
     const tick = async () => {
+      if (enrichmentSyncInFlight.current) return;
+      enrichmentSyncInFlight.current = true;
+      lastEnrichmentSyncAt.current = Date.now();
+
       try {
         const [hpMap, purchasedByStudent] = await Promise.all([
           fetchHpMap(),
@@ -231,20 +228,26 @@ export default function App() {
         );
       } catch {
         // keep dashboard usable
+      } finally {
+        enrichmentSyncInFlight.current = false;
       }
     };
 
-    const wrappedTick = async () => {
+    const wrappedTick = async (force = false) => {
       if (!shouldPoll()) return;
+      if (!force && Date.now() - lastEnrichmentSyncAt.current < 120_000) {
+        return;
+      }
       await tick();
     };
 
-    wrappedTick();
-
-    const t = window.setInterval(wrappedTick, 25_000);
+    // Load enrichment once. After that, refresh only when the user returns to
+    // the dashboard after a meaningful pause. Continuous polling multiplied
+    // Apps Script traffic across a classroom and could saturate the web app.
+    void wrappedTick(true);
 
     const onReturn = () => {
-      if (shouldPoll()) tick();
+      void wrappedTick();
     };
 
     document.addEventListener("visibilitychange", onReturn);
@@ -252,7 +255,6 @@ export default function App() {
 
     return () => {
       alive = false;
-      window.clearInterval(t);
       document.removeEventListener("visibilitychange", onReturn);
       window.removeEventListener("focus", onReturn);
     };

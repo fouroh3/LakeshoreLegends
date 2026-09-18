@@ -1,17 +1,26 @@
 // src/data.ts
 
 import type { Student } from "./types";
+import {
+  addGuildSkill,
+  getGuildAttributeValues,
+} from "./data/guildBenefits";
 
-// ✅ Lakeshore Legends Apps Script Web App (XP/HP + live roster API)
+// ✅ Lakeshore Legends Apps Script Web App (XP/HP + admin API)
 export const XP_API_URL =
   "https://script.google.com/macros/s/AKfycbw6gMIFYPvaljF3Ls-waojzprU6bygZZonOIJeKLopN2NSKgkDT-EsRKznxQiGpth_6/exec";
 
-// ✅ Live Master roster from Apps Script (avoids stale Google "Publish to web" CSV)
-export const SHEET_CSV_URL = `${XP_API_URL}?action=roster`;
+// ✅ Direct live export of the Master tab. This is not the stale Google
+// "Publish to web" feed; it returns the current sheet and supports CORS.
+export const SHEET_CSV_URL =
+  "https://docs.google.com/spreadsheets/d/1678Zk1sz_GelksvkFzf8l5fYxW7smmfqBDhAF0513Qo/export?format=csv&gid=1383364809";
 
 // ✅ Short cache so purchases show quickly on the dashboard
 let cache: { at: number; students: Student[] } | null = null;
+let inFlight: Promise<Student[]> | null = null;
 const CACHE_MS = 10_000;
+const PERSISTENT_CACHE_MS = 12 * 60 * 60 * 1000;
+const PERSISTENT_CACHE_KEY = "ll:roster:v2";
 const ROSTER_ATTEMPT_TIMEOUT_MS = 20_000;
 
 /* ---------------- helpers ---------------- */
@@ -407,12 +416,14 @@ function rowsToStudents(rows: string[][]): Student[] {
     const bonusCha =
       iChaB >= 0 ? toNum(row[iChaB], 0) : 0;
 
-    const str = baseStr + bonusStr;
-    const dex = baseDex + bonusDex;
-    const con = baseCon + bonusCon;
-    const int = baseInt + bonusInt;
-    const wis = baseWis + bonusWis;
-    const cha = baseCha + bonusCha;
+    const guildAttributes = getGuildAttributeValues(guild);
+
+    const str = baseStr + bonusStr + guildAttributes.str;
+    const dex = baseDex + bonusDex + guildAttributes.dex;
+    const con = baseCon + bonusCon + guildAttributes.con;
+    const int = baseInt + bonusInt + guildAttributes.int;
+    const wis = baseWis + bonusWis + guildAttributes.wis;
+    const cha = baseCha + bonusCha + guildAttributes.cha;
 
     const portraitUrl =
       iPortrait >= 0
@@ -432,7 +443,7 @@ function rowsToStudents(rows: string[][]): Student[] {
     const skillsRaw =
       iSkills >= 0 ? row[iSkills] : "";
 
-    const skills = splitSkills(skillsRaw);
+    const skills = addGuildSkill(splitSkills(skillsRaw), guild);
 
     const inventoryRaw =
       iInventory >= 0 ? row[iInventory] : "";
@@ -466,6 +477,7 @@ function rowsToStudents(rows: string[][]): Student[] {
         wis: bonusWis,
         cha: bonusCha,
       },
+      guildAttributes,
 
       skills: skills.length
         ? skills
@@ -489,6 +501,30 @@ function rowsToStudents(rows: string[][]): Student[] {
 
 /* ---------------- public API ---------------- */
 
+export function loadCachedStudents(): Student[] | null {
+  if (cache?.students.length) return cache.students;
+  if (typeof window === "undefined") return null;
+
+  try {
+    const raw = window.localStorage.getItem(PERSISTENT_CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (
+      !parsed ||
+      !Array.isArray(parsed.students) ||
+      !parsed.students.length ||
+      Date.now() - Number(parsed.at || 0) > PERSISTENT_CACHE_MS
+    ) {
+      return null;
+    }
+
+    cache = { at: Number(parsed.at), students: parsed.students as Student[] };
+    return cache.students;
+  } catch {
+    return null;
+  }
+}
+
 export async function loadStudents(options?: { force?: boolean }): Promise<Student[]> {
   const now = Date.now();
 
@@ -496,12 +532,30 @@ export async function loadStudents(options?: { force?: boolean }): Promise<Stude
     return cache.students;
   }
 
+  if (!options?.force) {
+    const persisted = loadCachedStudents();
+    if (persisted) return persisted;
+  }
+
+  // React StrictMode mounts effects twice in local development. Share the
+  // same live request so that never creates two simultaneous Google exports.
+  if (inFlight) return inFlight;
+
+  inFlight = fetchStudentsFromLiveRoster(now);
+  try {
+    return await inFlight;
+  } finally {
+    inFlight = null;
+  }
+}
+
+async function fetchStudentsFromLiveRoster(now: number): Promise<Student[]> {
+
   let res: Response | null = null;
   let lastError: Error | null = null;
 
-  // Apps Script ContentService occasionally returns a transient 404 while its
-  // one-time googleusercontent.com redirect is becoming available. Retry the
-  // same live roster endpoint; do not fall back to the stale published CSV.
+  // Google CSV exports use a one-time googleusercontent.com redirect. Retry
+  // transient failures from that live export; never use the stale published CSV.
   for (let attempt = 0; attempt < 3; attempt++) {
     const url = `${SHEET_CSV_URL}${
       SHEET_CSV_URL.includes("?") ? "&" : "?"
@@ -562,6 +616,12 @@ export async function loadStudents(options?: { force?: boolean }): Promise<Stude
     at: Date.now(),
     students,
   };
+
+  try {
+    window.localStorage.setItem(PERSISTENT_CACHE_KEY, JSON.stringify(cache));
+  } catch {
+    // Storage can be disabled or full; the in-memory cache still works.
+  }
 
   return students;
 }

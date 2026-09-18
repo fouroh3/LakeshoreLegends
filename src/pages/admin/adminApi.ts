@@ -1,8 +1,9 @@
 // src/pages/admin/adminApi.ts
 
+import { queueAppsScriptRead } from "../../appsScriptRequestQueue";
 import { HP_API_URL } from "../battle/battleConstants";
 import { getBattleTeacherToken } from "../battle/battleTeacherApi";
-export const ADMIN_API_VERSION = "2026-09-01.10";
+export const ADMIN_API_VERSION = "2026-09-18.2";
 
 import type {
   AdminAttributeValues,
@@ -343,75 +344,114 @@ type AdminAction =
   | "adminstoresnapshot"
   | "adminupdatestore";
 
-const RETRYABLE_ADMIN_READS = new Set<AdminAction>([
+const READ_ONLY_ADMIN_ACTIONS = new Set<AdminAction>([
   "admincurrencysnapshot",
   "admininventorysnapshot",
   "adminsystemstatus",
   "adminyearrolloverpreview",
   "adminarchivedstudents",
   "adminabilitysnapshot",
-  "adminupdateabilities",
   "adminstoresnapshot",
 ]);
+
+const ADMIN_READ_TIMEOUT_MS = 90_000;
+const ADMIN_WRITE_TIMEOUT_MS = 120_000;
 
 async function postAdminAction<T>(
   action: AdminAction,
   body: Record<string, any>
 ): Promise<T> {
-  const retryableRead = RETRYABLE_ADMIN_READS.has(action);
-  const maxAttempts = 3;
-  let lastError: Error | null = null;
+  const readOnlyAction = READ_ONLY_ADMIN_ACTIONS.has(action);
 
-  for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    try {
-      const res = await fetch(
-        `${HP_API_URL}?action=${encodeURIComponent(action)}&_=${Date.now()}-${attempt}`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "text/plain;charset=utf-8",
-          },
-          body: JSON.stringify({
-            action,
-            teacherToken: getBattleTeacherToken(),
-            ...body,
-          }),
-        }
-      );
+  const run = async () => {
+    const maxAttempts = 3;
+    let lastError: Error | null = null;
 
-      const text = await res.text();
-      let data: any = null;
-
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
       try {
-        data = text ? JSON.parse(text) : null;
-      } catch {
-        throw new Error(
-          `Admin API returned non-JSON (${res.status}). ${text
-            .slice(0, 160)
-            .replace(/\s+/g, " ")}`
+        const controller = new AbortController();
+        const timeoutId = window.setTimeout(
+          () => controller.abort(),
+          readOnlyAction ? ADMIN_READ_TIMEOUT_MS : ADMIN_WRITE_TIMEOUT_MS
+        );
+        let res: Response;
+        try {
+          res = await fetch(
+            `${HP_API_URL}?action=${encodeURIComponent(action)}&_=${Date.now()}-${attempt}`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "text/plain;charset=utf-8",
+              },
+              body: JSON.stringify({
+                action,
+                teacherToken: getBattleTeacherToken(),
+                ...body,
+              }),
+              signal: controller.signal,
+            }
+          );
+        } catch (error) {
+          if ((error as Error)?.name === "AbortError") {
+            throw new Error(
+              readOnlyAction
+                ? "Admin data request timed out. Please retry."
+                : "The admin update is still taking too long to confirm. Check the live balance or record before trying again."
+            );
+          }
+          throw error;
+        } finally {
+          window.clearTimeout(timeoutId);
+        }
+
+        const text = await res.text();
+        let data: any = null;
+
+        try {
+          data = text ? JSON.parse(text) : null;
+        } catch {
+          throw new Error(
+            `Admin API returned non-JSON (${res.status}). ${text
+              .slice(0, 160)
+              .replace(/\s+/g, " ")}`
+          );
+        }
+
+        if (!res.ok || !data?.ok) {
+          throw new Error(data?.error || `Admin API failed: ${res.status}`);
+        }
+
+        return data as T;
+      } catch (err: any) {
+        lastError = err instanceof Error ? err : new Error(String(err || "Admin API failed."));
+        const unknownAction = /^Unknown action:/i.test(lastError.message.trim());
+        const canRetryUnknownAction = unknownAction && attempt < 2;
+        const transientReadFailure =
+          readOnlyAction &&
+          attempt < maxAttempts - 1 &&
+          (/Admin API returned non-JSON \((?:404|408|429|5\d\d)\)/i.test(
+            lastError.message
+          ) ||
+            /(?:failed to fetch|network error|load failed)/i.test(
+              lastError.message
+            ));
+
+        // A timed-out Apps Script execution keeps running on Google's side.
+        // Retrying it automatically piles up more work and can duplicate a
+        // mutation. Read-only snapshots are safe to retry when Google returns
+        // a transient gateway/redirect response instead of Apps Script JSON.
+        if (!canRetryUnknownAction && !transientReadFailure) break;
+
+        await new Promise((resolve) =>
+          window.setTimeout(resolve, transientReadFailure ? 900 * (attempt + 1) : 650)
         );
       }
-
-      if (!res.ok || !data?.ok) {
-        throw new Error(data?.error || `Admin API failed: ${res.status}`);
-      }
-
-      return data as T;
-    } catch (err: any) {
-      lastError = err instanceof Error ? err : new Error(String(err || "Admin API failed."));
-      const unknownAction = /^Unknown action:/i.test(lastError.message.trim());
-      const canRetryUnknownAction = unknownAction && attempt < 2;
-      const canRetryRead = retryableRead && attempt < 1;
-
-      if (!canRetryUnknownAction && !canRetryRead) break;
-
-      await new Promise((resolve) =>
-        window.setTimeout(resolve, canRetryUnknownAction ? 650 : 300)
-      );
     }
-  }
 
-  throw lastError || new Error("Admin API failed.");
+    throw lastError || new Error("Admin API failed.");
+  };
+
+  return readOnlyAction ? queueAppsScriptRead(run) : run();
 }
 
 export async function adminImportStudents(students: AdminImportedStudent[]) {
@@ -477,8 +517,22 @@ export async function adminAdjustInventory(args: {
   );
 }
 
+let adminSystemStatusInFlight: Promise<AdminSystemStatusResult> | null = null;
+
 export async function adminSystemStatus() {
-  return postAdminAction<AdminSystemStatusResult>("adminsystemstatus", {});
+  if (adminSystemStatusInFlight) return adminSystemStatusInFlight;
+  const request = postAdminAction<AdminSystemStatusResult>(
+    "adminsystemstatus",
+    {}
+  );
+  adminSystemStatusInFlight = request;
+  try {
+    return await request;
+  } finally {
+    if (adminSystemStatusInFlight === request) {
+      adminSystemStatusInFlight = null;
+    }
+  }
 }
 
 export async function adminMigratePlayerState() {
@@ -649,8 +703,22 @@ export async function adminUpdateCompanion(args: {
 }
 
 
+let adminStoreSnapshotInFlight: Promise<AdminStoreSnapshotResult> | null = null;
+
 export async function adminStoreSnapshot() {
-  return postAdminAction<AdminStoreSnapshotResult>("adminstoresnapshot", {});
+  if (adminStoreSnapshotInFlight) return adminStoreSnapshotInFlight;
+  const request = postAdminAction<AdminStoreSnapshotResult>(
+    "adminstoresnapshot",
+    {}
+  );
+  adminStoreSnapshotInFlight = request;
+  try {
+    return await request;
+  } finally {
+    if (adminStoreSnapshotInFlight === request) {
+      adminStoreSnapshotInFlight = null;
+    }
+  }
 }
 
 export async function adminUpdateStore(settings: AdminStoreSettings) {
