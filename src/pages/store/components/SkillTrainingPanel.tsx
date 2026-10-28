@@ -29,7 +29,6 @@ type Props = {
 
 export default function SkillTrainingPanel({
   studentId,
-  selectedSkillId,
   setSelectedSkillId,
   ownedSkillIds,
   storeLocked,
@@ -43,9 +42,11 @@ export default function SkillTrainingPanel({
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [purchasing, setPurchasing] = useState(false);
-  const [lastPurchasedSkillId, setLastPurchasedSkillId] = useState<string | null>(
-    null
-  );
+
+
+  useEffect(() => {
+    setPendingSkillIds([]);
+  }, [studentId]);
 
   useEffect(() => {
     let alive = true;
@@ -99,9 +100,6 @@ export default function SkillTrainingPanel({
 
   const pendingSkills = skillLibrary.filter((skill) => pendingSkillIds.includes(skill.id) && !allOwnedSkillIds.has(skill.id));
   const selectedSkill = pendingSkills[0] ?? null;
-  const selectedOwned = selectedSkill
-    ? allOwnedSkillIds.has(selectedSkill.id)
-    : false;
   const skillTokens = summary?.skillTokens ?? 0;
   const skillCost = Math.max(1, summary?.skillCost ?? 1);
   const totalCost = pendingSkills.length * skillCost;
@@ -144,8 +142,6 @@ export default function SkillTrainingPanel({
       const next = await getSkillSummary(studentId);
       setSummary(next);
       onSummaryChange?.(next);
-      setLastPurchasedSkillId(cart[cart.length - 1]?.id ?? null);
-      window.setTimeout(() => setLastPurchasedSkillId(null), 2400);
     } catch (e) {
       setErr(completed + " of " + cart.length + " skills purchased. " +
         (e instanceof Error ? e.message : "Purchase failed.") +
@@ -339,9 +335,7 @@ export default function SkillTrainingPanel({
               <span
                 className={[
                   "inline-flex items-center justify-center rounded-full border px-3 py-1 text-center text-xs font-semibold",
-                  selectedOwned
-                    ? "border-emerald-300/20 bg-emerald-400/[0.12] text-emerald-100"
-                    : "border-violet-300/20 bg-violet-400/[0.12] text-violet-100",
+                  "border-violet-300/20 bg-violet-400/[0.12] text-violet-100",
                 ].join(" ")}
               >
                 {`${totalCost} Tokens`}
@@ -398,7 +392,7 @@ export default function SkillTrainingPanel({
                 : !confirmOk
                 ? "Confirm StudentID"
                 : err
-                ? "Skill Backend Needed"
+                ? "Resolve Purchase Error"
                 : !canAfford
                 ? "Not Enough Skill Tokens"
                 : `Buy ${pendingSkills.length} Skills (${totalCost} Tokens)`}
