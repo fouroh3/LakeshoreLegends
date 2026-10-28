@@ -3073,6 +3073,21 @@ function regularBattleTeacherStart_(args) {
       throw new Error(`Paired homeroom not found in Battle_Control: ${pairTo}`);
     }
 
+    // Never replace a running or paused battle when starting another session.
+    // This also protects the partner homeroom of an existing paired battle.
+    const requestedHomerooms = new Set([leaderHomeroom, pairTo].filter(Boolean));
+    const occupied = rows.filter((row) => {
+      if (!["ACTIVE", "PAUSED"].includes(norm_(row.status).toUpperCase())) return false;
+      const members = [row.homeroom, row.pairTo, row.leaderHomeroom].map(norm_);
+      return members.some((hr) => requestedHomerooms.has(hr));
+    });
+    if (occupied.length) {
+      const names = Array.from(new Set(occupied.map((row) => norm_(row.homeroom)))).join(", ");
+      throw new Error(
+        `Cannot start battle: ${names} already belong to an active or paused battle. End that battle first.`
+      );
+    }
+
     rows.forEach((row, index) => {
       const belongsToOldGroup =
         norm_(row.homeroom) === leaderHomeroom ||
