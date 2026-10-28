@@ -435,7 +435,7 @@ export default function BattlePage({ onBack }: Props) {
           : snapshot.reduce((total, row) => total + Math.max(0, row.after - row.before), 0);
         if (healingGuild) {
           try {
-            await submitGuildAction({ sessionId: cleanSessionId, homeroom: activeHomeroom, guild: healingGuild, action: "HEAL", round: activeRound, ...(healedAmount > 0 ? { event: { amount: healedAmount, requestId: submitNonce } } : {}) });
+            await submitGuildAction({ sessionId: cleanSessionId, homeroom: activeHomeroom, guild: healingGuild, action: "HEAL", round: activeRound, event: { amount: healedAmount, requestId: submitNonce } });
           } catch (statusError) {
             console.error("Healing saved, but raid status/chronicle update failed:", statusError);
             setBanner({ type: "err", msg: "Healing saved, but raid display update failed. Tell your teacher." });
