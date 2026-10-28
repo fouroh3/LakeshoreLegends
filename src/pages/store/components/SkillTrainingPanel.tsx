@@ -39,6 +39,7 @@ export default function SkillTrainingPanel({
   guildTheme,
 }: Props) {
   const [summary, setSummary] = useState<SkillSummary | null>(null);
+  const [pendingSkillIds, setPendingSkillIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [purchasing, setPurchasing] = useState(false);
@@ -51,6 +52,7 @@ export default function SkillTrainingPanel({
 
     (async () => {
       if (!studentId) {
+        setPendingSkillIds([]);
         setSummary(null);
         onSummaryChange?.(null);
         return;
@@ -95,16 +97,17 @@ export default function SkillTrainingPanel({
     return new Set([...Array.from(ownedSkillIds), ...Array.from(purchasedSkillIds)]);
   }, [ownedSkillIds, purchasedSkillIds]);
 
-  const selectedSkill =
-    skillLibrary.find((skill) => skill.id === selectedSkillId) ?? null;
+  const pendingSkills = skillLibrary.filter((skill) => pendingSkillIds.includes(skill.id) && !allOwnedSkillIds.has(skill.id));
+  const selectedSkill = pendingSkills[0] ?? null;
   const selectedOwned = selectedSkill
     ? allOwnedSkillIds.has(selectedSkill.id)
     : false;
   const skillTokens = summary?.skillTokens ?? 0;
   const skillCost = Math.max(1, summary?.skillCost ?? 1);
-  const canAfford = skillTokens >= skillCost;
+  const totalCost = pendingSkills.length * skillCost;
+  const canAfford = skillTokens >= totalCost;
   const canBuy =
-    !!selectedSkill &&
+    pendingSkills.length > 0 &&
     !selectedOwned &&
     !storeLocked &&
     !loading &&
@@ -156,7 +159,7 @@ export default function SkillTrainingPanel({
   }
 
   return (
-    <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_360px] xl:gap-5 xl:grid-cols-[minmax(0,1.05fr)_minmax(360px,0.95fr)]">
+    <div className="grid grid-cols-1 gap-3 2xl:grid-cols-[minmax(0,1fr)_minmax(300px,0.7fr)] 2xl:gap-5">
       <div className={`${innerCard} px-3 py-3 xl:px-5 xl:py-5`}>
         <div className="flex flex-col gap-2 xl:flex-row xl:items-end xl:justify-between">
           <div>
@@ -172,7 +175,7 @@ export default function SkillTrainingPanel({
             </div>
 
             <div className="mt-1 text-xs text-white/56 xl:text-sm">
-              Spend Skill Tokens to unlock a new permanent skill.
+              Select multiple skills, then purchase them in one checkout.
             </div>
           </div>
 
@@ -195,13 +198,17 @@ export default function SkillTrainingPanel({
         <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2 xl:mt-5">
           {skillLibrary.map((skill) => {
             const owned = allOwnedSkillIds.has(skill.id);
-            const isSelected = selectedSkillId === skill.id;
+            const isSelected = pendingSkillIds.includes(skill.id);
 
             return (
               <button
                 key={skill.id}
                 type="button"
-                onClick={() => setSelectedSkillId(isSelected ? null : skill.id)}
+                onClick={() => {
+                  if (owned || purchasing) return;
+                  setPendingSkillIds((current) => isSelected ? current.filter((id) => id !== skill.id) : [...current, skill.id]);
+                  setSelectedSkillId(skill.id);
+                }}
                 className={[
                   "group relative overflow-hidden rounded-[18px] border px-3.5 py-3.5 text-left transition-all duration-300",
                   isSelected && !owned
