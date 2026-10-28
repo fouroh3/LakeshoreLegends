@@ -1645,7 +1645,10 @@ export default function CharacterProfileModal({
   }, [open, onClose]);
 
 const skillList = useMemo(() => {
-  const baseSkills = skillsToArray(person?.skills);
+  const baseSkills = Array.from(new Set([
+    ...skillsToArray(person?.skills),
+    ...skillsToArray(person?.purchasedSkills),
+  ]));
 
   const hasLivingCompanion =
     !!String(person?.companionUrl || "").trim() &&
@@ -1658,6 +1661,7 @@ const skillList = useMemo(() => {
     : baseSkills;
 }, [
   person?.skills,
+  person?.purchasedSkills,
   person?.companionUrl,
   person?.companionStatus,
 ]);

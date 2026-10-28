@@ -437,7 +437,7 @@ export default function BattleTeacherConsole() {
     } else {
       setBossHpOverride("");
     }
-  }, [boss?.bossInstanceId, currentHP]);
+  }, [boss?.bossInstanceId]);
 
   async function refreshStudentHp() {
     const nextHp = await fetchHpMap();
@@ -512,8 +512,8 @@ export default function BattleTeacherConsole() {
 
   async function handleApplyBossHpOverride() {
     if (!bossKey || !bossInstanceId) return;
-    const targetHP = toPositiveInt(bossHpOverride);
-    if (!targetHP) {
+    const targetHP = toNonNegativeInt(bossHpOverride);
+    if (targetHP < 0) {
       setNotice({ type: "err", msg: "Enter a valid boss HP value." });
       return;
     }
@@ -527,8 +527,8 @@ export default function BattleTeacherConsole() {
     const ok = window.confirm(`Set current boss HP from ${currentHP} to ${targetHP}?`);
     if (!ok) return;
 
-    await runTeacherAction("Set Boss HP", () =>
-      submitBossDelta({
+    await runTeacherAction("Set Boss HP", async () => {
+      const result = await submitBossDelta({
         bossKey,
         bossInstanceId,
         delta,
@@ -538,8 +538,10 @@ export default function BattleTeacherConsole() {
         homeroom: selectedOption?.label || "teacher",
         guild: "Teacher",
         actionType: delta > 0 ? "TEACHER_HEAL" : "TEACHER_DAMAGE",
-      })
-    );
+      });
+      if (result?.deduped) throw new Error(result?.reason || "Boss HP correction was not applied.");
+      return result;
+    });
   }
 
   async function handleApplyStudentHpOverride() {
@@ -760,6 +762,7 @@ export default function BattleTeacherConsole() {
                     <input
                       value={bossHpOverride}
                       onChange={(event) => setBossHpOverride(event.target.value.replace(/[^0-9]/g, ""))}
+                      onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); void handleApplyBossHpOverride(); } }}
                       inputMode="numeric"
                       disabled={!hasBattle || !bossInstanceId || isActionBusy}
                       className="w-full rounded-xl border border-zinc-800/70 bg-black/45 px-3 py-2 text-sm font-bold text-zinc-100 outline-none focus:border-rose-300/50 disabled:opacity-50"

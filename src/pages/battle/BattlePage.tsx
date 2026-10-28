@@ -500,6 +500,12 @@ export default function BattlePage({ onBack }: Props) {
       setBossBanner(null);
       setBossSubmitErr(null);
 
+      if (!guildAttacksOpen) {
+        setBossSubmitErr("Boss Turn — guild attacks are locked.");
+        setBossBanner({ type: "err", msg: "Wait for Guild Turn to attack the boss." });
+        return;
+      }
+
       if (!canStrikeBoss) {
         setBossSubmitErr("This quest does not use boss strikes.");
         setBossBanner({
@@ -600,7 +606,7 @@ export default function BattlePage({ onBack }: Props) {
             guild: cleanGuild,
             action: "ATTACK",
             round,
-            event: { amount: Math.max(0, previousHP - (typeof (result as any)?.currentHP === "number" ? (result as any).currentHP : optimisticHP)), requestId: `${activeSessionId}:${cleanGuild}:${round}:${makeSubmitNonce()}` },
+            event: { amount: Math.abs(deltaValue), requestId: `${activeSessionId}:${cleanGuild}:${round}:${makeSubmitNonce()}` },
           });
           setBossBanner({ type: "ok", msg: "Boss hit submitted ✅" });
         } catch (statusError) {
@@ -626,6 +632,7 @@ export default function BattlePage({ onBack }: Props) {
     },
     [
       canStrikeBoss,
+      guildAttacksOpen,
       bossInstanceId,
       bossSubmitting,
       bossDamage,
