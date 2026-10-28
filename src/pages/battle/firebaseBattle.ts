@@ -1,6 +1,7 @@
 import {
   collection,
   doc,
+  addDoc,
   onSnapshot,
   setDoc,
   serverTimestamp,
@@ -61,4 +62,19 @@ export function subscribeGuildActions(
       callback(rows);
     }
   );
+}
+/** Append-only chronicle: unlike guildActions, repeat actions remain visible. */
+export async function recordRaidAction(params: {
+  sessionId: string;
+  homeroom: string;
+  guild: string;
+  action: "ATTACK" | "HEAL";
+  round: number;
+  amount: number;
+  requestId: string;
+}) {
+  await addDoc(collection(db, "raidChronicle"), {
+    ...params,
+    createdAt: serverTimestamp(),
+  });
 }
