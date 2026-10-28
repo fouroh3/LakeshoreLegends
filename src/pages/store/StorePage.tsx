@@ -416,7 +416,7 @@ export default function StorePage({ onBack }: Props) {
             noHomerooms={noHomerooms}
           />
 
-          <div className="grid grid-cols-1 gap-4 xl:grid-cols-[360px_minmax(0,1fr)]">
+          <div className="grid grid-cols-1 gap-4 2xl:grid-cols-[320px_minmax(0,1fr)]">
             <LegendSelectionPanel
               homerooms={homerooms}
               hr={hr}
@@ -439,7 +439,7 @@ export default function StorePage({ onBack }: Props) {
             />
 
             <section
-              className={`${shellCardBase} ${guildTheme.border} ${guildTheme.tintBg} px-4 py-4 sm:px-5 ${guildTheme.shellGlow}`}
+              className={`${shellCardBase} min-w-0 ${guildTheme.border} ${guildTheme.tintBg} px-3 py-4 sm:px-5 ${guildTheme.shellGlow}`}
             >
               {!selected && (
                 <div className="rounded-[22px] border border-white/[0.04] bg-[linear-gradient(180deg,rgba(18,22,32,0.58),rgba(9,11,17,0.70))] px-5 py-10 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.03),0_10px_24px_rgba(0,0,0,0.22)]">
@@ -489,7 +489,7 @@ export default function StorePage({ onBack }: Props) {
                   />
 
                   {storeMode === "attributes" && (
-                    <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_360px] xl:gap-5 xl:grid-cols-[minmax(0,1.05fr)_minmax(360px,0.95fr)]">
+                    <div className="grid grid-cols-1 gap-3 2xl:grid-cols-[minmax(0,1fr)_minmax(300px,0.7fr)] 2xl:gap-5">
                       <AttributeGrid
                         xpPerPoint={xpPerPoint}
                         storeLocked={storeLocked}
