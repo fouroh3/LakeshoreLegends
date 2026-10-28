@@ -6,6 +6,7 @@ import CharacterProfileModal from "../../components/CharacterProfileModal";
 import type { Student, Guild } from "../../types";
 import { loadStudents } from "../../data";
 import { submitBossDelta } from "../../bossApi";
+import { submitGuildAction } from "./firebaseBattle";
 
 import { usePageActive } from "./hooks/usePageActive";
 import { useBattleControl } from "./hooks/useBattleControl";
@@ -549,11 +550,26 @@ export default function BattlePage({ onBack }: Props) {
             : prev
         );
 
-        setBossBanner({ type: "ok", msg: "Boss hit submitted ✅" });
-
-        // Restrictions removed:
-        // No longer marks the guild as having completed ATTACK for the round.
-        // No cooldown is applied.
+        // Record the successful guild attack for the current battle and round.
+        // This drives the Teacher Console and Boss Display status indicators.
+        // Do not roll back the successful boss damage if the status write fails.
+        try {
+          await submitGuildAction({
+            sessionId: stripQuotes(activeSessionId).trim(),
+            homeroom: activeHomeroom,
+            guild: cleanGuild,
+            action: "ATTACK",
+            round,
+          });
+          setBossBanner({ type: "ok", msg: "Boss hit submitted ✅" });
+        } catch (statusError) {
+          console.error("Boss damage saved, but guild action status failed:", statusError);
+          setBossSubmitErr("Boss damage saved, but guild status did not update. Tell your teacher.");
+          setBossBanner({
+            type: "err",
+            msg: "Damage saved; guild status update failed.",
+          });
+        }
 
         setBossNote("");
         setBossDamage("");
