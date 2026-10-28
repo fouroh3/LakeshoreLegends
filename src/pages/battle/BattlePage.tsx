@@ -5,6 +5,7 @@ import AppTopBar from "../../components/AppTopBar";
 import CharacterProfileModal from "../../components/CharacterProfileModal";
 import type { Student, Guild } from "../../types";
 import { loadStudents } from "../../data";
+import { getPurchasedSkillSnapshot } from "../../skillApi";
 import { submitBossDelta } from "../../bossApi";
 import { submitGuildAction } from "./firebaseBattle";
 
@@ -148,8 +149,17 @@ export default function BattlePage({ onBack }: Props) {
   useEffect(() => {
     (async () => {
       try {
-        const data = await loadStudents();
-        setStudents(data);
+        const [data, purchased] = await Promise.all([
+          loadStudents(),
+          getPurchasedSkillSnapshot().catch((error) => {
+            console.warn("Purchased skills could not be loaded for Battle Mode.", error);
+            return new Map<string, string[]>();
+          }),
+        ]);
+        setStudents(data.map((student) => ({
+          ...student,
+          purchasedSkills: purchased.get(normId(student.id)) ?? [],
+        })));
       } catch (e: any) {
         setErr(e?.message || "Failed to load students.");
       } finally {
@@ -328,7 +338,15 @@ export default function BattlePage({ onBack }: Props) {
 
   const selectedSkills = useMemo(() => {
     if (selectedStudents.length !== 1) return [];
-    return skillsToArray(selectedStudents[0].skills);
+    const student = selectedStudents[0];
+    const purchased = skillsToArray((student as any).purchasedSkills);
+    const companionActive = Boolean(String(student.companionUrl || "").trim()) &&
+      String(student.companionStatus || "").trim().toLowerCase() === "active";
+    return Array.from(new Set([
+      ...skillsToArray(student.skills),
+      ...purchased,
+      ...(companionActive ? ["Companion Bond"] : []),
+    ].map((skill) => skill.trim()).filter(Boolean)));
   }, [selectedStudents]);
 
   const onSubmit = useCallback(async () => {

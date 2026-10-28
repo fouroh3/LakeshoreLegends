@@ -123,19 +123,7 @@ function TileSkills({ student, muted }: { student: Student; muted?: boolean }) {
           {sk}
         </span>
       ))}
-
-      {extra > 0 && (
-        <span
-          className={[
-            "inline-flex h-[18px] items-center rounded-md border px-1.5 text-[9px] leading-none",
-            muted
-              ? "border-zinc-900 bg-zinc-950/10 text-zinc-700"
-              : "border-zinc-800/70 bg-zinc-950/35 text-zinc-400",
-          ].join(" ")}
-        >
-          +{extra}
-        </span>
-      )}
+      {extra > 0 && <span className="inline-flex h-[18px] items-center rounded-md border border-zinc-800/70 bg-zinc-950/35 px-1.5 text-[9px] leading-none text-zinc-400">+{extra}</span>}
     </div>
   );
 }
