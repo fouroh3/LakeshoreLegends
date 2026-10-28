@@ -597,7 +597,7 @@ export default function BattleTeacherConsole() {
             <div className="flex flex-wrap gap-2">
               <a href="/" className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2 text-sm font-bold text-zinc-200">Dashboard</a>
               <a href="/battle" className="rounded-xl border border-white/15 bg-white/[0.05] px-4 py-2 text-sm font-bold text-white">Student Battle</a>
-              <a href="/bossdisplay" className="rounded-xl border border-cyan-300/20 bg-cyan-400/10 px-4 py-2 text-sm font-bold text-cyan-100">Boss Display</a>
+              <a href="/bossdisplay" target="_blank" rel="noopener noreferrer" className="rounded-xl border border-cyan-300/20 bg-cyan-400/10 px-4 py-2 text-sm font-bold text-cyan-100">Boss Display</a>
               <button
                 type="button"
                 onClick={() => {
