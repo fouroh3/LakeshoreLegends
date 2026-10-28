@@ -94,6 +94,7 @@ export default function BossDisplayPage() {
 
   const [selectedSessionKey, setSelectedSessionKey] = useState("");
   const [raidChronicle, setRaidChronicle] = useState<any[]>([]);
+  const [chronicleExpanded, setChronicleExpanded] = useState(false);
   const [guildActionsMap, setGuildActionsMap] = useState<Record<string, string>>(
     {}
   );
@@ -219,7 +220,7 @@ export default function BossDisplayPage() {
       const entries = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as any))
         .filter((entry) => String(entry.sessionId || "") === selectedSessionKey)
         .sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0));
-      setRaidChronicle(entries.slice(0, 5));
+      setRaidChronicle(entries);
     }, (error) => {
       console.error("Raid chronicle subscription failed:", error);
       setRaidChronicle([]);
@@ -502,25 +503,22 @@ export default function BossDisplayPage() {
                   </div>
 
                   <section aria-label="Recent raid actions" className="mt-2 shrink-0 overflow-hidden rounded-xl border border-cyan-400/20 bg-black/40 px-3 py-2">
-                    <div className="mb-1 text-[10px] font-black uppercase tracking-[0.18em] text-cyan-200">⚔ Raid Chronicle · Latest Actions</div>
-                    {raidChronicle.length === 0 ? (
-                      <div className="text-[11px] text-zinc-500">No recorded actions for this battle yet.</div>
-                    ) : (
-                      <div className="space-y-0.5">
-                        {raidChronicle.slice(0, 5).map((entry: any, index: number) => (
-                          <div key={entry.id} className={[
-                            "flex min-w-0 items-center justify-between gap-2 text-[11px] leading-4",
-                            index >= 2 ? "hidden min-[900px]:flex" : "flex",
-                            index >= 4 ? "min-[900px]:hidden min-[1200px]:flex" : "",
-                          ].join(" ")}>
-                            <span className="min-w-0 truncate text-zinc-200">R{entry.round} · {entry.homeroom} {entry.guild}</span>
-                            <span className={entry.action === "HEAL" ? "shrink-0 font-bold text-emerald-300" : "shrink-0 font-bold text-red-300"}>
-                              {entry.action === "HEAL" ? "💚 HEAL" : "⚔ ATTACK"} {entry.action === "HEAL" ? "+" : "−"}{entry.amount} HP
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                    <div className="mb-1 flex items-center justify-between gap-2">
+                      <div className="truncate text-[10px] font-black uppercase tracking-[0.18em] text-cyan-200">⚔ Raid Chronicle · Latest Actions ({raidChronicle.length})</div>
+                      <button type="button" onClick={() => setChronicleExpanded(true)} className="shrink-0 rounded border border-cyan-400/30 px-2 py-0.5 text-[10px] font-bold text-cyan-200 hover:bg-cyan-400/10">Expand ↗</button>
+                    </div>
+                    <div className="max-h-[clamp(40px,10dvh,100px)] overflow-y-auto overscroll-contain pr-1">
+                      {raidChronicle.length === 0 ? (
+                        <div className="text-[11px] text-zinc-500">No recorded actions for this battle yet.</div>
+                      ) : raidChronicle.map((entry: any) => (
+                        <div key={entry.id} className="flex min-w-0 items-center justify-between gap-2 border-b border-white/5 py-0.5 text-[11px] leading-4">
+                          <span className="min-w-0 truncate text-zinc-200">R{entry.round} · {entry.homeroom} {entry.guild}</span>
+                          <span className={entry.action === "HEAL" ? "shrink-0 font-bold text-emerald-300" : "shrink-0 font-bold text-red-300"}>
+                            {entry.action === "HEAL" ? "💚 HEAL" : "⚔ ATTACK"} {entry.action === "HEAL" ? "+" : "−"}{entry.amount} HP
+                          </span>
+                        </div>
+                      ))}
+                    </div>
                   </section>
 
                   {defeated && (
@@ -572,6 +570,24 @@ export default function BossDisplayPage() {
             )}
           </div>
         </main>
+        {chronicleExpanded && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-3 sm:p-8" role="dialog" aria-modal="true" aria-label="Full Raid Chronicle">
+            <div className="flex max-h-[90dvh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-cyan-400/30 bg-[#0b101b] p-4 text-zinc-100 shadow-2xl">
+              <div className="mb-3 flex shrink-0 items-center justify-between gap-3">
+                <div><h2 className="text-lg font-black text-cyan-200">⚔ Full Raid Chronicle</h2><p className="text-xs text-zinc-400">{homeroomLabel} · {raidChronicle.length} recorded actions · newest first</p></div>
+                <button type="button" onClick={() => setChronicleExpanded(false)} className="rounded-lg border border-zinc-600 px-3 py-2 text-sm font-bold hover:bg-white/10">Close ✕</button>
+              </div>
+              <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+                {raidChronicle.length === 0 ? <p className="text-sm text-zinc-400">No recorded actions yet.</p> : raidChronicle.map((entry: any) => (
+                  <div key={entry.id} className="flex items-center justify-between gap-3 border-b border-white/10 px-2 py-2 text-sm">
+                    <span className="min-w-0 truncate">Round {entry.round} · {entry.homeroom} · {entry.guild}</span>
+                    <span className={entry.action === "HEAL" ? "shrink-0 font-bold text-emerald-300" : "shrink-0 font-bold text-red-300"}>{entry.action === "HEAL" ? "💚 HEAL +" : "⚔ ATTACK −"}{entry.amount} HP</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
