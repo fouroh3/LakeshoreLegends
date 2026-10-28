@@ -104,16 +104,13 @@ function TileSkills({ student, muted }: { student: Student; muted?: boolean }) {
 
   if (skills.length === 0) return null;
 
-  const top = skills.slice(0, 3);
-  const extra = skills.length - top.length;
-
   return (
-    <div className="mt-2 flex min-h-[22px] flex-wrap content-start gap-1 overflow-hidden">
-      {top.map((sk) => (
+    <div className="mt-2 flex min-h-[22px] flex-wrap content-start gap-1">
+      {skills.map((sk) => (
         <span
           key={sk}
           className={[
-            "inline-flex h-[18px] max-w-[86px] items-center truncate rounded-md border px-1.5 text-[9px] leading-none",
+            "inline-flex min-h-[18px] max-w-full items-center break-words rounded-md border px-1.5 py-0.5 text-[9px] leading-tight",
             muted
               ? "border-zinc-900 bg-zinc-950/10 text-zinc-600"
               : "border-zinc-800/70 bg-zinc-950/35 text-zinc-300",
@@ -124,18 +121,6 @@ function TileSkills({ student, muted }: { student: Student; muted?: boolean }) {
         </span>
       ))}
 
-      {extra > 0 && (
-        <span
-          className={[
-            "inline-flex h-[18px] items-center rounded-md border px-1.5 text-[9px] leading-none",
-            muted
-              ? "border-zinc-900 bg-zinc-950/10 text-zinc-700"
-              : "border-zinc-800/70 bg-zinc-950/35 text-zinc-400",
-          ].join(" ")}
-        >
-          +{extra}
-        </span>
-      )}
     </div>
   );
 }
