@@ -416,7 +416,7 @@ export default function StorePage({ onBack }: Props) {
             noHomerooms={noHomerooms}
           />
 
-          <div className="grid grid-cols-1 gap-4 2xl:grid-cols-[320px_minmax(0,1fr)]">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-[280px_minmax(0,1fr)] xl:grid-cols-[320px_minmax(0,1fr)]">
             <LegendSelectionPanel
               homerooms={homerooms}
               hr={hr}
