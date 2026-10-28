@@ -612,9 +612,20 @@ export default function BossDisplayPage() {
               </div>
               <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
                 {raidChronicle.length === 0 ? <p className="text-sm text-zinc-400">No recorded actions yet.</p> : raidChronicle.map((entry: any) => (
-                  <div key={entry.id} className="flex items-center justify-between gap-3 border-b border-white/10 px-2 py-2 text-sm">
+                  <div key={entry.id} className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 px-2 py-2 text-sm">
                     <span className="min-w-0 truncate">Round {entry.round} · {entry.homeroom} · {entry.guild}</span>
                     <span className={entry.action === "HEAL" ? "shrink-0 font-bold text-emerald-300" : "shrink-0 font-bold text-red-300"}>{entry.action === "HEAL" ? "💚 HEAL +" : "⚔ ATTACK −"}{entry.amount} HP</span>
+                    {entry.action === "HEAL" && Array.isArray(entry.targets) && entry.targets.length > 0 && (
+                      <div className="mt-2 w-full rounded-lg border border-emerald-400/15 bg-emerald-400/5 p-2">
+                        <div className="mb-1 text-xs font-semibold text-emerald-200">Students healed</div>
+                        {entry.targets.map((target: any, index: number) => (
+                          <div key={String(target.studentId) + "-" + index} className="flex justify-between gap-3 py-0.5 text-xs text-zinc-300">
+                            <span className="truncate">{target.studentName || target.studentId}</span>
+                            <span className="shrink-0 font-semibold text-emerald-300">+{target.amount} HP</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
