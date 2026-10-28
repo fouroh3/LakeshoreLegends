@@ -500,6 +500,12 @@ export default function BattlePage({ onBack }: Props) {
       setBossBanner(null);
       setBossSubmitErr(null);
 
+      if (!guildAttacksOpen) {
+        setBossSubmitErr("Boss Turn — guild attacks are locked.");
+        setBossBanner({ type: "err", msg: "Wait for Guild Turn to attack the boss." });
+        return;
+      }
+
       if (!canStrikeBoss) {
         setBossSubmitErr("This quest does not use boss strikes.");
         setBossBanner({
