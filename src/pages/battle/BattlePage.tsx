@@ -328,7 +328,15 @@ export default function BattlePage({ onBack }: Props) {
 
   const selectedSkills = useMemo(() => {
     if (selectedStudents.length !== 1) return [];
-    return skillsToArray(selectedStudents[0].skills);
+    const student = selectedStudents[0];
+    const purchased = skillsToArray((student as any).purchasedSkills);
+    const companionActive = Boolean(String(student.companionUrl || "").trim()) &&
+      String(student.companionStatus || "").trim().toLowerCase() === "active";
+    return Array.from(new Set([
+      ...skillsToArray(student.skills),
+      ...purchased,
+      ...(companionActive ? ["Companion Bond"] : []),
+    ].map((skill) => skill.trim()).filter(Boolean)));
   }, [selectedStudents]);
 
   const onSubmit = useCallback(async () => {
