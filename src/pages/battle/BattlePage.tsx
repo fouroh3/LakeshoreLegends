@@ -435,7 +435,7 @@ export default function BattlePage({ onBack }: Props) {
           : snapshot.reduce((total, row) => total + Math.max(0, row.after - row.before), 0);
         if (healingGuild) {
           try {
-            await submitGuildAction({ sessionId: cleanSessionId, homeroom: activeHomeroom, guild: healingGuild, action: "HEAL", round: activeRound, event: { amount: healedAmount, requestId: submitNonce } });
+            await submitGuildAction({ sessionId: cleanSessionId, homeroom: activeHomeroom, guild: healingGuild, action: "HEAL", round: activeRound, event: { amount: healedAmount, requestId: submitNonce, targets: (Array.isArray(result.results) ? result.results : snapshot).map((row) => ({ studentId: row.studentId, studentName: fullName(students.find((student) => normId(student.id) === normId(row.studentId)) as Student), amount: Math.max(0, Number(row.after) - Number(row.before)) })) } });
           } catch (statusError) {
             console.error("Healing saved, but raid status/chronicle update failed:", statusError);
             setBanner({ type: "err", msg: "Healing saved, but raid display update failed. Tell your teacher." });
@@ -474,6 +474,7 @@ export default function BattlePage({ onBack }: Props) {
     note,
     activeGuild,
     activeRound,
+    students,
   ]);
 
   const onSubmitBossAttack = useCallback(
