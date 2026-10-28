@@ -204,6 +204,7 @@ export default function SkillTrainingPanel({
                 type="button"
                 onClick={() => {
                   if (owned || purchasing) return;
+                  setErr(null);
                   setPendingSkillIds((current) => isSelected ? current.filter((id) => id !== skill.id) : [...current, skill.id]);
                   setSelectedSkillId(skill.id);
                 }}
