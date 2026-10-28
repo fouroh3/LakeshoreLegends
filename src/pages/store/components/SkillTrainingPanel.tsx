@@ -118,41 +118,43 @@ export default function SkillTrainingPanel({
     canAfford;
 
   async function handleBuySkill() {
-    if (!selectedSkill || !studentId) return;
-
+    if (!canBuy || !studentId) return;
+    const cart = [...pendingSkills];
     setPurchasing(true);
     setErr(null);
-
+    const batchId = "skill-batch:" + studentId + ":" + Date.now();
+    let completed = 0;
     try {
-      const requestId = `skill:${studentId}:${selectedSkill.id}:${Date.now()}:${Math.random()
-        .toString(16)
-        .slice(2)}`;
-
-      const res = await purchaseSkill({
-        studentId,
-        skillId: selectedSkill.id,
-        skillName: selectedSkill.name,
-        pin: pin.trim(),
-        requestId,
-      });
-
-      if (res?.summary) {
-        const next = res.summary as SkillSummary;
-        setSummary(next);
-        onSummaryChange?.(next);
-      } else {
+      for (const skill of cart) {
+        const res = await purchaseSkill({
+          studentId,
+          skillId: skill.id,
+          skillName: skill.name,
+          pin: pin.trim(),
+          requestId: batchId + ":" + skill.id,
+        });
+        completed++;
+        setPendingSkillIds((current) => current.filter((id) => id !== skill.id));
+        if (res?.summary) {
+          const next = res.summary as SkillSummary;
+          setSummary(next);
+          onSummaryChange?.(next);
+        }
+      }
+      const next = await getSkillSummary(studentId);
+      setSummary(next);
+      onSummaryChange?.(next);
+      setLastPurchasedSkillId(cart[cart.length - 1]?.id ?? null);
+      window.setTimeout(() => setLastPurchasedSkillId(null), 2400);
+    } catch (e) {
+      setErr(completed + " of " + cart.length + " skills purchased. " +
+        (e instanceof Error ? e.message : "Purchase failed.") +
+        " Remaining skills stay selected.");
+      try {
         const next = await getSkillSummary(studentId);
         setSummary(next);
         onSummaryChange?.(next);
-      }
-
-      setLastPurchasedSkillId(selectedSkill.id);
-
-      window.setTimeout(() => {
-        setLastPurchasedSkillId(null);
-      }, 2400);
-    } catch (e) {
-      setErr(e instanceof Error ? e.message : "Skill purchase failed.");
+      } catch { /* Preserve the last confirmed balance. */ }
     } finally {
       setPurchasing(false);
     }
