@@ -731,9 +731,17 @@ function syncBattleControlDerivedFields_() {
     const effectiveRound = isFollower ? leaderRow.round : r.round;
     const effectiveTurn = isFollower ? leaderRow.turn : r.turn;
 
+    // A session ID belongs to one battle run, not to a homeroom/quest pair.
+    // Preserve it across syncs, round changes, pauses and resumes.
+    // Followers always inherit their leader's ID.
+    const isRunning = ["ACTIVE", "PAUSED"].includes(r.status);
     const battleSessionId =
-      r.status === "ACTIVE" && effectiveQuest
-        ? makeBattleSessionId_(leaderHomeroom, effectiveQuest)
+      isRunning && effectiveQuest
+        ? (isFollower
+            ? (leaderRow.activeBattleSessionId ||
+                makeBattleSessionId_(leaderHomeroom, effectiveQuest))
+            : (r.activeBattleSessionId ||
+                makeBattleSessionId_(leaderHomeroom, effectiveQuest)))
         : "";
 
     const bossKey =
@@ -3060,6 +3068,9 @@ function regularBattleTeacherStart_(args) {
     const { sh, map, rows } = battleControlRows_();
     const vals = sh.getRange(2, 1, BATTLE_UI.MAX_ROWS, 12).getValues();
     const nowIso = new Date().toISOString();
+    // Generate once per start, under the script lock; never regenerate on sync.
+    const newSessionId = makeBattleSessionId_(leaderHomeroom, quest) +
+      "_" + Utilities.getUuid().replace(/-/g, "");
 
     const leader = findBattleControlRowByHomeroom_(rows, leaderHomeroom);
     if (!leader) {
@@ -3108,6 +3119,7 @@ function regularBattleTeacherStart_(args) {
     vals[leaderIndex][map["turn"]] = initialTurn;
     vals[leaderIndex][map["pairto"]] = "";
     vals[leaderIndex][map["leaderhomeroom"]] = leaderHomeroom;
+    vals[leaderIndex][map["activebattlesessionid"]] = newSessionId;
     vals[leaderIndex][map["lastupdated"]] = nowIso;
 
     if (pairTo && follower) {
@@ -3119,6 +3131,7 @@ function regularBattleTeacherStart_(args) {
       vals[followerIndex][map["turn"]] = initialTurn;
       vals[followerIndex][map["pairto"]] = leaderHomeroom;
       vals[followerIndex][map["leaderhomeroom"]] = leaderHomeroom;
+      vals[followerIndex][map["activebattlesessionid"]] = newSessionId;
       vals[followerIndex][map["lastupdated"]] = nowIso;
     }
 
