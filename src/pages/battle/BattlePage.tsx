@@ -6,7 +6,7 @@ import CharacterProfileModal from "../../components/CharacterProfileModal";
 import type { Student, Guild } from "../../types";
 import { loadStudents } from "../../data";
 import { submitBossDelta } from "../../bossApi";
-import { submitGuildAction } from "./firebaseBattle";
+import { submitGuildAction, recordRaidAction } from "./firebaseBattle";
 
 import { usePageActive } from "./hooks/usePageActive";
 import { useBattleControl } from "./hooks/useBattleControl";
@@ -421,8 +421,22 @@ export default function BattlePage({ onBack }: Props) {
             })`,
       });
 
-      // Restrictions removed:
-      // No longer marks the guild as having completed HEAL for the round.
+      // HP has already been saved. Chronicle/status failures must never undo healing.
+      if (!result.deduped && delta > 0) {
+        const healingGuild = activeGuild;
+        const healedAmount = Array.isArray(result.results)
+          ? result.results.reduce((total, row) => total + Math.max(0, row.after - row.before), 0)
+          : snapshot.reduce((total, row) => total + Math.max(0, row.after - row.before), 0);
+        if (healingGuild && healedAmount > 0) {
+          try {
+            await submitGuildAction({ sessionId: cleanSessionId, homeroom: activeHomeroom, guild: healingGuild, action: "HEAL", round: activeRound });
+            await recordRaidAction({ sessionId: cleanSessionId, homeroom: activeHomeroom, guild: healingGuild, action: "HEAL", round: activeRound, amount: healedAmount, requestId: submitNonce });
+          } catch (statusError) {
+            console.error("Healing saved, but raid status/chronicle update failed:", statusError);
+            setBanner({ type: "err", msg: "Healing saved, but raid display update failed. Tell your teacher." });
+          }
+        }
+      }
 
       setSelectedIds([]);
       setNote("");
@@ -453,6 +467,8 @@ export default function BattlePage({ onBack }: Props) {
     applyOptimisticHp,
     clearPending,
     note,
+    activeGuild,
+    activeRound,
   ]);
 
   const onSubmitBossAttack = useCallback(
@@ -561,6 +577,11 @@ export default function BattlePage({ onBack }: Props) {
             action: "ATTACK",
             round,
           });
+          try {
+            await recordRaidAction({ sessionId: stripQuotes(activeSessionId).trim(), homeroom: activeHomeroom, guild: cleanGuild, action: "ATTACK", round, amount: Math.max(0, previousHP - (typeof (result as any)?.currentHP === "number" ? (result as any).currentHP : optimisticHP)), requestId: makeSubmitNonce() });
+          } catch (chronicleError) {
+            console.error("Boss damage saved but chronicle update failed:", chronicleError);
+          }
           setBossBanner({ type: "ok", msg: "Boss hit submitted ✅" });
         } catch (statusError) {
           console.error("Boss damage saved, but guild action status failed:", statusError);
