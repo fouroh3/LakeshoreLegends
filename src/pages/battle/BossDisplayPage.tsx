@@ -247,12 +247,12 @@ export default function BossDisplayPage() {
         events.push(entry);
         continue;
       }
-      const key = [selectedSessionKey, entry.homeroom, entry.guild, entry.round].join("|");
+      const key = [selectedSessionKey, String(entry.homeroom || "").trim().toLowerCase(), String(entry.guild || "").trim().toLowerCase()].join("|");
       const existing = groupedHeals.get(key);
       if (existing) {
         existing.amount += Number(entry.amount) || 0;
       } else {
-        const group = { ...entry, id: "heal:" + key, amount: Number(entry.amount) || 0 };
+        const group = { ...entry, id: "heal:" + key, round: "ALL", amount: Number(entry.amount) || 0 };
         groupedHeals.set(key, group);
         events.push(group);
       }
@@ -545,7 +545,7 @@ export default function BossDisplayPage() {
                         <div className="text-[11px] text-zinc-500">No recorded actions for this battle yet.</div>
                       ) : chroniclePreview.map((entry: any) => (
                         <div key={entry.id} className="flex min-w-0 items-center justify-between gap-2 border-b border-white/5 py-0.5 text-[11px] leading-4">
-                          <span className="min-w-0 truncate text-zinc-200">R{entry.round} · {entry.homeroom} {entry.guild}</span>
+                          <span className="min-w-0 truncate text-zinc-200">{entry.action === "HEAL" ? "ALL ROUNDS" : `R${entry.round}`} · {entry.homeroom} {entry.guild}</span>
                           <span className={entry.action === "HEAL" ? "shrink-0 font-bold text-emerald-300" : "shrink-0 font-bold text-red-300"}>
                             {entry.action === "HEAL" ? "💚 HEAL" : "⚔ ATTACK"} {entry.action === "HEAL" ? "+" : "−"}{entry.amount} HP
                           </span>
