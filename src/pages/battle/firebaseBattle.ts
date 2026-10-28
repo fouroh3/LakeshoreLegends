@@ -20,7 +20,7 @@ export async function submitGuildAction(params: {
   guild: string;
   action: GuildActionType;
   round: number;
-  event?: { amount: number; requestId: string };
+  event?: { amount: number; requestId: string; targets?: Array<{ studentId: string; studentName: string; amount: number }> };
 }) {
   const id = [
     params.sessionId,
@@ -38,7 +38,7 @@ export async function submitGuildAction(params: {
       action: params.action,
       round: params.round,
       updatedAt: serverTimestamp(),
-      ...(params.event ? { history: arrayUnion({ action: params.action, round: params.round, amount: params.event.amount, requestId: params.event.requestId, at: Date.now() }) } : {}),
+      ...(params.event ? { history: arrayUnion({ action: params.action, round: params.round, amount: params.event.amount, requestId: params.event.requestId, targets: params.event.targets || [], at: Date.now() }) } : {}),
     },
     { merge: true }
   );
