@@ -632,6 +632,7 @@ export default function BattlePage({ onBack }: Props) {
     },
     [
       canStrikeBoss,
+      guildAttacksOpen,
       bossInstanceId,
       bossSubmitting,
       bossDamage,
