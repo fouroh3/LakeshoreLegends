@@ -1,7 +1,7 @@
 import {
   collection,
   doc,
-  addDoc,
+  arrayUnion,
   onSnapshot,
   setDoc,
   serverTimestamp,
@@ -20,6 +20,7 @@ export async function submitGuildAction(params: {
   guild: string;
   action: GuildActionType;
   round: number;
+  event?: { amount: number; requestId: string };
 }) {
   const id = [
     params.sessionId,
@@ -37,6 +38,7 @@ export async function submitGuildAction(params: {
       action: params.action,
       round: params.round,
       updatedAt: serverTimestamp(),
+      ...(params.event ? { history: arrayUnion({ action: params.action, round: params.round, amount: params.event.amount, requestId: params.event.requestId, at: Date.now() }) } : {}),
     },
     { merge: true }
   );
@@ -62,19 +64,4 @@ export function subscribeGuildActions(
       callback(rows);
     }
   );
-}
-/** Append-only chronicle: unlike guildActions, repeat actions remain visible. */
-export async function recordRaidAction(params: {
-  sessionId: string;
-  homeroom: string;
-  guild: string;
-  action: "ATTACK" | "HEAL";
-  round: number;
-  amount: number;
-  requestId: string;
-}) {
-  await addDoc(collection(db, "raidChronicle"), {
-    ...params,
-    createdAt: serverTimestamp(),
-  });
 }
