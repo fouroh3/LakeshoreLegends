@@ -14,7 +14,7 @@ import {
   type StoreState,
   type XpSummary,
 } from "../../xpApi";
-import type { SkillSummary } from "../../skillApi";
+import { getSkillSummary, type SkillSummary } from "../../skillApi";
 import StoreHero from "./components/StoreHero";
 import LegendSelectionPanel from "./components/LegendSelectionPanel";
 import StoreSummaryPanel from "./components/StoreSummaryPanel";
@@ -249,6 +249,17 @@ export default function StorePage({ onBack }: Props) {
     };
   }, [selectedId]);
 
+  useEffect(() => {
+    let alive = true;
+    setSkillSummary(null);
+    if (selectedId) {
+      void getSkillSummary(selectedId)
+        .then((next) => { if (alive) setSkillSummary(next); })
+        .catch(() => { if (alive) setSkillSummary(null); });
+    }
+    return () => { alive = false; };
+  }, [selectedId]);
+
   const confirmOk =
     !!selected &&
     normIdForConfirm(confirmId) === normIdForConfirm(selectedStudentId);
@@ -458,6 +469,9 @@ export default function StorePage({ onBack }: Props) {
                   />
 
                   <StoreSummaryPanel
+                    mode={storeMode}
+                    skillTokens={skillSummary?.skillTokens ?? null}
+                    skillCost={skillSummary?.skillCost ?? 1}
                     xpPerPoint={xpPerPoint}
                     maxPoints={maxPoints}
                     summaryBalance={summary?.balance ?? null}
