@@ -320,7 +320,7 @@ export default function SkillTrainingPanel({
 
         {!selectedSkill && (
           <div className="mt-4 rounded-2xl border border-white/[0.04] bg-black/16 px-4 py-3 text-sm text-white/54">
-            Choose a skill to preview the purchase.
+            Choose one or more skills to preview the purchase.
           </div>
         )}
 
@@ -329,7 +329,7 @@ export default function SkillTrainingPanel({
             <div className="flex items-start justify-between gap-4">
               <div>
                 <div className="text-2xl font-semibold text-white">
-                  {selectedSkill.name}
+                  {pendingSkills.map((skill) => skill.name).join(", ")}
                 </div>
                 <div className="mt-1 text-xs uppercase tracking-[0.22em] text-white/38">
                   Skill Training
@@ -344,14 +344,14 @@ export default function SkillTrainingPanel({
                     : "border-violet-300/20 bg-violet-400/[0.12] text-violet-100",
                 ].join(" ")}
               >
-                {selectedOwned ? "Owned" : `${skillCost} Token${skillCost === 1 ? "" : "s"}`}
+                {`${totalCost} Tokens`}
               </span>
             </div>
 
             <div className="mt-5 rounded-2xl border border-white/[0.05] bg-black/20 px-4 py-3">
               <div className="flex items-center justify-between text-sm">
                 <span className="text-white/54">Cost</span>
-                <span className="font-semibold text-white">{skillCost} Skill Token{skillCost === 1 ? "" : "s"}</span>
+                <span className="font-semibold text-white">{totalCost} Skill Tokens</span>
               </div>
               <div className="mt-2 flex items-center justify-between text-sm">
                 <span className="text-white/54">Tokens Available</span>
@@ -362,7 +362,7 @@ export default function SkillTrainingPanel({
               <div className="mt-2 flex items-center justify-between text-sm">
                 <span className="text-white/54">After Purchase</span>
                 <span className="font-semibold text-cyan-100">
-                  {selectedOwned ? skillTokens : Math.max(0, skillTokens - skillCost)}
+                  {skillTokens - totalCost}
                 </span>
               </div>
             </div>
@@ -372,32 +372,24 @@ export default function SkillTrainingPanel({
                 Where this will show
               </div>
               <div className="mt-1 text-xs leading-5 text-cyan-100/62">
-                Purchased skills will appear on the dashboard card, profile
-                modal, and battle card after the purchased-skill display layer is
-                connected.
+                Purchased skills are permanent and appear in the student skill loadout.
               </div>
             </div>
 
             <button
               type="button"
-              disabled={!canBuy || lastPurchasedSkillId === selectedSkill.id}
+              disabled={!canBuy}
               onClick={() => {
                 void handleBuySkill();
               }}
               className={[
                 "mt-5 w-full rounded-[24px] px-5 py-4 text-[15px] font-semibold tracking-tight transition-all duration-200",
-                lastPurchasedSkillId === selectedSkill.id
-                  ? "border border-emerald-300/20 bg-emerald-400/[0.14] text-emerald-100 shadow-[0_0_28px_rgba(52,211,153,0.16)]"
-                  : canBuy
+                canBuy
                   ? "bg-[linear-gradient(180deg,#a78bfa,#67e8f9)] text-slate-950 shadow-[0_0_28px_rgba(34,211,238,0.24)] hover:scale-[1.02]"
                   : "cursor-not-allowed border border-white/[0.05] bg-white/[0.04] text-white/38",
               ].join(" ")}
             >
-              {lastPurchasedSkillId === selectedSkill.id
-                ? `Purchased — ${selectedSkill.name}`
-                : selectedOwned
-                ? "Already Owned"
-                : purchasing
+              {purchasing
                 ? "Processing Purchase..."
                 : storeLocked
                 ? "Store Closed"
@@ -409,7 +401,7 @@ export default function SkillTrainingPanel({
                 ? "Skill Backend Needed"
                 : !canAfford
                 ? "Not Enough Skill Tokens"
-                : `Buy ${selectedSkill.name} (${skillCost} Token${skillCost === 1 ? "" : "s"})`}
+                : `Buy ${pendingSkills.length} Skills (${totalCost} Tokens)`}
             </button>
           </div>
         )}
