@@ -358,6 +358,12 @@ export default function BattlePage({ onBack }: Props) {
       return;
     }
 
+    // The acting guild must be known; healing targets do not identify the healer.
+    if (delta > 0 && !activeGuild) {
+      setBanner({ type: "err", msg: "Select the healing guild using the Guild filter before submitting." });
+      return;
+    }
+
     setSubmitting(true);
 
     const cleanSessionId = stripQuotes(activeSessionId).trim();
@@ -427,10 +433,12 @@ export default function BattlePage({ onBack }: Props) {
         const healedAmount = Array.isArray(result.results)
           ? result.results.reduce((total, row) => total + Math.max(0, row.after - row.before), 0)
           : snapshot.reduce((total, row) => total + Math.max(0, row.after - row.before), 0);
-        if (healingGuild && healedAmount > 0) {
+        if (healingGuild) {
           try {
             await submitGuildAction({ sessionId: cleanSessionId, homeroom: activeHomeroom, guild: healingGuild, action: "HEAL", round: activeRound });
-            await recordRaidAction({ sessionId: cleanSessionId, homeroom: activeHomeroom, guild: healingGuild, action: "HEAL", round: activeRound, amount: healedAmount, requestId: submitNonce });
+            if (healedAmount > 0) {
+              await recordRaidAction({ sessionId: cleanSessionId, homeroom: activeHomeroom, guild: healingGuild, action: "HEAL", round: activeRound, amount: healedAmount, requestId: submitNonce });
+            }
           } catch (statusError) {
             console.error("Healing saved, but raid status/chronicle update failed:", statusError);
             setBanner({ type: "err", msg: "Healing saved, but raid display update failed. Tell your teacher." });
