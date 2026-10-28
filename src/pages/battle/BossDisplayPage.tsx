@@ -237,6 +237,29 @@ export default function BossDisplayPage() {
     }, (error) => console.error("Raid history read failed:", error));
   }, [selectedSessionKey]);
 
+  // Group healing by battle/class/guild/round for the compact display.
+  // Preserve the original events in raidChronicle for the expanded audit history.
+  const chroniclePreview = useMemo(() => {
+    const groupedHeals = new Map<string, any>();
+    const events: any[] = [];
+    for (const entry of raidChronicle) {
+      if (entry.action !== "HEAL") {
+        events.push(entry);
+        continue;
+      }
+      const key = [selectedSessionKey, entry.homeroom, entry.guild, entry.round].join("|");
+      const existing = groupedHeals.get(key);
+      if (existing) {
+        existing.amount += Number(entry.amount) || 0;
+      } else {
+        const group = { ...entry, id: "heal:" + key, amount: Number(entry.amount) || 0 };
+        groupedHeals.set(key, group);
+        events.push(group);
+      }
+    }
+    return events;
+  }, [raidChronicle, selectedSessionKey]);
+
   const bossKey = primaryBattle?.bossKey || "";
   const bossInstanceId = primaryBattle?.bossInstanceId || "";
 
@@ -514,13 +537,13 @@ export default function BossDisplayPage() {
 
                   <section aria-label="Recent raid actions" className="mt-2 shrink-0 overflow-hidden rounded-xl border border-cyan-400/20 bg-black/40 px-3 py-2">
                     <div className="mb-1 flex items-center justify-between gap-2">
-                      <div className="truncate text-[10px] font-black uppercase tracking-[0.18em] text-cyan-200">⚔ Raid Chronicle · Latest Actions ({raidChronicle.length})</div>
+                      <div className="truncate text-[10px] font-black uppercase tracking-[0.18em] text-cyan-200">⚔ Raid Chronicle · Latest Actions ({chroniclePreview.length})</div>
                       <button type="button" onClick={() => setChronicleExpanded(true)} className="shrink-0 rounded border border-cyan-400/30 px-2 py-0.5 text-[10px] font-bold text-cyan-200 hover:bg-cyan-400/10">Expand ↗</button>
                     </div>
                     <div className="max-h-[clamp(40px,10dvh,100px)] overflow-y-auto overscroll-contain pr-1">
-                      {raidChronicle.length === 0 ? (
+                      {chroniclePreview.length === 0 ? (
                         <div className="text-[11px] text-zinc-500">No recorded actions for this battle yet.</div>
-                      ) : raidChronicle.map((entry: any) => (
+                      ) : chroniclePreview.map((entry: any) => (
                         <div key={entry.id} className="flex min-w-0 items-center justify-between gap-2 border-b border-white/5 py-0.5 text-[11px] leading-4">
                           <span className="min-w-0 truncate text-zinc-200">R{entry.round} · {entry.homeroom} {entry.guild}</span>
                           <span className={entry.action === "HEAL" ? "shrink-0 font-bold text-emerald-300" : "shrink-0 font-bold text-red-300"}>
