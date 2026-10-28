@@ -190,12 +190,13 @@ export default function RightRail({
 
   const attackDisabledReason = useMemo(() => {
     if (!canStrikeBoss) return "This quest does not use boss strikes";
+    if (!guildAttacksOpen) return "Boss Turn — guild attacks are locked";
     if (!hasBossConfigured) return "No boss configured";
     if (bossDefeated) return "Boss defeated";
     if (!activeRound || activeRound <= 0) return "Missing round";
     if (!activeGuild) return "Choose a guild first";
     return "";
-  }, [canStrikeBoss, hasBossConfigured, bossDefeated, activeRound, activeGuild]);
+  }, [canStrikeBoss, guildAttacksOpen, hasBossConfigured, bossDefeated, activeRound, activeGuild]);
 
   const isLowBossHp = !bossDefeated && bossPct > 0 && bossPct <= 0.3;
 
