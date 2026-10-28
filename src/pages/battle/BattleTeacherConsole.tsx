@@ -470,6 +470,24 @@ export default function BattleTeacherConsole() {
       return;
     }
 
+    const requested = new Set([setupHomeroom, setupPairTo].filter(Boolean));
+    const conflictingRows = battleRows.filter((row: any) => {
+      const status = String(row?.status || "").trim().toUpperCase();
+      if (status !== "ACTIVE" && status !== "PAUSED") return false;
+      return [row?.homeroom, row?.pairTo, row?.leaderHomeroom]
+        .some((value) => requested.has(String(value || "").trim()));
+    });
+    if (conflictingRows.length) {
+      const occupied = Array.from(new Set(
+        conflictingRows.map((row: any) => String(row.homeroom || "").trim())
+      )).join(", ");
+      setNotice({
+        type: "err",
+        msg: `Cannot start: ${occupied} already belong to an active or paused battle. End the existing battle first.`,
+      });
+      return;
+    }
+
     const label = setupPairTo ? `${setupHomeroom} + ${setupPairTo}` : setupHomeroom;
     const ok = window.confirm(`Start ${setupQuest} for ${label} with ${startingHp} boss HP?`);
     if (!ok) return;

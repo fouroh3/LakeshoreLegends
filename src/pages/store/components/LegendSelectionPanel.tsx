@@ -193,7 +193,7 @@ export default function LegendSelectionPanel({
       <div className="mt-3 grid grid-cols-1 gap-2 lg:grid-cols-3 xl:mt-4 xl:block xl:space-y-3">
         <div className={`${softPanel} px-3 py-2 xl:py-3`}>
           <div className={`${label} flex items-center gap-2`}>
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-cyan-400/20 text-[11px] font-black text-cyan-200">
+            <span className="inline-grid h-5 w-5 shrink-0 place-items-center rounded-full leading-none bg-cyan-400/20 text-[11px] font-black text-cyan-200">
               1
             </span>
 
@@ -234,7 +234,7 @@ export default function LegendSelectionPanel({
         <div className={`${softPanel} px-3 py-2 xl:py-3`}>
           <div className={`${label} flex items-center gap-2`}>
             <span
-              className={`flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-black ${
+              className={`inline-grid h-5 w-5 shrink-0 place-items-center rounded-full leading-none text-[11px] font-black ${
                 hr
                   ? "bg-cyan-400/20 text-cyan-200"
                   : "bg-white/10 text-white/40"
@@ -282,7 +282,7 @@ export default function LegendSelectionPanel({
         <div className={`${softPanel} px-3 py-2 xl:py-3`}>
           <div className={`${label} flex items-center gap-2`}>
             <span
-              className={`flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-black ${
+              className={`inline-grid h-5 w-5 shrink-0 place-items-center rounded-full leading-none text-[11px] font-black ${
                 hr
                   ? "bg-cyan-400/20 text-cyan-200"
                   : "bg-white/10 text-white/40"

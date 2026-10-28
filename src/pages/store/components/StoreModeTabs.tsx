@@ -101,7 +101,7 @@ export default function StoreModeTabs({
               Tokens
             </div>
             <div className="text-lg font-black text-white">
-              {skillTokens ?? "Soon"}
+              {skillTokens ?? "—"}
             </div>
             <div className="text-[10px] text-white/42">1 per skill</div>
           </div>

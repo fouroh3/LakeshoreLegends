@@ -1,8 +1,12 @@
 // src/pages/store/components/StoreSummaryPanel.tsx
 
+import type { StoreMode } from "./StoreModeTabs";
 import { innerCard, label } from "../storeTheme";
 
 type Props = {
+  mode: StoreMode;
+  skillTokens: number | null;
+  skillCost: number;
   xpPerPoint: number;
   maxPoints: number;
   summaryBalance: number | null;
@@ -26,6 +30,9 @@ type Props = {
 };
 
 export default function StoreSummaryPanel({
+  mode,
+  skillTokens,
+  skillCost,
   xpPerPoint,
   summaryBalance,
   summarySpendable,
@@ -53,7 +60,7 @@ export default function StoreSummaryPanel({
       <div className="flex items-center justify-between gap-3">
         <div>
           <div className={`${label} flex items-center gap-2`}>
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-cyan-300 text-[11px] font-black text-slate-950">
+            <span className="inline-grid h-5 w-5 shrink-0 place-items-center rounded-full leading-none bg-cyan-300 text-[11px] font-black text-slate-950">
               4
             </span>
 
@@ -66,28 +73,28 @@ export default function StoreSummaryPanel({
         </div>
 
         <div className="hidden items-center justify-center rounded-full border border-white/[0.05] bg-white/[0.035] px-3 py-1 text-center text-xs text-white/60 sm:inline-flex">
-          {xpPerPoint} XP per upgrade
+          {mode === "skills" ? `${skillCost} token${skillCost === 1 ? "" : "s"} per skill` : `${xpPerPoint} XP per upgrade`}
         </div>
       </div>
 
       <div className="mt-3 grid grid-cols-2 gap-2 lg:grid-cols-[120px_120px_minmax(0,1fr)_minmax(0,1fr)]">
         <div className="rounded-2xl border border-white/[0.05] bg-black/18 px-3 py-2">
           <div className="text-[9px] uppercase tracking-[0.2em] text-white/40">
-            XP
+            {mode === "skills" ? "Tokens" : "XP"}
           </div>
 
           <div className="mt-1 text-2xl font-black text-white">
-            {summaryBalance ?? "—"}
+            {mode === "skills" ? skillTokens ?? "—" : summaryBalance ?? "—"}
           </div>
         </div>
 
         <div className="rounded-2xl border border-white/[0.05] bg-black/18 px-3 py-2">
           <div className="text-[9px] uppercase tracking-[0.2em] text-white/40">
-            Points
+            {mode === "skills" ? "Skills" : "Points"}
           </div>
 
           <div className="mt-1 text-2xl font-black text-white">
-            {summarySpendable ?? "—"}
+            {mode === "skills" ? (skillTokens == null ? "—" : Math.floor(skillTokens / Math.max(1, skillCost))) : summarySpendable ?? "—"}
           </div>
         </div>
 
@@ -155,12 +162,12 @@ export default function StoreSummaryPanel({
 
         <span
           className={`inline-flex items-center justify-center rounded-full px-3 py-1 text-center ${
-            hasEnoughPoints
+            (mode === "skills" ? skillTokens != null && skillTokens >= skillCost : hasEnoughPoints)
               ? "bg-emerald-500/10 text-emerald-200"
               : "bg-amber-500/10 text-amber-200"
           }`}
         >
-          {hasEnoughPoints ? "Enough XP" : "Not Enough XP"}
+          {mode === "skills" ? (skillTokens == null ? "Tokens Loading" : skillTokens >= skillCost ? "Enough Tokens" : "Not Enough Tokens") : hasEnoughPoints ? "Enough XP" : "Not Enough XP"}
         </span>
 
         {pendingCount > 0 && (
