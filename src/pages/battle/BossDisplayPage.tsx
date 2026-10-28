@@ -266,8 +266,8 @@ export default function BossDisplayPage() {
           </div>
         </header>
 
-        <main className="flex flex-1 flex-col px-1 py-1">
-          <div className="mx-auto flex w-full max-w-[920px] flex-col gap-1.5">
+        <main className="flex min-h-0 flex-1 flex-col px-1 py-1">
+          <div className="mx-auto flex min-h-0 w-full max-w-[920px] flex-1 flex-col gap-1.5">
             {battleOptions.length > 1 && (
               <div className="shrink-0 rounded-[18px] border border-zinc-800/70 bg-zinc-950/35 p-2">
                 <div className="mb-1 text-[8px] uppercase tracking-[0.24em] text-zinc-500">
