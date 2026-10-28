@@ -230,7 +230,7 @@ export default function BossDisplayPage() {
   const turnLabel = String(primaryBattle?.turn || "BOSS").toUpperCase();
 
   return (
-    <div className="min-h-screen bg-[#05070d] text-zinc-100">
+    <div className="h-[100dvh] overflow-hidden bg-[#05070d] text-zinc-100">
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
         <div
           className={[
@@ -242,7 +242,7 @@ export default function BossDisplayPage() {
         <div className="absolute right-[-140px] top-[210px] h-[300px] w-[300px] rounded-full bg-amber-500/[0.04] blur-3xl" />
       </div>
 
-      <div className="relative z-[1] flex min-h-screen flex-col">
+      <div className="relative z-[1] flex h-full min-h-0 flex-col">
         <header className="shrink-0 border-b border-zinc-900/80 bg-black/55 px-3 py-1.5 backdrop-blur">
           <div className="flex items-center gap-4">
             <img
@@ -301,7 +301,7 @@ export default function BossDisplayPage() {
             ) : (
               <div
                 className={[
-                  "min-h-[78vh] overflow-hidden rounded-[24px] border border-zinc-800/70 bg-zinc-950/45",
+                  "min-h-0 flex-1 overflow-hidden rounded-[24px] border border-zinc-800/70 bg-zinc-950/45",
                   cardGlowClass(pct, defeated),
                 ].join(" ")}
               >
