@@ -600,7 +600,7 @@ export default function BattlePage({ onBack }: Props) {
             guild: cleanGuild,
             action: "ATTACK",
             round,
-            event: { amount: Math.max(0, previousHP - (typeof (result as any)?.currentHP === "number" ? (result as any).currentHP : optimisticHP)), requestId: `${activeSessionId}:${cleanGuild}:${round}:${makeSubmitNonce()}` },
+            event: { amount: Math.abs(deltaValue), requestId: `${activeSessionId}:${cleanGuild}:${round}:${makeSubmitNonce()}` },
           });
           setBossBanner({ type: "ok", msg: "Boss hit submitted ✅" });
         } catch (statusError) {
