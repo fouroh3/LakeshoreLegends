@@ -93,6 +93,7 @@ export default function BossDisplayPage() {
   const { battleRows } = useBattleControl(pageActive, true);
 
   const [selectedSessionKey, setSelectedSessionKey] = useState("");
+  const [raidChronicle, setRaidChronicle] = useState<any[]>([]);
   const [guildActionsMap, setGuildActionsMap] = useState<Record<string, string>>(
     {}
   );
@@ -208,6 +209,22 @@ export default function BossDisplayPage() {
 
     return () => unsubscribe();
   }, [selectedSessionKey, primaryBattle?.round]);
+
+  useEffect(() => {
+    if (!selectedSessionKey) {
+      setRaidChronicle([]);
+      return;
+    }
+    return onSnapshot(query(collection(db, "raidChronicle")), (snapshot) => {
+      const entries = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as any))
+        .filter((entry) => String(entry.sessionId || "") === selectedSessionKey)
+        .sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0));
+      setRaidChronicle(entries.slice(0, 5));
+    }, (error) => {
+      console.error("Raid chronicle subscription failed:", error);
+      setRaidChronicle([]);
+    });
+  }, [selectedSessionKey]);
 
   const bossKey = primaryBattle?.bossKey || "";
   const bossInstanceId = primaryBattle?.bossInstanceId || "";
@@ -483,6 +500,28 @@ export default function BossDisplayPage() {
                       })}
                     </div>
                   </div>
+
+                  <section aria-label="Recent raid actions" className="mt-2 shrink-0 overflow-hidden rounded-xl border border-cyan-400/20 bg-black/40 px-3 py-2">
+                    <div className="mb-1 text-[10px] font-black uppercase tracking-[0.18em] text-cyan-200">⚔ Raid Chronicle · Latest Actions</div>
+                    {raidChronicle.length === 0 ? (
+                      <div className="text-[11px] text-zinc-500">No recorded actions for this battle yet.</div>
+                    ) : (
+                      <div className="space-y-0.5">
+                        {raidChronicle.slice(0, 5).map((entry: any, index: number) => (
+                          <div key={entry.id} className={[
+                            "flex min-w-0 items-center justify-between gap-2 text-[11px] leading-4",
+                            index >= 2 ? "hidden min-[900px]:flex" : "flex",
+                            index >= 4 ? "min-[900px]:hidden min-[1200px]:flex" : "",
+                          ].join(" ")}>
+                            <span className="min-w-0 truncate text-zinc-200">R{entry.round} · {entry.homeroom} {entry.guild}</span>
+                            <span className={entry.action === "HEAL" ? "shrink-0 font-bold text-emerald-300" : "shrink-0 font-bold text-red-300"}>
+                              {entry.action === "HEAL" ? "💚 HEAL" : "⚔ ATTACK"} {entry.action === "HEAL" ? "+" : "−"}{entry.amount} HP
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </section>
 
                   {defeated && (
                     <div className="mt-3 rounded-[20px] border border-red-500/25 bg-red-950/30 px-4 py-3 text-center shadow-[0_0_32px_rgba(239,68,68,0.18)]">
