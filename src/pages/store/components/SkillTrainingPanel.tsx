@@ -106,7 +106,6 @@ export default function SkillTrainingPanel({
   const canAfford = skillTokens >= totalCost;
   const canBuy =
     pendingSkills.length > 0 &&
-    !selectedOwned &&
     !storeLocked &&
     !loading &&
     !purchasing &&
