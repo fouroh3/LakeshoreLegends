@@ -216,15 +216,25 @@ export default function BossDisplayPage() {
       setRaidChronicle([]);
       return;
     }
-    return onSnapshot(query(collection(db, "raidChronicle")), (snapshot) => {
-      const entries = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as any))
-        .filter((entry) => String(entry.sessionId || "") === selectedSessionKey)
-        .sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0));
+    // Reuse guildActions: the same collection already powers working HEAL/ATTACK statuses.
+    return onSnapshot(query(collection(db, "guildActions")), (snapshot) => {
+      const entries: any[] = [];
+      snapshot.forEach((docSnap) => {
+        const data = docSnap.data();
+        if (String(data.sessionId || "") !== selectedSessionKey) return;
+        for (const event of Array.isArray(data.history) ? data.history : []) {
+          if (event.action !== "ATTACK" && event.action !== "HEAL") continue;
+          entries.push({
+            ...event,
+            id: String(event.requestId || docSnap.id + ":" + event.at),
+            homeroom: data.homeroom,
+            guild: data.guild,
+          });
+        }
+      });
+      entries.sort((a, b) => Number(b.at || 0) - Number(a.at || 0));
       setRaidChronicle(entries);
-    }, (error) => {
-      console.error("Raid chronicle subscription failed:", error);
-      setRaidChronicle([]);
-    });
+    }, (error) => console.error("Raid history read failed:", error));
   }, [selectedSessionKey]);
 
   const bossKey = primaryBattle?.bossKey || "";
