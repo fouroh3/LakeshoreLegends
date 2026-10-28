@@ -93,6 +93,8 @@ export default function BossDisplayPage() {
   const { battleRows } = useBattleControl(pageActive, true);
 
   const [selectedSessionKey, setSelectedSessionKey] = useState("");
+  const [raidChronicle, setRaidChronicle] = useState<any[]>([]);
+  const [chronicleExpanded, setChronicleExpanded] = useState(false);
   const [guildActionsMap, setGuildActionsMap] = useState<Record<string, string>>(
     {}
   );
@@ -209,6 +211,55 @@ export default function BossDisplayPage() {
     return () => unsubscribe();
   }, [selectedSessionKey, primaryBattle?.round]);
 
+  useEffect(() => {
+    if (!selectedSessionKey) {
+      setRaidChronicle([]);
+      return;
+    }
+    // Reuse guildActions: the same collection already powers working HEAL/ATTACK statuses.
+    return onSnapshot(query(collection(db, "guildActions")), (snapshot) => {
+      const entries: any[] = [];
+      snapshot.forEach((docSnap) => {
+        const data = docSnap.data();
+        if (String(data.sessionId || "") !== selectedSessionKey) return;
+        for (const event of Array.isArray(data.history) ? data.history : []) {
+          if (event.action !== "ATTACK" && event.action !== "HEAL") continue;
+          entries.push({
+            ...event,
+            id: String(event.requestId || docSnap.id + ":" + event.at),
+            homeroom: data.homeroom,
+            guild: data.guild,
+          });
+        }
+      });
+      entries.sort((a, b) => Number(b.at || 0) - Number(a.at || 0));
+      setRaidChronicle(entries);
+    }, (error) => console.error("Raid history read failed:", error));
+  }, [selectedSessionKey]);
+
+  // Group healing by battle/class/guild/round for the compact display.
+  // Preserve the original events in raidChronicle for the expanded audit history.
+  const chroniclePreview = useMemo(() => {
+    const groupedHeals = new Map<string, any>();
+    const events: any[] = [];
+    for (const entry of raidChronicle) {
+      if (entry.action !== "HEAL") {
+        events.push(entry);
+        continue;
+      }
+      const key = [selectedSessionKey, String(entry.homeroom || "").trim().toLowerCase(), String(entry.guild || "").trim().toLowerCase(), entry.round].join("|");
+      const existing = groupedHeals.get(key);
+      if (existing) {
+        existing.amount += Number(entry.amount) || 0;
+      } else {
+        const group = { ...entry, id: "heal:" + key, amount: Number(entry.amount) || 0 };
+        groupedHeals.set(key, group);
+        events.push(group);
+      }
+    }
+    return events;
+  }, [raidChronicle, selectedSessionKey]);
+
   const bossKey = primaryBattle?.bossKey || "";
   const bossInstanceId = primaryBattle?.bossInstanceId || "";
 
@@ -230,7 +281,7 @@ export default function BossDisplayPage() {
   const turnLabel = String(primaryBattle?.turn || "BOSS").toUpperCase();
 
   return (
-    <div className="min-h-screen bg-[#05070d] text-zinc-100">
+    <div className="h-[100dvh] overflow-hidden bg-[#05070d] text-zinc-100">
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
         <div
           className={[
@@ -242,7 +293,7 @@ export default function BossDisplayPage() {
         <div className="absolute right-[-140px] top-[210px] h-[300px] w-[300px] rounded-full bg-amber-500/[0.04] blur-3xl" />
       </div>
 
-      <div className="relative z-[1] flex min-h-screen flex-col">
+      <div className="relative z-[1] flex h-full min-h-0 flex-col">
         <header className="shrink-0 border-b border-zinc-900/80 bg-black/55 px-3 py-1.5 backdrop-blur">
           <div className="flex items-center gap-4">
             <img
@@ -266,8 +317,8 @@ export default function BossDisplayPage() {
           </div>
         </header>
 
-        <main className="flex flex-1 flex-col px-1 py-1">
-          <div className="mx-auto flex w-full max-w-[920px] flex-col gap-1.5">
+        <main className="flex min-h-0 flex-1 flex-col px-1 py-1">
+          <div className="mx-auto flex min-h-0 w-full max-w-[920px] flex-1 flex-col gap-1.5">
             {battleOptions.length > 1 && (
               <div className="shrink-0 rounded-[18px] border border-zinc-800/70 bg-zinc-950/35 p-2">
                 <div className="mb-1 text-[8px] uppercase tracking-[0.24em] text-zinc-500">
@@ -301,7 +352,7 @@ export default function BossDisplayPage() {
             ) : (
               <div
                 className={[
-                  "min-h-[78vh] overflow-hidden rounded-[24px] border border-zinc-800/70 bg-zinc-950/45",
+                  "min-h-0 flex-1 overflow-hidden rounded-[24px] border border-zinc-800/70 bg-zinc-950/45",
                   cardGlowClass(pct, defeated),
                 ].join(" ")}
               >
@@ -484,6 +535,25 @@ export default function BossDisplayPage() {
                     </div>
                   </div>
 
+                  <section aria-label="Recent raid actions" className="mt-2 shrink-0 overflow-hidden rounded-xl border border-cyan-400/20 bg-black/40 px-3 py-2">
+                    <div className="mb-1 flex items-center justify-between gap-2">
+                      <div className="truncate text-[10px] font-black uppercase tracking-[0.18em] text-cyan-200">⚔ Raid Chronicle · Latest Actions ({chroniclePreview.length})</div>
+                      <button type="button" onClick={() => setChronicleExpanded(true)} className="shrink-0 rounded border border-cyan-400/30 px-2 py-0.5 text-[10px] font-bold text-cyan-200 hover:bg-cyan-400/10">Expand ↗</button>
+                    </div>
+                    <div className="max-h-[clamp(40px,10dvh,100px)] overflow-y-auto overscroll-contain pr-1">
+                      {chroniclePreview.length === 0 ? (
+                        <div className="text-[11px] text-zinc-500">No recorded actions for this battle yet.</div>
+                      ) : chroniclePreview.map((entry: any) => (
+                        <div key={entry.id} className="flex min-w-0 items-center justify-between gap-2 border-b border-white/5 py-0.5 text-[11px] leading-4">
+                          <span className="min-w-0 truncate text-zinc-200">R{entry.round} · {entry.homeroom} {entry.guild}</span>
+                          <span className={entry.action === "HEAL" ? "shrink-0 font-bold text-emerald-300" : "shrink-0 font-bold text-red-300"}>
+                            {entry.action === "HEAL" ? "💚 HEAL" : "⚔ ATTACK"} {entry.action === "HEAL" ? "+" : "−"}{entry.amount} HP
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+
                   {defeated && (
                     <div className="mt-3 rounded-[20px] border border-red-500/25 bg-red-950/30 px-4 py-3 text-center shadow-[0_0_32px_rgba(239,68,68,0.18)]">
                       <div className="text-[10px] uppercase tracking-[0.32em] text-red-300/70">
@@ -533,6 +603,35 @@ export default function BossDisplayPage() {
             )}
           </div>
         </main>
+        {chronicleExpanded && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-3 sm:p-8" role="dialog" aria-modal="true" aria-label="Full Raid Chronicle">
+            <div className="flex max-h-[90dvh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-cyan-400/30 bg-[#0b101b] p-4 text-zinc-100 shadow-2xl">
+              <div className="mb-3 flex shrink-0 items-center justify-between gap-3">
+                <div><h2 className="text-lg font-black text-cyan-200">⚔ Full Raid Chronicle</h2><p className="text-xs text-zinc-400">{homeroomLabel} · {raidChronicle.length} recorded actions · newest first</p></div>
+                <button type="button" onClick={() => setChronicleExpanded(false)} className="rounded-lg border border-zinc-600 px-3 py-2 text-sm font-bold hover:bg-white/10">Close ✕</button>
+              </div>
+              <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+                {raidChronicle.length === 0 ? <p className="text-sm text-zinc-400">No recorded actions yet.</p> : raidChronicle.map((entry: any) => (
+                  <div key={entry.id} className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 px-2 py-2 text-sm">
+                    <span className="min-w-0 truncate">Round {entry.round} · {entry.homeroom} · {entry.guild}</span>
+                    <span className={entry.action === "HEAL" ? "shrink-0 font-bold text-emerald-300" : "shrink-0 font-bold text-red-300"}>{entry.action === "HEAL" ? "💚 HEAL +" : "⚔ ATTACK −"}{entry.amount} HP</span>
+                    {entry.action === "HEAL" && Array.isArray(entry.targets) && entry.targets.length > 0 && (
+                      <div className="mt-2 w-full rounded-lg border border-emerald-400/15 bg-emerald-400/5 p-2">
+                        <div className="mb-1 text-xs font-semibold text-emerald-200">Students healed</div>
+                        {entry.targets.map((target: any, index: number) => (
+                          <div key={String(target.studentId) + "-" + index} className="flex justify-between gap-3 py-0.5 text-xs text-zinc-300">
+                            <span className="truncate">{target.studentName || target.studentId}</span>
+                            <span className="shrink-0 font-semibold text-emerald-300">+{target.amount} HP</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

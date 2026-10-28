@@ -358,6 +358,12 @@ export default function BattlePage({ onBack }: Props) {
       return;
     }
 
+    // The acting guild must be known; healing targets do not identify the healer.
+    if (delta > 0 && !activeGuild) {
+      setBanner({ type: "err", msg: "Select the healing guild using the Guild filter before submitting." });
+      return;
+    }
+
     setSubmitting(true);
 
     const cleanSessionId = stripQuotes(activeSessionId).trim();
@@ -421,8 +427,21 @@ export default function BattlePage({ onBack }: Props) {
             })`,
       });
 
-      // Restrictions removed:
-      // No longer marks the guild as having completed HEAL for the round.
+      // HP has already been saved. Chronicle/status failures must never undo healing.
+      if (!result.deduped && delta > 0) {
+        const healingGuild = activeGuild;
+        const healedAmount = Array.isArray(result.results)
+          ? result.results.reduce((total, row) => total + Math.max(0, row.after - row.before), 0)
+          : snapshot.reduce((total, row) => total + Math.max(0, row.after - row.before), 0);
+        if (healingGuild) {
+          try {
+            await submitGuildAction({ sessionId: cleanSessionId, homeroom: activeHomeroom, guild: healingGuild, action: "HEAL", round: activeRound, event: { amount: healedAmount, requestId: submitNonce, targets: (Array.isArray(result.results) ? result.results : snapshot).map((row) => ({ studentId: row.studentId, studentName: fullName(students.find((student) => normId(student.id) === normId(row.studentId)) as Student), amount: Math.max(0, Number(row.after) - Number(row.before)) })) } });
+          } catch (statusError) {
+            console.error("Healing saved, but raid status/chronicle update failed:", statusError);
+            setBanner({ type: "err", msg: "Healing saved, but raid display update failed. Tell your teacher." });
+          }
+        }
+      }
 
       setSelectedIds([]);
       setNote("");
@@ -453,6 +472,9 @@ export default function BattlePage({ onBack }: Props) {
     applyOptimisticHp,
     clearPending,
     note,
+    activeGuild,
+    activeRound,
+    students,
   ]);
 
   const onSubmitBossAttack = useCallback(
@@ -560,6 +582,7 @@ export default function BattlePage({ onBack }: Props) {
             guild: cleanGuild,
             action: "ATTACK",
             round,
+            event: { amount: Math.max(0, previousHP - (typeof (result as any)?.currentHP === "number" ? (result as any).currentHP : optimisticHP)), requestId: `${activeSessionId}:${cleanGuild}:${round}:${makeSubmitNonce()}` },
           });
           setBossBanner({ type: "ok", msg: "Boss hit submitted ✅" });
         } catch (statusError) {
