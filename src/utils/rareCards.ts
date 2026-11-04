@@ -10,6 +10,7 @@ const VISUAL_RARE_CARD_IDS = new Set([
   "stamina_helm",
   "alchemists_brew",
   "giants_brew",
+  "if_potion",
   "shadow_veil",
   "echoing_horn",
   "phoenix_feather",
