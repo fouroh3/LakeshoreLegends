@@ -68,6 +68,18 @@ export const itemLibrary: InventoryCard[] = [
 
   // POTIONS
   {
+    id: "if_potion",
+    name: "IF...",
+    type: "potion",
+    effect: "If your Health drops below 10, choose one: triple the damage of your next successful attack, or triple the Health restored by your next healing action (up to your maximum Health). Discard after use.",
+    useText: "1X USE",
+    isConsumed: true,
+    rarity: "rare",
+    lore: "The Power of Possibility!",
+    whisper: "IF you can imagine it... THEN you can change the game!",
+    source: "The Power of Possibility",
+  },
+  {
     id: "water_of_life",
     name: "Water of Life",
     type: "potion",
